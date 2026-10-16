@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "rules": {
+    "complexity": ["error", 8],
+    "max-depth": ["error", 3],
+    "no-console": "error",
+    "no-debugger": "error",
+    "no-duplicate-imports": "error",
+    "no-promise-executor-return": "error",
+    "no-shadow": "error",
+    "eqeqeq": "error",
+    "require-await": "error",
+    "require-unicode-regexp": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/**/*.mjs"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist",
+    "coverage",
+    "coverage-combined",
+    "coverage-e2e",
+    ".nyc_output",
+    "playwright-report",
+    "test-results",
+    "legacy"
+  ]
+}

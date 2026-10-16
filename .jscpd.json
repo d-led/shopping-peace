@@ -1,0 +1,23 @@
+{
+  "minTokens": 60,
+  "minLines": 8,
+  "mode": "mild",
+  "format": ["typescript", "tsx", "json", "markdown"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/coverage-combined/**",
+    "**/coverage-e2e/**",
+    "**/.nyc_output/**",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/.quality-gate/**",
+    "**/README.md",
+    "**/THIRD-PARTY-NOTICES.md",
+    "**/package-lock.json"
+  ],
+  "reporters": ["console", "json"],
+  "output": "reports/jscpd",
+  "absolute": true
+}

@@ -1,9 +1,15 @@
 node_modules/
 dist/
 coverage/
+coverage-e2e/
 .vite/
 *.local
 .DS_Store
+
+# The quality gate's own leavings: logs, jscpd, CRAP, mutation, sandboxes
+reports/
+.stryker-tmp/
+*.tsbuildinfo
 
 # Playwright
 playwright-report/

@@ -14,8 +14,14 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:properties": "FC_RUNS=1000 vitest run tests/stock-plan.properties.test.ts tests/presets-file.properties.test.ts",
     "test:e2e": "playwright test",
     "coverage": "vitest run --coverage",
+    "coverage:all": "node scripts/coverage-report.mjs",
+    "crap": "node scripts/crap-report.mjs",
+    "duplicates": "jscpd src tests",
+    "mutation": "stryker run",
+    "gate": "./quality-gate.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -161,6 +161,32 @@ async function pickEmoji(container: HTMLElement, firstKeyword: string): Promise<
   emojiChoice(container, firstKeyword).click();
 }
 
+/**
+ * Hands the picker's file input a file, the way the household's file dialog
+ * would. Hono aliases `onChange` to the `input` event (React's habit), which is
+ * the same event a real file dialog fires — along with `change` — so this is
+ * what the app is listening on.
+ */
+function pickFile(container: HTMLElement, contents: string): void {
+  const input = fileInput(container);
+  const file = new File([contents], 'presets.json', { type: 'application/json' });
+  Object.defineProperty(input, 'files', { value: [file], configurable: true });
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/** The dialog was opened and thought better of: no file comes back at all. */
+function dismissFileDialog(container: HTMLElement): void {
+  fileInput(container).dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function fileInput(container: HTMLElement): HTMLInputElement {
+  const input = container.querySelector('input[type="file"]');
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error('There is no file input in the picker.');
+  }
+  return input;
+}
+
 function saved(storage: FakeStorage): StockItem[] {
   return parsePresets(storage.getItem(PRESETS_STORAGE_KEY) ?? '[]');
 }
@@ -449,6 +475,67 @@ describe('finding a picture for a thing', () => {
   });
 });
 
+describe('files in and out', () => {
+  it('imports a file the household picked, and says what came in', async () => {
+    const { container, storage } = openApp([detergent]);
+    await openThingPicker(container);
+
+    pickFile(
+      container,
+      JSON.stringify([
+        { id: 'soap', name: '🧼 Dish soap', usageDays: 20, leadDays: 2, extraDays: 40 },
+      ]),
+    );
+
+    await vi.waitFor(() => {
+      expect(saved(storage)[0]?.name).toBe('🧼 Dish soap');
+    });
+    expect(textOf(container)).toContain('Imported 1 thing.');
+    // 20 days a unit, 2 days to fetch, 40 extra days: one tight, two spare.
+    expect(value(container, 'target-stock')).toBe('3');
+  });
+
+  it('explains a file it cannot read, and keeps the shelf it had', async () => {
+    const { container, storage } = openApp([detergent]);
+    await openThingPicker(container);
+
+    pickFile(container, 'this is not json');
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('not valid JSON');
+    });
+    expect(saved(storage)).toHaveLength(1);
+  });
+
+  it('does nothing at all when the file dialog was dismissed', async () => {
+    const { container, storage } = openApp([detergent]);
+    await openThingPicker(container);
+
+    dismissFileDialog(container);
+
+    expect(saved(storage)).toEqual([detergent]);
+    expect(textOf(container)).not.toContain('Imported');
+  });
+});
+
+describe('being told what just happened', () => {
+  it('says it once, and takes it away when dismissed', async () => {
+    const { container } = openApp([detergent]);
+    await openThingPicker(container);
+
+    pickerButton(container, '↩️ Restore defaults').click();
+    await vi.waitFor(() => {
+      expect(container.querySelector('[role="status"]')).not.toBeNull();
+    });
+
+    button(container, 'Dismiss').click();
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('[role="status"]')).toBeNull();
+    });
+  });
+});
+
 describe('bringing the starter things back', () => {
   it('brings back a starter thing that was thrown away', async () => {
     const { container, storage } = openApp([tabs]);
@@ -499,6 +586,20 @@ describe('touching the numbers', () => {
     expect(value(container, 'target-stock')).toBe('3');
     expect(textOf(container)).toContain("Down to 2? Bring home 1 more and you're back at 3.");
     expect(saved(storage)[0]?.leadDays).toBe(45);
+  });
+
+  it('recalculates when how long a unit lasts changes, on the dial or by hand', async () => {
+    const { container, storage } = openApp([detergent]);
+
+    // A unit now lasts 10 days, so the same 3-day wait is a third of a unit —
+    // still a whole one — and 30 spare days become 3 units.
+    enter(container, 'usage-days', '10');
+
+    await vi.waitFor(() => {
+      expect(value(container, 'target-stock')).toBe('4');
+    });
+    expect(textOf(container)).toContain('4 units ≈ 40 days of cover.');
+    expect(saved(storage)[0]?.usageDays).toBe(10);
   });
 
   it('recalculates when the number is dragged on the track', async () => {

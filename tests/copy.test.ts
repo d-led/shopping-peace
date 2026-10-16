@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import { InvalidPresetFileError } from '../src/data/presets-file';
 import { planStock } from '../src/domain/stock-plan';
 import {
   countThings,
+  deleteQuestion,
+  exportedNotice,
+  importFailed,
+  importedNotice,
   itemName,
   itemSummary,
   planCover,
   planHeadline,
+  restoredNotice,
   spareNote,
   spoilsWarning,
-} from '../src/ui/plan-copy';
+} from '../src/ui/copy';
 import { thing } from './support/items';
 
 const detergent = thing({
@@ -107,5 +113,37 @@ describe('counting things out loud', () => {
   it('says "things" for more than one, and for none', () => {
     expect(countThings(3)).toBe('3 things');
     expect(countThings(0)).toBe('0 things');
+  });
+});
+
+describe('words for the things that happen to a shelf', () => {
+  it('names the thing that is about to be deleted', () => {
+    expect(deleteQuestion(detergent)).toBe('Delete 🧴 Laundry detergent?');
+  });
+
+  it('says "this thing" rather than asking about a blank', () => {
+    expect(deleteQuestion({ ...detergent, name: '   ' })).toBe('Delete this thing?');
+  });
+
+  it('repeats the complaint about the imported file, word for word', () => {
+    const complaint = new InvalidPresetFileError('Preset #2 needs freshDays to be at least 0.');
+
+    expect(importFailed(complaint)).toBe('Preset #2 needs freshDays to be at least 0.');
+  });
+
+  it('says plainly when the failure was not the file being wrong', () => {
+    expect(importFailed(new Error('the disk was yanked out'))).toBe(
+      'That file could not be read.',
+    );
+  });
+
+  it('counts what came and went, in whole things', () => {
+    expect(exportedNotice(3)).toBe('Exported 3 things.');
+    expect(importedNotice(1)).toBe('Imported 1 thing.');
+    expect(restoredNotice(2)).toBe('Brought back 2 things.');
+  });
+
+  it('makes nothing of a restore that had nothing to restore', () => {
+    expect(restoredNotice(0)).toBe('The starter things are all here already.');
   });
 });

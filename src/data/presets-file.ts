@@ -38,40 +38,42 @@ function parseJson(text: string): unknown {
 }
 
 function toStockItem(entry: unknown, index: number, createId: () => string): StockItem {
-  if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+  if (!isRecord(entry)) {
     throw new InvalidPresetFileError(`Preset ${position(index)} is not an object.`);
   }
-  const record = entry as Record<string, unknown>;
+  const where = `Preset ${position(index)}`;
   return {
-    id: readId(record.id, createId),
-    name: readName(record.name, index),
-    usageDays: readNumber(record.usageDays, index, 'usageDays', 1),
-    leadDays: readNumber(record.leadDays, index, 'leadDays', 0),
-    extraDays: readNumber(record.extraDays, index, 'extraDays', 0),
+    id: readId(entry.id, createId),
+    name: readName(entry.name, where),
+    usageDays: readNumber(entry.usageDays, where, 'usageDays', 1),
+    leadDays: readNumber(entry.leadDays, where, 'leadDays', 0),
+    extraDays: readNumber(entry.extraDays, where, 'extraDays', 0),
     // Files written before the freshness slider existed mean "never spoils".
-    freshDays: readNumber(record.freshDays ?? FRESHNESS_NEVER, index, 'freshDays', 0),
+    freshDays: readNumber(entry.freshDays ?? FRESHNESS_NEVER, where, 'freshDays', 0),
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function readId(value: unknown, createId: () => string): string {
   return typeof value === 'string' && value !== '' ? value : createId();
 }
 
-function readName(value: unknown, index: number): string {
+function readName(value: unknown, where: string): string {
   if (value === undefined || value === null) {
     return UNNAMED_ITEM;
   }
   if (typeof value !== 'string') {
-    throw new InvalidPresetFileError(`Preset ${position(index)} has a name that is not text.`);
+    throw new InvalidPresetFileError(`${where} has a name that is not text.`);
   }
   return value.trim() === '' ? UNNAMED_ITEM : value;
 }
 
-function readNumber(value: unknown, index: number, field: string, minimum: number): number {
+function readNumber(value: unknown, where: string, field: string, minimum: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < minimum) {
-    throw new InvalidPresetFileError(
-      `Preset ${position(index)} needs ${field} to be at least ${minimum}.`,
-    );
+    throw new InvalidPresetFileError(`${where} needs ${field} to be at least ${minimum}.`);
   }
   return value;
 }

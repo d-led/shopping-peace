@@ -27,7 +27,7 @@ LOGS="$REPORTS/logs"
 # Lines reached by the unit tests and the browser tests together. The two
 # instrument the same source differently, so this counts lines, which neither
 # can disagree about.
-MIN_LINES="${MIN_LINES:-90}"
+MIN_LINES="${MIN_LINES:-95}"
 # Cyclomatic complexity, per function, as the linter counts it.
 MAX_COMPLEXITY="${MAX_COMPLEXITY:-8}"
 # Change risk: complexity² × (1 − coverage)³ + complexity, per function.

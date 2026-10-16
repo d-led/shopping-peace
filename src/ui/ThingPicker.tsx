@@ -2,11 +2,9 @@ import { useEffect, useState } from 'hono/jsx/dom';
 import { withEmoji } from '../data/emoji';
 import type { StockItem } from '../domain/stock-item';
 import { EmojiPicker } from './EmojiPicker';
-import { itemName, itemSummary } from './plan-copy';
+import { itemName, itemSummary } from './copy';
 import { TEXT } from './text';
-
-/** The one text field in the app, so it always has a predictable id. */
-export const THING_NAME_FIELD_ID = 'thing-name';
+import { THING_NAME_FIELD_ID, focusThingNameSoon } from './thing-name';
 
 export interface ThingPickerProps {
   readonly items: readonly StockItem[];
@@ -61,7 +59,7 @@ export function ThingPicker({
       return;
     }
     onRename(current.id, withEmoji(current.name, symbol));
-    document.getElementById(THING_NAME_FIELD_ID)?.focus();
+    focusThingNameSoon();
   };
 
   return (

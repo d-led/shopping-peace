@@ -2,7 +2,7 @@ import { FRESHNESS_NEVER, type StockItem, type StockRequirements } from '../doma
 import { planStock, spoilsBeforeEmpty } from '../domain/stock-plan';
 import { KpiCard } from './KpiCard';
 import { StepSlider } from './StepSlider';
-import { itemName, planCover, planHeadline, spareNote, spoilsWarning } from './plan-copy';
+import { itemName, planCover, planHeadline, spareNote, spoilsWarning } from './copy';
 import { TEXT } from './text';
 
 /** Slider limits: wide enough for a year's worth of a slow item, tight enough

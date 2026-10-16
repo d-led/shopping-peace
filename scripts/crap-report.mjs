@@ -114,6 +114,15 @@ async function main() {
   const diagnostics = JSON.parse(await readFile(resolve(ROOT, chosen.lint), 'utf8')).diagnostics;
   const statements = await lineCoverage(chosen.sources.split(','));
 
+  if (statements.size === 0) {
+    console.error(
+      `No coverage in ${chosen.sources}. CRAP multiplies complexity by\n` +
+        'uncovered code, so the tests have to have run before this report means anything.',
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const measured = [];
   for (const function_ of complexity(diagnostics)) {
     const source = resolve(ROOT, function_.file);

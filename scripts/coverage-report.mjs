@@ -10,10 +10,10 @@
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { ROOT, fmt, lineCoverage, share } from './coverage-map.mjs';
+import { ROOT, fmt, lineCoverage, share, tally } from './coverage-map.mjs';
 
 const DEFAULTS = {
-  'min-lines': 90,
+  'min-lines': 95,
   sources: 'coverage/coverage-final.json,coverage-e2e',
   report: 'reports/coverage.txt',
 };
@@ -35,26 +35,32 @@ async function main() {
   const sources = chosen.sources.split(',');
   const files = await lineCoverage(sources);
 
-  const perFile = [...files.entries()]
-    .map(([path, entry]) => ({ path: fmt(path), ...entry, share: share(entry) }))
-    .sort((left, right) => left.share - right.share);
-
-  const all = { instrumented: new Set(), covered: new Set() };
-  for (const entry of files.values()) {
-    for (const line of entry.instrumented) all.instrumented.add(`${entry}:${line}`);
-    for (const line of entry.covered) all.covered.add(`${entry}:${line}`);
+  if (files.size === 0) {
+    console.error(
+      `No coverage in ${sources.join(' or ')}. The unit stage writes the first of those\n` +
+        'and the browser stage the second, so run them before this report.',
+    );
+    process.exitCode = 1;
+    return;
   }
 
-  const total = share(all);
+  const perFile = [...files.entries()]
+    .map(([path, entry]) => ({ path: fmt(path), ...tally(entry), share: share(entry) }))
+    .sort((left, right) => left.share - right.share);
+
+  const covered = perFile.reduce((sum, file) => sum + file.covered, 0);
+  const instrumented = perFile.reduce((sum, file) => sum + file.instrumented, 0);
+  const total = instrumented === 0 ? 1 : covered / instrumented;
+
   const lines = [
     `Coverage of src/, unit tests and browser tests together (${sources.join(' + ')})`,
     '',
     ...perFile.map(
       (file) =>
-        `  ${(file.share * 100).toFixed(1).padStart(5)}%  ${String(file.covered.size).padStart(4)}/${String(file.instrumented.size).padEnd(4)} lines  ${file.path}`,
+        `  ${(file.share * 100).toFixed(1).padStart(5)}%  ${String(file.covered).padStart(4)}/${String(file.instrumented).padEnd(4)} lines  ${file.path}`,
     ),
     '',
-    `Total: ${(total * 100).toFixed(2)}% of ${all.instrumented.size} lines, bar ${chosen['min-lines']}%.`,
+    `Total: ${(total * 100).toFixed(2)}% of ${instrumented} lines, bar ${chosen['min-lines']}%.`,
   ];
 
   const report = `${lines.join('\n')}\n`;

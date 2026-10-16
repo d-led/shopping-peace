@@ -105,7 +105,7 @@ never a question of which number a check compared against:
 | `unit`       | Vitest with coverage, all green                                      |
 | `properties` | the fast-check properties at 1000 runs each                          |
 | `e2e`        | Playwright on three devices, against an instrumented build            |
-| `coverage`   | at least 90% of `src/` lines, unit and browser runs *together*        |
+| `coverage`   | at least 95% of `src/` lines, unit and browser runs *together*        |
 | `metrics`    | complexity ≤ 8 and CRAP ≤ 10, per function                           |
 | `mutation`   | Stryker: at least 85% of mutants killed                              |
 
@@ -118,15 +118,24 @@ Two of those stages are worth explaining:
 - **Coverage is measured across both test runners.** Vitest instruments the
   TypeScript; the browser tests run against a build instrumented by
   `vite-plugin-istanbul`, and each Playwright test hands its `__coverage__`
-  back. The two instrumenters disagree about what a statement is, so
-  `scripts/coverage-report.mjs` counts *lines* instead — a line was reached or
-  it was not, whoever was watching. A line the browser reached counts even if
-  no unit test ever went near it.
+  back. The two disagree about where a statement begins — a bundler's line 72
+  can be the line after the one a reader sees — so `scripts/coverage-report.mjs`
+  lets the unit run decide *which lines exist* and lets every run decide *which
+  were reached*. A line the browser reached counts even if no unit test went
+  near it; a line nothing reached counts against the total. It sits at 98% of
+  about 270 lines, and the two lines it does not count are guards the DOM cannot
+  produce (a non-numeric number field, a picker open with no thing selected).
 - **CRAP** (`scripts/crap-report.mjs`) is the number that says where the next
   bug will be: `complexity² × (1 − coverage)³ + complexity`. A function is
   risky when it is complicated *and* thinly covered. Complexity comes from the
   same linter rule the gate enforces, asked for every function rather than only
   the offenders, so nothing is measured twice or measured differently.
+- **Mutation testing cannot be measured here yet**, and the gate says so rather
+  than reporting a number that describes the tool: `@stryker-mutator/vitest-runner`
+  10 executes no tests per mutant under vitest 5, so every mutant is reported as
+  survived. `scripts/mutation-report.mjs` notices exactly that and exits with
+  "not measurable", which the gate shows as `–` instead of `✓`. When the runner
+  catches up, the same command starts enforcing the 85% bar by itself.
 
 
 ## Where the presets live

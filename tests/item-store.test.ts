@@ -108,6 +108,15 @@ describe('things being removed', () => {
     expect(store.getState().selected?.id).toBe('tabs');
   });
 
+  it('leaves the open thing open when a different one is deleted', () => {
+    const { store } = openApp([detergent, tabs]);
+    store.select('tabs');
+
+    store.remove('detergent');
+
+    expect(store.getState().selected?.id).toBe('tabs');
+  });
+
   it('leaves nothing selected once the last thing is gone', () => {
     const { store } = openApp([detergent]);
     store.remove('detergent');
@@ -128,6 +137,16 @@ describe('importing a file', () => {
     store.replaceAll([tabs]);
     expect(store.getState().selected).toEqual(tabs);
     expect(stored()).toEqual([tabs]);
+  });
+
+  it('leaves nothing open when the file had nothing in it', () => {
+    const { store, stored } = openApp([detergent]);
+
+    store.replaceAll([]);
+
+    expect(store.getState().selected).toBeNull();
+    expect(store.getState().items).toEqual([]);
+    expect(stored()).toEqual([]);
   });
 });
 
@@ -189,6 +208,17 @@ describe('watching for changes', () => {
 
     expect(seen).toHaveLength(1);
     expect(seen[0]?.selected?.extraDays).toBe(45);
+  });
+
+  it('tells them which thing is in front of the household now', () => {
+    const { store } = openApp([detergent, tabs]);
+    const seen: string[] = [];
+    store.subscribe((state) => seen.push(state.selected?.id ?? ''));
+
+    store.select('tabs');
+
+    expect(store.getState().selected?.id).toBe('tabs');
+    expect(seen).toEqual(['tabs']);
   });
 
   it('hands out the same state object until something actually changes', () => {

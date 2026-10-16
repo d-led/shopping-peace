@@ -2,34 +2,41 @@
 import { useState } from 'hono/jsx/dom';
 import type { ItemStore } from '../app/item-store';
 import { BUILD_SHA } from '../build';
-import {
-  InvalidPresetFileError,
-  exportFilename,
-  parsePresets,
-  serializePresets,
-} from '../data/presets-file';
+import { exportFilename, parsePresets, serializePresets } from '../data/presets-file';
 import type { StockItem, StockRequirements } from '../domain/stock-item';
+import { EmptyEditor } from './EmptyEditor';
 import { ItemEditor } from './ItemEditor';
+import { NoticeBar, type Notice } from './NoticeBar';
 import { SourceStamp } from './SourceStamp';
-import { THING_NAME_FIELD_ID, ThingPicker } from './ThingPicker';
+import { ThingPicker } from './ThingPicker';
+import {
+  deleteQuestion,
+  exportedNotice,
+  importFailed,
+  importedNotice,
+  restoredNotice,
+} from './copy';
 import { downloadJson } from './download';
-import { countThings } from './plan-copy';
 import { TEXT } from './text';
+import { focusThingNameSoon } from './thing-name';
 import { useStoreState } from './use-store-state';
 
-interface Notice {
-  readonly tone: 'success' | 'error';
-  readonly text: string;
-}
-
+/**
+ * The screen: one thing at a time, the two numbers that matter, and the sheet
+ * with everything else in it. Every change is saved as it is made, so nothing
+ * here has a save button to forget to press.
+ */
 export function App({ store }: { readonly store: ItemStore }) {
   const { items, selected } = useStoreState(store);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
+  const say = (text: string) => setNotice({ tone: 'success', text });
+  const complain = (text: string) => setNotice({ tone: 'error', text });
+
   const exportPresets = () => {
     downloadJson(exportFilename(new Date()), serializePresets(items));
-    setNotice({ tone: 'success', text: `Exported ${countThings(items.length)}.` });
+    say(exportedNotice(items.length));
   };
 
   const importPresets = async (event: Event) => {
@@ -42,15 +49,9 @@ export function App({ store }: { readonly store: ItemStore }) {
     try {
       const imported = parsePresets(await file.text());
       store.replaceAll(imported);
-      setNotice({ tone: 'success', text: `Imported ${countThings(imported.length)}.` });
+      say(importedNotice(imported.length));
     } catch (error) {
-      setNotice({
-        tone: 'error',
-        text:
-          error instanceof InvalidPresetFileError
-            ? error.message
-            : 'That file could not be read.',
-      });
+      complain(importFailed(error));
     }
   };
 
@@ -61,21 +62,13 @@ export function App({ store }: { readonly store: ItemStore }) {
   };
 
   const deleteThing = (item: StockItem) => {
-    const label = item.name.trim() === '' ? 'this thing' : item.name;
-    if (window.confirm(`Delete ${label}?`)) {
+    if (window.confirm(deleteQuestion(item))) {
       store.remove(item.id);
     }
   };
 
   const restoreDefaults = () => {
-    const restored = store.restoreDefaults();
-    setNotice({
-      tone: 'success',
-      text:
-        restored === 0
-          ? 'The starter things are all here already.'
-          : `Brought back ${countThings(restored)}.`,
-    });
+    say(restoredNotice(store.restoreDefaults()));
   };
 
   return (
@@ -119,73 +112,7 @@ export function App({ store }: { readonly store: ItemStore }) {
         />
       )}
 
-      {notice !== null && (
-        <div class="fixed inset-x-0 bottom-4 z-[200] flex justify-center px-3" role="status">
-          <div
-            class={`alert max-w-lg rounded-none shadow-lg ${
-              notice.tone === 'error' ? 'alert-error' : 'alert-success'
-            }`}
-          >
-            <span class={`flex-1 font-semibold ${TEXT.small}`}>{notice.text}</span>
-            <button
-              type="button"
-              class="btn btn-sm rounded-none"
-              aria-label="Dismiss"
-              onClick={() => setNotice(null)}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      <NoticeBar notice={notice} onDismiss={() => setNotice(null)} />
     </div>
   );
-}
-
-function EmptyEditor({
-  onAdd,
-  onRestoreDefaults,
-}: {
-  readonly onAdd: () => void;
-  readonly onRestoreDefaults: () => void;
-}) {
-  return (
-    <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300">
-      <div class="card-body min-w-0 items-center text-center py-16 gap-4">
-        <span class={TEXT.display} aria-hidden="true">
-          🧺
-        </span>
-        <h2 class={`font-black ${TEXT.body}`}>No things yet</h2>
-        <p class={`text-base-content/60 max-w-sm ${TEXT.small}`}>
-          Add your first thing — dish tabs, detergent, toilet paper. The numbers follow within
-          seconds.
-        </p>
-        <button
-          type="button"
-          class={`btn btn-accent btn-lg h-auto min-h-16 rounded-none font-bold ${TEXT.body}`}
-          onClick={onAdd}
-        >
-          + New thing
-        </button>
-        <button
-          type="button"
-          class={`btn btn-sm rounded-none ${TEXT.small}`}
-          onClick={onRestoreDefaults}
-        >
-          ↩️ Bring back the starter things
-        </button>
-      </div>
-    </section>
-  );
-}
-
-/** The name field lives in the picker, so wait one frame for it to be on screen. */
-function focusThingNameSoon(): void {
-  requestAnimationFrame(() => {
-    const field = document.getElementById(THING_NAME_FIELD_ID);
-    if (field instanceof HTMLInputElement) {
-      field.focus();
-      field.select();
-    }
-  });
 }

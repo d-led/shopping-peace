@@ -1,3 +1,4 @@
+import { InvalidPresetFileError } from '../data/presets-file';
 import { effectiveUsageDays, type StockPlan } from '../domain/stock-plan';
 import { UNNAMED_ITEM, type StockItem } from '../domain/stock-item';
 
@@ -39,6 +40,31 @@ export function itemSummary(item: StockItem): string {
 /** "1 thing" / "3 things", for the export and import messages. */
 export function countThings(count: number): string {
   return `${count} ${count === 1 ? 'thing' : 'things'}`;
+}
+
+/** The question before a thing disappears, naming it so there is no doubt. */
+export function deleteQuestion(item: StockItem): string {
+  return `Delete ${item.name.trim() === '' ? 'this thing' : item.name}?`;
+}
+
+/** What to say when the file somebody picked was not a presets file. */
+export function importFailed(error: unknown): string {
+  return error instanceof InvalidPresetFileError ? error.message : 'That file could not be read.';
+}
+
+export function exportedNotice(count: number): string {
+  return `Exported ${countThings(count)}.`;
+}
+
+export function importedNotice(count: number): string {
+  return `Imported ${countThings(count)}.`;
+}
+
+/** Nothing to bring back is not a failure, so it gets its own sentence. */
+export function restoredNotice(count: number): string {
+  return count === 0
+    ? 'The starter things are all here already.'
+    : `Brought back ${countThings(count)}.`;
 }
 
 function days(count: number): string {

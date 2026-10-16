@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+@plugin 'daisyui' {
+  themes: cupcake --default;
+}
+
+/* Kitchen mode: no accidental text selection, no double-tap zoom while handling
+   a drippy bottle with one hand. */
+@layer base {
+  button,
+  label.btn,
+  input[type='range'] {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+
+  input[type='range'] {
+    min-height: 2.5rem;
+  }
+}

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cupcake">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Kanban Calc</title>
+    <!-- Tailwind and DaisyUI via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-base-200 min-h-screen text-base-content antialiased">
+
+    <!-- Sticky Big Header -->
+    <header class="navbar bg-primary text-primary-content shadow-md sticky top-0 z-50 px-4">
+        <div class="flex-1">
+            <h1 class="text-2xl font-black tracking-tight">🏡 HOME KANBAN</h1>
+        </div>
+        <div class="flex-none gap-2">
+            <button onclick="exportJSON()" class="btn btn-sm btn-outline btn-neutral text-white">📤 Export</button>
+            <label class="btn btn-sm btn-outline btn-neutral text-white">
+                📥 Import
+                <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" class="hidden" />
+            </label>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 md:p-6 pb-24">
+        <!-- Main Dashboard Split Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- LEFT PANEL: Presets Selection (Big Tap Targets) -->
+            <div class="md:col-span-1 flex flex-col gap-3">
+                <h2 class="text-lg font-bold px-1 text-base-content/70 uppercase tracking-wider">Select Item</h2>
+                <div id="presetList" class="flex flex-col gap-2 max-h-[40vh] md:max-h-[65vh] overflow-y-auto pr-1">
+                    <!-- Dynamic Presets Go Here -->
+                </div>
+                <button onclick="createNewItem()" class="btn btn-accent btn-block text-xl font-bold py-4 h-auto shadow-lg">+ New Thing</button>
+            </div>
+
+            <!-- RIGHT PANEL: Big Interactive Calculator Form -->
+            <div class="md:col-span-2 card bg-base-100 shadow-xl border border-base-300">
+                <div class="card-body p-6 md:p-8 flex flex-col justify-between">
+                    
+                    <div>
+                        <!-- Title Field -->
+                        <div class="form-control mb-6">
+                            <label class="label font-bold text-xs uppercase text-base-content/60">What's the "THING"?</label>
+                            <input type="text" id="calcName" oninput="updateCurrentItem('name', this.value)" class="input input-bordered input-primary input-lg w-full text-2xl font-bold" placeholder="e.g., Laundry Detergent" />
+                        </div>
+
+                        <!-- Core Output KPIs (Massive for Easy Reading) -->
+                        <div class="grid grid-cols-2 gap-4 mb-8">
+                            <div class="bg-warning/20 border border-warning text-warning-content rounded-2xl p-4 text-center">
+                                <span class="text-xs uppercase font-black block opacity-70">Buy More When Unused Hits</span>
+                                <span id="outRop" class="text-4xl md:text-5xl font-black block mt-1">0</span>
+                                <span class="text-xs font-semibold block opacity-80 mt-1">units remaining</span>
+                            </div>
+                            <div class="bg-success/20 border border-success text-success-content rounded-2xl p-4 text-center">
+                                <span class="text-xs uppercase font-black block opacity-70">How Many To Keep / Fetch</span>
+                                <span id="outTarget" class="text-4xl md:text-5xl font-black block mt-1">0</span>
+                                <span class="text-xs font-semibold block opacity-80 mt-1">total max target</span>
+                            </div>
+                        </div>
+
+                        <div class="divider font-bold text-xs text-base-content/40 uppercase">Fine-Tune the Uncertainties</div>
+
+                        <!-- Config Sliders / Steppers (Dirty Finger Friendly) -->
+                        <div class="space-y-6">
+                            <!-- Usage Rate -->
+                            <div class="form-control">
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="label font-bold text-sm">🗓️ Average Usage Rate</label>
+                                    <span class="badge badge-lg badge-neutral font-mono font-bold" id="valUsageText">1 pack / 30 days</span>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="sliderUsage" min="1" max="90" value="30" oninput="handleUsageSlider(this.value)" class="range range-primary range-md flex-1" />
+                                </div>
+                            </div>
+
+                            <!-- Lead Time / Fetch Time -->
+                            <div class="form-control">
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="label font-bold text-sm">🚚 Time to Fetch / Delivery Delay</label>
+                                    <span class="badge badge-lg badge-neutral font-mono font-bold" id="valLeadText">3 days</span>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="sliderLead" min="1" max="14" value="3" oninput="handleLeadSlider(this.value)" class="range range-secondary range-md flex-1" />
+                                </div>
+                            </div>
+
+                            <!-- Safety Buffer (Weekend Risks etc) -->
+                            <div class="form-control">
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="label font-bold text-sm">🛡️ Weekend Risks / Buffer Stock</label>
+                                    <span class="badge badge-lg badge-neutral font-mono font-bold" id="valBufferText">1 pack extra</span>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" id="sliderBuffer" min="0" max="5" value="1" oninput="handleBufferSlider(this.value)" class="range range-accent range-md flex-1" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delete Button at Bottom -->
+                    <div class="mt-8 pt-4 border-t border-base-200 flex justify-between">
+                        <button onclick="deleteCurrentItem()" class="btn btn-error btn-outline btn-sm">🗑️ Delete This Item</button>
+                        <span class="text-xs text-base-content/40 self-center">Changes save automatically</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Default seed data if local storage is blank
+        const defaultItems = [
+            { id: "1", name: "🧽 Dishwasher Tabs", usageDays: 45, leadDays: 4, buffer: 1 },
+            { id: "2", name: "🧴 Laundry Detergent", usageDays: 30, leadDays: 3, buffer: 1 },
+            { id: "3", name: "🧻 Toilet Paper Jumbo", usageDays: 14, leadDays: 2, buffer: 2 }
+        ];
+
+        let items = JSON.parse(localStorage.getItem('home_kanban_presets')) || defaultItems;
+        let currentId = items[0] ? items[0].id : "";
+
+        // UI Initialization
+        function init() {
+            renderPresets();
+            loadItemToForm(currentId);
+        }
+
+        function renderPresets() {
+            const listContainer = document.getElementById('presetList');
+            listContainer.innerHTML = '';
+            
+            items.forEach(item => {
+                const isActive = item.id === currentId;
+                const btn = document.createElement('button');
+                btn.className = `btn btn-lg h-auto py-4 text-left justify-start font-bold text-lg shadow-sm normal-case \${isActive ? 'btn-primary' : 'btn-white bg-base-100 border-base-300'}`;
+                btn.onclick = () => selectItem(item.id);
+                btn.innerHTML = `
+                    <div class="truncate w-full">
+                        <div class="text-base">\${item.name || 'Unnamed Thing'}</div>
+                        <div class="text-xs opacity-60 font-normal mt-0.5">Every \${item.usageDays} days • Buffer: \${item.buffer}</div>
+                    </div>
+                `;
+                listContainer.appendChild(btn);
+            });
+            localStorage.setItem('home_kanban_presets', JSON.stringify(items));
+        }
+
+        function selectItem(id) {
+            currentId = id;
+            renderPresets();
+            loadItemToForm(id);
+        }
+
+        function loadItemToForm(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) {
+                // Clear inputs if list is empty
+                document.getElementById('calcName').value = "";
+                calculateKanban(0, 0, 0);
+                return;
+            }
+
+            document.getElementById('calcName').value = item.name;
+            document.getElementById('sliderUsage').value = item.usageDays;
+            document.getElementById('sliderLead').value = item.leadDays;
+            document.getElementById('sliderBuffer').value = item.buffer;
+
+            // Trigger manual text adjustments and math recalculation
+            handleUsageSlider(item.usageDays, false);
+            handleLeadSlider(item.leadDays, false);
+            handleBufferSlider(item.buffer, false);
+            
+            calculateKanban(item.usageDays, item.leadDays, item.buffer);
+        }
+
+        // Realtime Data Updates
+        function updateCurrentItem(key, value) {
+            const item = items.find(i => i.id === currentId);
+            if (item) {
+                item[key] = value;
+                if (key === 'name') {
+                    // Update list text without resetting form focus
+                    renderPresets();
+                } else {
+                    localStorage.setItem('home_kanban_presets', JSON.stringify(items));
+                }
+            }
+        }
+
+        // Slider Input Interceptors
+        function handleUsageSlider(val, shouldCalculate = true) {
+            document.getElementById('valUsageText').innerText = `1 pack / \${val} days`;
+            if (shouldCalculate) {
+                updateCurrentItem('usageDays', parseInt(val));
+                recalcActiveForm();
+            }
+        }
+
+        function handleLeadSlider(val, shouldCalculate = true) {
+            document.getElementById('valLeadText').innerText = `\${val} days delay`;
+            if (shouldCalculate) {
+                updateCurrentItem('leadDays', parseInt(val));
+                recalcActiveForm();
+            }
+        }
+
+        function handleBufferSlider(val, shouldCalculate = true) {
+            document.getElementById('valBufferText').innerText = `\${val} pack safety`;
+            if (shouldCalculate) {
+                updateCurrentItem('buffer', parseInt(val));
+                recalcActiveForm();
+            }
+        }
+
+        function recalcActiveForm() {
+            const usage = parseInt(document.getElementById('sliderUsage').value);
+            const lead = parseInt(document.getElementById('sliderLead').value);
+            const buffer = parseInt(document.getElementById('sliderBuffer').value);
+            calculateKanban(usage, lead, buffer);
+        }
+
+        // Core Lean Production Math Engine
+        function calculateKanban(usageDays, leadDays, buffer) {
+            if (!currentId) return;
+            
+            // Daily usage proportion fraction
+            const dailyUsage = 1 / usageDays; 
+            
+            // Raw stock expected to exhaust during transit period
+            const transitUsage = dailyUsage * leadDays; 
+            
+            // Reorder Point = transit need + risk safety stock
+            const exactRop = transitUsage + buffer;
+            
+            // Ceil because you can only order/fetch whole practical packaging sets
+            const displayRop = Math.ceil(exactRop);
+            
+            // Target inventory to store (Economic Quantity ceiling base)
+            const displayTarget = Math.ceil(displayRop + 1);
+
+            document.getElementById('outRop').innerText = displayRop;
+            document.getElementById('outTarget').innerText = displayTarget;
+        }
+
+        // CRUD Actions
+        function createNewItem() {
+            const newId = Date.now().toString();
+            const newItem = {
+                id: newId,
+                name: "🆕 New Item Preset",
+                usageDays: 30,
+                leadDays: 3,
+                buffer: 1
+            };
+            items.push(newItem);
+            currentId = newId;
+            renderPresets();
+            loadItemToForm(newId);
+        }
+
+        function deleteCurrentItem() {
+            if (!currentId) return;
+            items = items.filter(i => i.id !== currentId);
+            currentId = items[0] ? items[0].id : "";
+            renderPresets();
+            loadItemToForm(currentId);
+        }
+
+        // JSON Data Import / Export Functional Handlers
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `home_kanban_presets_\${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        items = imported;
+                        currentId = items[0] ? items[0].id : "";
+                        renderPresets();
+                        loadItemToForm(currentId);
+                        alert("🎒 Presets imported successfully!");
+                    } else {
+                        alert("Invalid file structure. Must be a JSON array.");
+                    }
+                } catch (err) {
+                    alert("Error parsing file contents.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Go!
+        init();
+    </script>
+</body>
+</html>

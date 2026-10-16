@@ -1,6 +1,6 @@
 import type { PresetRepository } from '../data/presets';
 import { newId } from '../domain/ids';
-import type { StockItem, StockRequirements } from '../domain/stock-item';
+import { FRESHNESS_NEVER, type StockItem, type StockRequirements } from '../domain/stock-item';
 
 export interface ItemStoreState {
   readonly items: readonly StockItem[];
@@ -18,7 +18,12 @@ export interface ItemStoreOptions {
 }
 
 const NAME_FOR_NEW_ITEM = 'New thing';
-const DEFAULTS_FOR_NEW_ITEM: StockRequirements = { usageDays: 30, leadDays: 3, extraDays: 30 };
+const DEFAULTS_FOR_NEW_ITEM: StockRequirements = {
+  usageDays: 30,
+  leadDays: 3,
+  extraDays: 30,
+  freshDays: FRESHNESS_NEVER,
+};
 
 /**
  * Holds every preset and the current selection. Every change is written

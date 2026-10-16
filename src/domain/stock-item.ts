@@ -9,6 +9,12 @@ export interface StockRequirements {
   readonly leadDays: number;
   /** Extra days of stock kept on top of the tightly calculated minimum. */
   readonly extraDays: number;
+  /**
+   * How many days the thing stays good once it is opened. Butter eaten over a
+   * fortnight but turned after a week is gone in a week, however it went.
+   * Zero is for things that will not keep at all — fresh bread, milk.
+   */
+  readonly freshDays: number;
 }
 
 /** A named preset: the "THING" plus how it is used. */
@@ -19,3 +25,10 @@ export interface StockItem extends StockRequirements {
 
 /** Shown instead of a blank title, so a preset is never nameless on screen. */
 export const UNNAMED_ITEM = 'Unnamed thing';
+
+/**
+ * The top of the freshness slider, and the same maximum the usage slider has.
+ * A year of shelf life changes nothing about how a household plans, so that
+ * position means "never spoils" rather than a shelf life of exactly 365 days.
+ */
+export const FRESHNESS_NEVER = 365;

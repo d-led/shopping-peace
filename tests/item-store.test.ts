@@ -2,24 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { ItemStore, type ItemStoreState } from '../src/app/item-store';
 import { LocalStoragePresetRepository, PRESETS_STORAGE_KEY } from '../src/data/presets';
 import { parsePresets, serializePresets } from '../src/data/presets-file';
-import type { StockItem } from '../src/domain/stock-item';
+import { FRESHNESS_NEVER, type StockItem } from '../src/domain/stock-item';
 import { FakeStorage } from './support/fake-storage';
+import { thing } from './support/items';
 
-const detergent: StockItem = {
-  id: 'detergent',
-  name: '🧴 Laundry detergent',
-  usageDays: 30,
-  leadDays: 3,
-  extraDays: 30,
-};
+const detergent = thing({ id: 'detergent', name: '🧴 Laundry detergent' });
 
-const tabs: StockItem = {
+const tabs = thing({
   id: 'tabs',
   name: '🧽 Dishwasher tabs',
   usageDays: 45,
   leadDays: 4,
   extraDays: 20,
-};
+});
 
 interface App {
   readonly store: ItemStore;
@@ -71,6 +66,11 @@ describe('things being added and edited', () => {
     expect(added.id).toBe('brand-new');
   });
 
+  it('gives a brand new thing numbers that already work', () => {
+    const { store } = openApp([detergent]);
+    expect(store.add().freshDays).toBe(FRESHNESS_NEVER);
+  });
+
   it('saves every change straight away, with no save button anywhere', () => {
     const { store, stored } = openApp([detergent]);
     store.add();
@@ -87,10 +87,17 @@ describe('things being added and edited', () => {
     ]);
   });
 
-  it('changes one number at a time', () => {
-    const { store } = openApp([detergent]);
+  it('changes one number at a time, and leaves the rest of the shelf alone', () => {
+    const { store, stored } = openApp([detergent, tabs]);
     store.adjust('detergent', { extraDays: 45 });
     expect(store.getState().selected).toEqual({ ...detergent, extraDays: 45 });
+    expect(stored()).toEqual([{ ...detergent, extraDays: 45 }, tabs]);
+  });
+
+  it('remembers a shelf life, so it survives a reload', () => {
+    const { store, stored } = openApp([detergent]);
+    store.adjust('detergent', { freshDays: 7 });
+    expect(stored()[0]?.freshDays).toBe(7);
   });
 });
 
@@ -137,13 +144,7 @@ describe('bringing the starter things back', () => {
   });
 
   it('leaves the things the household thought up alone', () => {
-    const mine: StockItem = {
-      id: 'mine',
-      name: '🧼 Dish soap',
-      usageDays: 20,
-      leadDays: 2,
-      extraDays: 40,
-    };
+    const mine = thing({ id: 'mine', name: '🧼 Dish soap', usageDays: 20, extraDays: 40 });
     const { store, stored } = openApp([mine]);
 
     store.restoreDefaults();
@@ -153,7 +154,7 @@ describe('bringing the starter things back', () => {
   });
 
   it('recognises a starter by its name, however it got there', () => {
-    const { store } = openApp([{ ...detergent, id: 'copied-by-hand' }]);
+    const { store } = openApp([thing({ ...detergent, id: 'copied-by-hand' })]);
 
     expect(store.restoreDefaults()).toBe(1);
   });

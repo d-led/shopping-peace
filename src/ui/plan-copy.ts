@@ -1,6 +1,5 @@
-import type { StockItem } from '../domain/stock-item';
-import { UNNAMED_ITEM } from '../domain/stock-item';
-import type { StockPlan } from '../domain/stock-plan';
+import { effectiveUsageDays, type StockPlan } from '../domain/stock-plan';
+import { UNNAMED_ITEM, type StockItem } from '../domain/stock-item';
 
 /** What to call a thing on screen, even when it has not been named yet. */
 export function itemName(item: StockItem): string {
@@ -14,8 +13,17 @@ export function planHeadline(plan: StockPlan): string {
 
 /** How long a full top-up lasts — the number a household can picture. */
 export function planCover(item: StockItem, plan: StockPlan): string {
-  const days = Math.round(plan.targetStock * item.usageDays);
-  return `${units(plan.targetStock)} ≈ ${days} ${days === 1 ? 'day' : 'days'} of cover.`;
+  const cover = Math.round(plan.targetStock * effectiveUsageDays(item));
+  return `${units(plan.targetStock)} ≈ ${cover} ${cover === 1 ? 'day' : 'days'} of cover.`;
+}
+
+/**
+ * Said out loud when a thing turns before the household gets through a unit,
+ * because the numbers below then look higher than they used to.
+ */
+export function spoilsWarning(item: StockItem): string {
+  const turns = item.freshDays === 0 ? 'at once' : `${days(item.freshDays)} after opening`;
+  return `It turns ${turns}, though one unit lasts ${days(item.usageDays)} — the plan counts a unit as gone in ${days(effectiveUsageDays(item))}.`;
 }
 
 /** Says out loud how much of the shelf is spare, since the tight part is small. */

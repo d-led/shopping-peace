@@ -1,5 +1,7 @@
-import { useEffect } from 'hono/jsx/dom';
+import { useEffect, useState } from 'hono/jsx/dom';
+import { withEmoji } from '../data/emoji';
 import type { StockItem } from '../domain/stock-item';
+import { EmojiPicker } from './EmojiPicker';
 import { itemName, itemSummary } from './plan-copy';
 import { TEXT } from './text';
 
@@ -50,6 +52,17 @@ export function ThingPicker({
   }, [onConfirm]);
 
   const current = items.find((item) => item.id === currentId);
+  const [pickingEmoji, setPickingEmoji] = useState(false);
+
+  // Naming and emoji go together: after a picture is picked, the caret belongs
+  // in the name, ready for what it is a picture of.
+  const putEmojiInFrontOf = (symbol: string) => {
+    if (current === undefined) {
+      return;
+    }
+    onRename(current.id, withEmoji(current.name, symbol));
+    document.getElementById(THING_NAME_FIELD_ID)?.focus();
+  };
 
   return (
     <div
@@ -145,6 +158,16 @@ export function ThingPicker({
                   onRename(current.id, (event.target as HTMLInputElement).value)
                 }
               />
+              <button
+                type="button"
+                class={`btn btn-lg w-full h-auto rounded-none mt-2 ${TEXT.body}`}
+                aria-expanded={pickingEmoji ? 'true' : 'false'}
+                title="Find an emoji by what it is"
+                onClick={() => setPickingEmoji(!pickingEmoji)}
+              >
+                🙂 Emoji
+              </button>
+              {pickingEmoji && <EmojiPicker onPick={putEmojiInFrontOf} />}
             </div>
           )}
 

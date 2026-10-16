@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { StockItem } from '../src/domain/stock-item';
 import { planStock } from '../src/domain/stock-plan';
 import {
   countThings,
@@ -8,15 +7,27 @@ import {
   planCover,
   planHeadline,
   spareNote,
+  spoilsWarning,
 } from '../src/ui/plan-copy';
+import { thing } from './support/items';
 
-const detergent: StockItem = {
+const detergent = thing({
   id: 'detergent',
   name: '🧴 Laundry detergent',
   usageDays: 30,
   leadDays: 3,
   extraDays: 60,
-};
+});
+
+/** Eaten over a fortnight, but only good for a week once it is open. */
+const butter = thing({
+  id: 'butter',
+  name: '🧈 Butter',
+  usageDays: 14,
+  leadDays: 2,
+  extraDays: 7,
+  freshDays: 7,
+});
 
 describe('the instruction the household reads first', () => {
   it('reads as one sentence: when, how many, how many to keep', () => {
@@ -33,17 +44,36 @@ describe('the instruction the household reads first', () => {
     const single = { ...detergent, leadDays: 0, extraDays: 1 };
     expect(planCover(single, planStock(single))).toBe('1 unit ≈ 30 days of cover.');
   });
+
+  it('counts a perishable at the size it is really gone in', () => {
+    // Two units of butter, each gone a week after opening.
+    expect(planCover(butter, planStock(butter))).toBe('2 units ≈ 14 days of cover.');
+  });
 });
 
 describe('saying how much of the shelf is spare', () => {
   it('names the spare count, so the tight half is not mistaken for the whole', () => {
-    expect(spareNote(planStock({ usageDays: 30, leadDays: 3, extraDays: 60 }))).toBe(
+    expect(spareNote(planStock(thing({ usageDays: 30, leadDays: 3, extraDays: 60 })))).toBe(
       'units — 2 spare',
     );
   });
 
   it('says nothing about a spare when there is none', () => {
-    expect(spareNote(planStock({ usageDays: 30, leadDays: 3, extraDays: 0 }))).toBe('units');
+    expect(spareNote(planStock(thing({ usageDays: 30, leadDays: 3, extraDays: 0 })))).toBe('units');
+  });
+});
+
+describe('explaining a thing that turns before it is finished', () => {
+  it('names the shelf life, the unit, and the size the plan counts on', () => {
+    expect(spoilsWarning(butter)).toBe(
+      'It turns 7 days after opening, though one unit lasts 14 days — the plan counts a unit as gone in 7 days.',
+    );
+  });
+
+  it('says a thing that will not keep at all is gone at once', () => {
+    expect(spoilsWarning(thing({ usageDays: 3, freshDays: 0 }))).toBe(
+      'It turns at once, though one unit lasts 3 days — the plan counts a unit as gone in 1 day.',
+    );
   });
 });
 

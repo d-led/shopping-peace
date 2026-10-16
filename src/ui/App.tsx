@@ -1,6 +1,7 @@
 /** @jsxImportSource hono/jsx/dom */
 import { useState } from 'hono/jsx/dom';
 import type { ItemStore } from '../app/item-store';
+import { BUILD_SHA } from '../build';
 import {
   InvalidPresetFileError,
   exportFilename,
@@ -9,6 +10,7 @@ import {
 } from '../data/presets-file';
 import type { StockItem, StockRequirements } from '../domain/stock-item';
 import { ItemEditor } from './ItemEditor';
+import { SourceStamp } from './SourceStamp';
 import { THING_NAME_FIELD_ID, ThingPicker } from './ThingPicker';
 import { downloadJson } from './download';
 import { countThings } from './plan-copy';
@@ -94,6 +96,10 @@ export function App({ store }: { readonly store: ItemStore }) {
             onOpenThingPicker={() => setPickerOpen(true)}
           />
         )}
+
+        <div class="mt-6 md:mt-8">
+          <SourceStamp sha={BUILD_SHA} />
+        </div>
       </main>
 
       {pickerOpen && selected !== null && (

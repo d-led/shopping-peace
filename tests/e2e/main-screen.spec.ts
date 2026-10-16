@@ -1,5 +1,16 @@
-import { expect, test } from '@playwright/test';
-import { openFreshApp, paintedFontSizes } from './support/app';
+import { expect, test } from './support/coverage';
+import type { StockItem } from '../../src/domain/stock-item';
+import { openAppWith, openFreshApp, paintedFontSizes } from './support/app';
+
+/** Eaten over a fortnight, but sour a week after opening. */
+const perishable: StockItem = {
+  id: 'butter',
+  name: '🧈 Butter',
+  usageDays: 14,
+  leadDays: 2,
+  extraDays: 7,
+  freshDays: 7,
+};
 
 test.describe('the screen a household opens', () => {
   test('shows the numbers for the first thing straight away', async ({ page }) => {
@@ -37,6 +48,10 @@ test.describe('the screen a household opens', () => {
     await page.locator('[aria-haspopup="dialog"]').click();
 
     expect(await sideways(), 'the picker is wider than the screen').toBeLessThanOrEqual(0);
+
+    await page.getByRole('button', { name: /Emoji/u }).click();
+
+    expect(await sideways(), 'the emoji search is wider than the screen').toBeLessThanOrEqual(0);
   });
 
   test('puts both numbers above the fold, with no scrolling at all', async ({ page }) => {
@@ -78,15 +93,49 @@ test.describe('the screen a household opens', () => {
       ),
     );
 
-    expect(labelSizes).toHaveLength(3);
+    // How long a unit lasts, how long a fetch takes, the emergency reserve,
+    // and how long the thing stays fresh after opening.
+    expect(labelSizes).toHaveLength(4);
     expect(Math.min(...labelSizes), 'a slider label is caption-sized').toBeGreaterThanOrEqual(16);
+  });
+
+  test('warns when a thing turns before a unit is finished', async ({ page }) => {
+    await openAppWith(page, [perishable]);
+
+    await expect(page.getByTestId('spoil-warning')).toContainText('It turns 7 days after opening');
+    await expect(page.getByTestId('target-stock')).toHaveText('2');
+  });
+
+  test('says nothing about turning for a thing that keeps', async ({ page }) => {
+    await openFreshApp(page);
+
+    await expect(page.getByTestId('spoil-warning')).toHaveCount(0);
+  });
+
+  test('names the ends of the shelf life slider instead of leaving them as numbers', async ({
+    page,
+  }) => {
+    await openAppWith(page, [{ ...perishable, freshDays: 0 }]);
+
+    await expect(page.getByText('spoils at once')).toBeVisible();
+
+    await page.locator('#fresh-days').fill('365');
+
+    await expect(page.getByText('never spoils')).toBeVisible();
+  });
+
+  test('says where it came from, and which commit this copy is', async ({ page }) => {
+    await openFreshApp(page);
+
+    await expect(page.getByRole('link', { name: 'Source on GitHub' })).toBeVisible();
+    await expect(page.getByTestId('build-sha')).toHaveText(/^[0-9a-f]{7}$/u);
   });
 
   test('keeps renaming and deleting off the main screen', async ({ page }) => {
     await openFreshApp(page);
 
-    await expect(page.getByRole('button', { name: /Delete/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Delete/u })).toHaveCount(0);
     await expect(page.locator('#thing-name')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /Export/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Export/u })).toHaveCount(0);
   });
 });

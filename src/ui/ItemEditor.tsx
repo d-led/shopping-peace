@@ -1,8 +1,8 @@
-import type { StockItem, StockRequirements } from '../domain/stock-item';
-import { planStock } from '../domain/stock-plan';
+import { FRESHNESS_NEVER, type StockItem, type StockRequirements } from '../domain/stock-item';
+import { planStock, spoilsBeforeEmpty } from '../domain/stock-plan';
 import { KpiCard } from './KpiCard';
 import { StepSlider } from './StepSlider';
-import { itemName, planCover, planHeadline, spareNote } from './plan-copy';
+import { itemName, planCover, planHeadline, spareNote, spoilsWarning } from './plan-copy';
 import { TEXT } from './text';
 
 /** Slider limits: wide enough for a year's worth of a slow item, tight enough
@@ -11,6 +11,7 @@ export const LIMITS = {
   usageDays: { min: 1, max: 365 },
   leadDays: { min: 0, max: 60 },
   extraDays: { min: 1, max: 180 },
+  freshDays: { min: 0, max: FRESHNESS_NEVER },
 } as const;
 
 export interface ItemEditorProps {
@@ -41,6 +42,16 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             </span>
           </button>
         </div>
+
+        {spoilsBeforeEmpty(item) && (
+          <p
+            class={`alert alert-warning rounded-none ${TEXT.small}`}
+            role="alert"
+            data-testid="spoil-warning"
+          >
+            ⏰ {spoilsWarning(item)}
+          </p>
+        )}
 
         <div class="grid grid-cols-2 gap-3 md:gap-4">
           <KpiCard
@@ -98,6 +109,18 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             min={LIMITS.extraDays.min}
             max={LIMITS.extraDays.max}
             onChange={(extraDays) => onChange(item.id, { extraDays })}
+          />
+          <StepSlider
+            id="fresh-days"
+            tone="info"
+            label="🕐 Fresh after opening"
+            unit="day"
+            minLabel="spoils at once"
+            maxLabel="never spoils"
+            value={item.freshDays}
+            min={LIMITS.freshDays.min}
+            max={LIMITS.freshDays.max}
+            onChange={(freshDays) => onChange(item.id, { freshDays })}
           />
         </div>
 

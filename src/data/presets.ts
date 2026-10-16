@@ -1,5 +1,5 @@
 import { newId } from '../domain/ids';
-import type { StockItem } from '../domain/stock-item';
+import { FRESHNESS_NEVER, type StockItem } from '../domain/stock-item';
 import { parsePresets, serializePresets } from './presets-file';
 
 /** Where the presets live in this browser. */
@@ -44,11 +44,15 @@ export class LocalStoragePresetRepository implements PresetRepository {
 
 /** The presets a household finds on its first visit. */
 export function starterPresets(createId: () => string = newId): StockItem[] {
+  const never = FRESHNESS_NEVER;
   return [
-    { id: createId(), name: '🧽 Dishwasher tabs', usageDays: 45, leadDays: 4, extraDays: 20 },
-    { id: createId(), name: '🫧 Dishwasher detergent', usageDays: 60, leadDays: 4, extraDays: 30 },
-    { id: createId(), name: '🧴 Laundry detergent', usageDays: 30, leadDays: 3, extraDays: 60 },
-    { id: createId(), name: '🧻 Toilet paper (jumbo)', usageDays: 14, leadDays: 2, extraDays: 21 },
-    { id: createId(), name: '🐾 Cat litter', usageDays: 21, leadDays: 5, extraDays: 42 },
+    { id: createId(), name: '🧽 Dishwasher tabs', usageDays: 45, leadDays: 4, extraDays: 20, freshDays: never },
+    { id: createId(), name: '🫧 Dishwasher detergent', usageDays: 60, leadDays: 4, extraDays: 30, freshDays: never },
+    { id: createId(), name: '🧴 Laundry detergent', usageDays: 30, leadDays: 3, extraDays: 60, freshDays: never },
+    { id: createId(), name: '🧻 Toilet paper (jumbo)', usageDays: 14, leadDays: 2, extraDays: 21, freshDays: never },
+    { id: createId(), name: '🐾 Cat litter', usageDays: 21, leadDays: 5, extraDays: 42, freshDays: never },
+    // The perishable one, so the freshness slider can be seen doing something:
+    // eaten over a fortnight, but sour a week after opening.
+    { id: createId(), name: '🧈 Butter', usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7 },
   ];
 }

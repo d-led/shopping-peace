@@ -32,10 +32,10 @@ export async function openThingPicker(page: Page): Promise<void> {
 /** Every text size the browser actually painted, largest last. */
 export function paintedFontSizes(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const TEXTUAL_INPUTS = ['text', 'number', 'search', 'tel', 'url', 'email', 'password'];
+    const TEXTUAL_INPUTS = new Set(['text', 'number', 'search', 'tel', 'url', 'email', 'password']);
     const showsText = (element: Element): boolean => {
       if (element instanceof HTMLInputElement) {
-        return TEXTUAL_INPUTS.includes(element.type) && element.value !== '';
+        return TEXTUAL_INPUTS.has(element.type) && element.value !== '';
       }
       if (element instanceof HTMLTextAreaElement) {
         return element.value !== '';
@@ -54,7 +54,7 @@ export function paintedFontSizes(page: Page): Promise<string[]> {
       }
       sizes.add(style.fontSize);
     }
-    return [...sizes].sort();
+    return [...sizes].toSorted();
   });
 }
 

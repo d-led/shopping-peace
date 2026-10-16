@@ -1,8 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
-import type { StockItem } from '../../src/domain/stock-item';
+import { expect, test } from './support/coverage';
+import { FRESHNESS_NEVER, type StockItem } from '../../src/domain/stock-item';
 import { openAppWith, openFreshApp, openThingPicker, paintedFontSizes } from './support/app';
 
 /** 1 unit lasts 30 days, 3 days to fetch, 30 extra: fetch at 1, keep 2. */
@@ -12,6 +12,7 @@ const detergent: StockItem = {
   usageDays: 30,
   leadDays: 3,
   extraDays: 30,
+  freshDays: FRESHNESS_NEVER,
 };
 
 /** Fast used, slow to fetch: fetch at 5, keep 8. */
@@ -21,6 +22,7 @@ const tabs: StockItem = {
   usageDays: 10,
   leadDays: 45,
   extraDays: 30,
+  freshDays: FRESHNESS_NEVER,
 };
 
 test.describe('the full screen of things', () => {
@@ -29,7 +31,7 @@ test.describe('the full screen of things', () => {
     await openThingPicker(page);
     const picker = page.getByRole('dialog');
 
-    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/ })).toBeVisible();
+    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toBeVisible();
 
     // No ellipsis anywhere: a long name wraps instead of being clipped.
     const clipped = await picker
@@ -39,7 +41,7 @@ test.describe('the full screen of things', () => {
       );
     expect(clipped, 'a thing name is clipped with an ellipsis').toBe(0);
 
-    await picker.getByRole('button', { name: /🧽 Dishwasher tabs/ }).click();
+    await picker.getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
 
     // The sheet stays put, and now points at the thing that was just picked.
     await expect(picker).toBeVisible();
@@ -55,7 +57,7 @@ test.describe('the full screen of things', () => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
 
-    await page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/ }).dblclick();
+    await page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u }).dblclick();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
@@ -67,7 +69,7 @@ test.describe('the full screen of things', () => {
     await openThingPicker(page);
     const picker = page.getByRole('dialog');
 
-    await picker.getByRole('button', { name: /🧽 Dishwasher tabs/ }).click();
+    await picker.getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
     await expect(page.locator('#thing-name')).toHaveValue('🧽 Dishwasher tabs');
 
     await page.locator('#thing-name').fill('Fairy tabs');
@@ -78,7 +80,7 @@ test.describe('the full screen of things', () => {
     // A reload opens the first thing again, but the new name stuck.
     await page.reload();
     await openThingPicker(page);
-    await expect(page.getByRole('dialog').getByRole('button', { name: /Fairy tabs/ })).toBeVisible();
+    await expect(page.getByRole('dialog').getByRole('button', { name: /Fairy tabs/u })).toBeVisible();
   });
 
   test('uses no more than three text sizes here either', async ({ page }) => {
@@ -102,6 +104,25 @@ test.describe('the full screen of things', () => {
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
   });
 
+  test('finds an emoji by what it is, and puts it in front of the name', async ({ page }) => {
+    await openAppWith(page, [detergent]);
+    await openThingPicker(page);
+    const picker = page.getByRole('dialog');
+
+    await picker.getByRole('button', { name: /Emoji/u }).click();
+    await page.locator('#emoji-search').fill('milk');
+    await picker.getByRole('button', { name: 'milk', exact: true }).click();
+
+    await expect(page.locator('#thing-name')).toHaveValue('🥛 Laundry detergent');
+    // The sheet stays open, and the caret is back in the name.
+    await expect(page.locator('#thing-name')).toBeFocused();
+
+    await page.locator('#thing-name').fill('🥛 Semi-skimmed milk');
+    await picker.getByRole('button', { name: 'OK' }).click();
+    await page.reload();
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🥛 Semi-skimmed milk');
+  });
+
   test('adds a thing from the + button and hands over the name field', async ({ page }) => {
     await openAppWith(page, [detergent]);
     await openThingPicker(page);
@@ -117,19 +138,19 @@ test.describe('the full screen of things', () => {
 
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧻 Toilet paper');
     await openThingPicker(page);
-    await expect(picker.getByRole('button', { name: /🧻 Toilet paper/ })).toBeVisible();
+    await expect(picker.getByRole('button', { name: /🧻 Toilet paper/u })).toBeVisible();
   });
 
   test('deletes the thing on screen, but only after asking', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
     const picker = page.getByRole('dialog');
-    const deleteButton = picker.getByRole('button', { name: /🗑️ Delete/ });
+    const deleteButton = picker.getByRole('button', { name: /🗑️ Delete/u });
 
     // The one destructive action is the small one, down below a separator.
     const [deleteBox, exportBox] = await Promise.all([
       deleteButton.boundingBox(),
-      picker.getByRole('button', { name: /Export/ }).boundingBox(),
+      picker.getByRole('button', { name: /Export/u }).boundingBox(),
     ]);
     expect(deleteBox).not.toBeNull();
     expect(exportBox).not.toBeNull();
@@ -137,12 +158,12 @@ test.describe('the full screen of things', () => {
 
     page.once('dialog', (dialog) => dialog.dismiss());
     await deleteButton.click();
-    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/ })).toBeVisible();
+    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toBeVisible();
 
     page.once('dialog', (dialog) => dialog.accept());
     await deleteButton.click();
 
-    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/ })).toHaveCount(0);
+    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toHaveCount(0);
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
   });
@@ -154,9 +175,13 @@ test.describe('the full screen of things', () => {
 
     await picker.getByRole('button', { name: '↩️ Restore defaults' }).click();
 
-    await expect(page.getByRole('status')).toContainText('Brought back 4 things');
-    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/ })).toBeVisible();
-    await expect(picker.getByRole('button', { name: /🐾 Cat litter/ })).toBeVisible();
+    await expect(page.getByRole('status')).toContainText('Brought back 5 things');
+    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toBeVisible();
+    await expect(picker.getByRole('button', { name: /🧈 Butter/u })).toBeVisible();
+
+    await page.reload();
+    await openThingPicker(page);
+    await expect(picker.getByRole('button', { name: /🧈 Butter/u })).toBeVisible();
   });
 
   test('restore defaults says so when there is nothing to bring back', async ({ page }) => {
@@ -173,7 +198,11 @@ test.describe('the full screen of things', () => {
 
     await page.getByRole('button', { name: '↩️ Bring back the starter things' }).click();
 
-    await expect(page.getByRole('status')).toContainText('Brought back 5 things');
+    await expect(page.getByRole('status')).toContainText('Brought back 6 things');
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
+
+    // Brought back is not "shown once": the shelf they land on is written down.
+    await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
   });
 });
@@ -214,7 +243,7 @@ test.describe('files in and out', () => {
     ]);
 
     expect(download.suggestedFilename()).toMatch(
-      /^shopping-peace-presets-\d{4}-\d{2}-\d{2}\.json$/,
+      /^shopping-peace-presets-\d{4}-\d{2}-\d{2}\.json$/u,
     );
     const exported = await download.path();
     expect(exported).not.toBeNull();
@@ -237,6 +266,10 @@ test.describe('files in and out', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
     // 20 days a unit, 2 days to fetch, 40 extra days: one tight, two spare.
     await expect(page.getByTestId('target-stock')).toHaveText('3');
+
+    await page.reload();
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
+    await expect(page.getByTestId('target-stock')).toHaveText('3');
   });
 
   test('explains a file it cannot read, and keeps the presets it had', async ({ page }) => {
@@ -248,7 +281,7 @@ test.describe('files in and out', () => {
 
     await expect(page.getByRole('status')).toContainText('not valid JSON');
     await expect(
-      page.getByRole('dialog').getByRole('button', { name: /🧴 Laundry detergent/ }),
+      page.getByRole('dialog').getByRole('button', { name: /🧴 Laundry detergent/u }),
     ).toBeVisible();
   });
 });

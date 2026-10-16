@@ -54,5 +54,7 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, host, () => {
+  // The one place a server script has to talk to whoever started it.
+  // oxlint-disable-next-line no-console
   console.log(`serving ${root} on http://${host}:${port}`);
 });

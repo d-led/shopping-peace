@@ -4,6 +4,7 @@ const TONE_RANGE = {
   primary: 'range-primary',
   secondary: 'range-secondary',
   accent: 'range-accent',
+  info: 'range-info',
 } as const;
 
 export type SliderTone = keyof typeof TONE_RANGE;
@@ -17,6 +18,10 @@ export interface StepSliderProps {
   readonly min: number;
   readonly max: number;
   readonly tone: SliderTone;
+  /** Wording for the bottom of the range, where the bare number misleads. */
+  readonly minLabel?: string;
+  /** Wording for the top of the range, where the bare number misleads. */
+  readonly maxLabel?: string;
   readonly onChange: (value: number) => void;
 }
 
@@ -33,12 +38,16 @@ export function StepSlider({
   min,
   max,
   tone,
+  minLabel,
+  maxLabel,
   onChange,
 }: StepSliderProps) {
   // An imported preset may sit outside the usual range; widen the track rather
   // than lying about the value.
   const highest = Math.max(max, value);
   const sliderId = `${id}-slider`;
+  // At the ends of the range the unit says less than the meaning does.
+  const ending = value === min ? minLabel : value === max ? maxLabel : undefined;
 
   const commit = (wanted: number) => {
     if (!Number.isFinite(wanted)) {
@@ -75,7 +84,7 @@ export function StepSlider({
             }}
           />
           <span class={`font-bold text-base-content/60 ${TEXT.small}`}>
-            {value === 1 ? unit : `${unit}s`}
+            {ending ?? (value === 1 ? unit : `${unit}s`)}
           </span>
         </span>
       </div>

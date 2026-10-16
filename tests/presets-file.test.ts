@@ -5,17 +5,19 @@ import {
   parsePresets,
   serializePresets,
 } from '../src/data/presets-file';
-import type { StockItem } from '../src/domain/stock-item';
+import { FRESHNESS_NEVER, UNNAMED_ITEM } from '../src/domain/stock-item';
+import { thing } from './support/items';
 
-const detergent: StockItem = {
+const detergent = thing({
   id: 'detergent',
   name: '🧴 Laundry detergent',
   usageDays: 30,
   leadDays: 3,
   extraDays: 30,
-};
+});
 
-const noName = '{"usageDays": 30, "leadDays": 3, "extraDays": 30}';
+/** A file written before the freshness slider existed. */
+const withoutFreshness = '{"usageDays": 30, "leadDays": 3, "extraDays": 30}';
 
 describe('presets travelling as a file', () => {
   it('reads back exactly what it wrote', () => {
@@ -39,11 +41,15 @@ describe('presets that arrive incomplete', () => {
   });
 
   it('invents an id when the file has none', () => {
-    expect(parsePresets(`[${noName}]`, () => 'fresh-id')[0]?.id).toBe('fresh-id');
+    expect(parsePresets(`[${withoutFreshness}]`, () => 'fresh-id')[0]?.id).toBe('fresh-id');
   });
 
   it('shows an unnamed preset as "Unnamed thing" rather than dropping it', () => {
-    expect(parsePresets(`[${noName}]`)[0]?.name).toBe('Unnamed thing');
+    expect(parsePresets(`[${withoutFreshness}]`)[0]?.name).toBe(UNNAMED_ITEM);
+  });
+
+  it('takes an older file to mean "this keeps", not "this spoils today"', () => {
+    expect(parsePresets(`[${withoutFreshness}]`)[0]?.freshDays).toBe(FRESHNESS_NEVER);
   });
 });
 
@@ -53,28 +59,34 @@ describe('files that are not preset files', () => {
   });
 
   it('refuses JSON that is not a list', () => {
-    expect(() => parsePresets('{"usageDays": 30}')).toThrow(/list of presets/);
+    expect(() => parsePresets('{"usageDays": 30}')).toThrow(/list of presets/u);
   });
 
   it('refuses a list of things that are not presets', () => {
-    expect(() => parsePresets('["detergent"]')).toThrow(/Preset #1 is not an object/);
+    expect(() => parsePresets('["detergent"]')).toThrow(/Preset #1 is not an object/u);
   });
 
   it('refuses a missing number instead of guessing one', () => {
     expect(() => parsePresets('[{"name": "Detergent"}]')).toThrow(
-      /Preset #1 needs usageDays to be at least 1/,
+      /Preset #1 needs usageDays to be at least 1/u,
     );
   });
 
   it('says which preset in the file is broken', () => {
     expect(() =>
-      parsePresets(`[${noName}, {"usageDays": 0, "leadDays": 3, "extraDays": 0}]`),
-    ).toThrow(/Preset #2 needs usageDays to be at least 1/);
+      parsePresets(`[${withoutFreshness}, {"usageDays": 0, "leadDays": 3, "extraDays": 0}]`),
+    ).toThrow(/Preset #2 needs usageDays to be at least 1/u);
   });
 
   it('refuses a name that is not text', () => {
     expect(() =>
       parsePresets('[{"name": 42, "usageDays": 30, "leadDays": 3, "extraDays": 0}]'),
-    ).toThrow(/not text/);
+    ).toThrow(/not text/u);
+  });
+
+  it('refuses a shelf life before opening', () => {
+    expect(() =>
+      parsePresets('[{"name": "Butter", "usageDays": 14, "leadDays": 2, "extraDays": 7, "freshDays": -1}]'),
+    ).toThrow(/Preset #1 needs freshDays to be at least 0/u);
   });
 });

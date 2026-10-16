@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ItemStore } from '../src/app/item-store';
 import { LocalStoragePresetRepository, PRESETS_STORAGE_KEY } from '../src/data/presets';
 import { parsePresets, serializePresets } from '../src/data/presets-file';
-import type { StockItem } from '../src/domain/stock-item';
+import { FRESHNESS_NEVER, type StockItem } from '../src/domain/stock-item';
 import { App } from '../src/ui/App';
 import { FakeStorage } from './support/fake-storage';
 
@@ -15,6 +15,7 @@ const detergent: StockItem = {
   usageDays: 30,
   leadDays: 3,
   extraDays: 30,
+  freshDays: FRESHNESS_NEVER,
 };
 
 /** A fast-used thing with a long wait: fetch at 5, keep 8. */
@@ -24,6 +25,17 @@ const tabs: StockItem = {
   usageDays: 10,
   leadDays: 45,
   extraDays: 30,
+  freshDays: FRESHNESS_NEVER,
+};
+
+/** Eaten over a fortnight, but sour a week after opening: the plan counts 7. */
+const butter: StockItem = {
+  id: 'butter',
+  name: '🧈 Butter',
+  usageDays: 14,
+  leadDays: 2,
+  extraDays: 7,
+  freshDays: 7,
 };
 
 const mounted: HTMLElement[] = [];
@@ -122,12 +134,41 @@ function pickerButton(container: HTMLElement, label: string): HTMLButtonElement 
   return button(dialog, label);
 }
 
+function emojiChoice(container: HTMLElement, firstKeyword: string): HTMLButtonElement {
+  const choices = [...container.querySelectorAll('[data-testid="emoji-choice"]')];
+  const found = choices.find(
+    (candidate) => candidate.getAttribute('aria-label') === firstKeyword,
+  );
+  if (!(found instanceof HTMLButtonElement)) {
+    throw new Error(`There is no emoji on offer for "${firstKeyword}".`);
+  }
+  return found;
+}
+
+/** Opens the emoji search, and waits for the browser to paint it. */
+async function openEmojiSearch(container: HTMLElement): Promise<void> {
+  pickerButton(container, 'Emoji').click();
+  await vi.waitFor(() => {
+    expect(container.querySelector('#emoji-search')).not.toBeNull();
+  });
+}
+
+/** Waits for that emoji to be offered, then presses it. */
+async function pickEmoji(container: HTMLElement, firstKeyword: string): Promise<void> {
+  await vi.waitFor(() => {
+    expect(emojiChoice(container, firstKeyword)).toBeDefined();
+  });
+  emojiChoice(container, firstKeyword).click();
+}
+
 function saved(storage: FakeStorage): StockItem[] {
   return parsePresets(storage.getItem(PRESETS_STORAGE_KEY) ?? '[]');
 }
 
 function nextFrame(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
 }
 
 describe('what the household sees first', () => {
@@ -338,6 +379,76 @@ describe('the full screen of things', () => {
   });
 });
 
+describe('finding a picture for a thing', () => {
+  it('offers emoji for what was typed, and puts the chosen one in front of the name', async () => {
+    const { container, storage } = openApp([{ ...detergent, name: 'Bar soap' }]);
+    await openThingPicker(container);
+
+    await openEmojiSearch(container);
+    enter(container, 'emoji-search', 'soap');
+    await pickEmoji(container, 'soap');
+
+    await vi.waitFor(() => {
+      expect(field(container, 'thing-name').value).toBe('🧼 Bar soap');
+    });
+    expect(saved(storage)[0]?.name).toBe('🧼 Bar soap');
+  });
+
+  it('swaps the emoji in front instead of stacking a second one', async () => {
+    const { container, storage } = openApp([{ ...detergent, name: '🧴 Laundry detergent' }]);
+    await openThingPicker(container);
+
+    await openEmojiSearch(container);
+    enter(container, 'emoji-search', 'soap');
+    await pickEmoji(container, 'soap');
+
+    await vi.waitFor(() => {
+      expect(saved(storage)[0]?.name).toBe('🧼 Laundry detergent');
+    });
+  });
+
+  it('leaves the sheet open, with the name ready for what the picture is of', async () => {
+    const { container } = openApp([{ ...detergent, name: 'Bar soap' }]);
+    await openThingPicker(container);
+
+    await openEmojiSearch(container);
+    enter(container, 'emoji-search', 'soap');
+    await pickEmoji(container, 'soap');
+
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(field(container, 'thing-name'));
+    });
+    expect(picker(container)).not.toBeNull();
+  });
+
+  it('narrows as more words are typed, and says so when nothing is left', async () => {
+    const { container } = openApp([detergent]);
+    await openThingPicker(container);
+    await openEmojiSearch(container);
+
+    enter(container, 'emoji-search', 'cat litter');
+    await vi.waitFor(() => {
+      expect(container.querySelectorAll('[data-testid="emoji-choice"]')).toHaveLength(1);
+    });
+
+    enter(container, 'emoji-search', 'hedgehog harness');
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('Nothing here for “hedgehog harness”');
+    });
+  });
+
+  it('stays out of the way until it is asked for', async () => {
+    const { container } = openApp([detergent]);
+    await openThingPicker(container);
+
+    expect(container.querySelector('#emoji-search')).toBeNull();
+
+    await openEmojiSearch(container);
+
+    expect(container.querySelector('#emoji-search')).not.toBeNull();
+  });
+});
+
 describe('bringing the starter things back', () => {
   it('brings back a starter thing that was thrown away', async () => {
     const { container, storage } = openApp([tabs]);
@@ -419,12 +530,62 @@ describe('touching the numbers', () => {
     expect(value(container, 'target-stock')).toBe('2');
   });
 
-  it('ignores a half-typed number instead of guessing', async () => {
+  it('ignores a half-typed number instead of guessing', () => {
     const { container, storage } = openApp([detergent]);
 
     enter(container, 'lead-days', '');
 
     expect(saved(storage)[0]?.leadDays).toBe(3);
     expect(value(container, 'reorder-point')).toBe('1');
+  });
+});
+
+describe('a thing that turns before it is finished', () => {
+  it('counts a unit as gone when it turns, in the numbers a household reads', () => {
+    const { container } = openApp([butter]);
+
+    expect(value(container, 'target-stock')).toBe('2');
+    expect(textOf(container)).toContain('2 units ≈ 14 days of cover.');
+  });
+
+  it('says out loud why the numbers are higher than the eating rate suggests', () => {
+    const { container } = openApp([butter]);
+
+    expect(container.querySelector('[data-testid="spoil-warning"]')?.textContent).toContain(
+      'It turns 7 days after opening, though one unit lasts 14 days — the plan counts a unit as gone in 7 days.',
+    );
+  });
+
+  it('keeps quiet about spoiling for a thing that keeps', () => {
+    const { container } = openApp([detergent]);
+
+    expect(container.querySelector('[data-testid="spoil-warning"]')).toBeNull();
+  });
+
+  it('lets a thing be marked as gone as soon as it is opened', async () => {
+    const { container, storage } = openApp([butter]);
+
+    enter(container, 'fresh-days', '0');
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('[data-testid="spoil-warning"]')?.textContent).toContain(
+        'It turns at once',
+      );
+    });
+    // A day is the shortest a unit can count as: 2 for the wait, 7 spare.
+    expect(value(container, 'target-stock')).toBe('9');
+    expect(saved(storage)[0]?.freshDays).toBe(0);
+  });
+
+  it('calls the top of the slider "never spoils" rather than "365 days"', () => {
+    const { container } = openApp([detergent]);
+
+    expect(textOf(container)).toContain('never spoils');
+  });
+
+  it('calls the bottom of the slider "spoils at once" rather than "0 days"', () => {
+    const { container } = openApp([{ ...butter, freshDays: 0 }]);
+
+    expect(textOf(container)).toContain('spoils at once');
   });
 });

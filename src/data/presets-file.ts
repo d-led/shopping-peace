@@ -1,5 +1,5 @@
 import { newId } from '../domain/ids';
-import { UNNAMED_ITEM, type StockItem } from '../domain/stock-item';
+import { FRESHNESS_NEVER, UNNAMED_ITEM, type StockItem } from '../domain/stock-item';
 
 /** Raised when an imported file cannot be understood. */
 export class InvalidPresetFileError extends Error {
@@ -48,6 +48,8 @@ function toStockItem(entry: unknown, index: number, createId: () => string): Sto
     usageDays: readNumber(record.usageDays, index, 'usageDays', 1),
     leadDays: readNumber(record.leadDays, index, 'leadDays', 0),
     extraDays: readNumber(record.extraDays, index, 'extraDays', 0),
+    // Files written before the freshness slider existed mean "never spoils".
+    freshDays: readNumber(record.freshDays ?? FRESHNESS_NEVER, index, 'freshDays', 0),
   };
 }
 

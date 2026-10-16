@@ -50,6 +50,7 @@ npm run dev          # http://localhost:5173, hot reload while you edit
 | `npm run dev`       | dev server with live reload                                |
 | `npm test`          | unit and component tests (Vitest + jsdom)                  |
 | `npm run test:watch`| the same, watching for changes                             |
+| `npm run coverage`  | unit tests with a coverage report in `coverage/`            |
 | `npm run test:e2e`  | browser tests on iPhone, iPad and desktop (Playwright)      |
 | `npm run typecheck` | `tsc --noEmit`                                             |
 | `npm run build`     | typecheck, then build into `dist/`                         |

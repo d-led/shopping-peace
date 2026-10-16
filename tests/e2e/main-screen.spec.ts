@@ -21,6 +21,22 @@ test.describe('the screen a household opens', () => {
     expect(overflowBy, 'the page is wider than the screen').toBeLessThanOrEqual(0);
   });
 
+  test('never scrolls sideways on the narrowest phone, or in the picker', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await openFreshApp(page);
+
+    const sideways = () =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+
+    expect(await sideways(), 'the main screen is wider than the screen').toBeLessThanOrEqual(0);
+
+    await page.locator('[aria-haspopup="dialog"]').click();
+
+    expect(await sideways(), 'the picker is wider than the screen').toBeLessThanOrEqual(0);
+  });
+
   test('puts both numbers above the fold, with no scrolling at all', async ({ page }) => {
     await openFreshApp(page);
 

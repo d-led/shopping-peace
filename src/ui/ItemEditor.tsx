@@ -62,9 +62,11 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
         <p class={`text-center font-bold leading-snug ${TEXT.body}`}>{planHeadline(plan)}</p>
         <p class={`text-center text-base-content/60 ${TEXT.small}`}>{planCover(item, plan)}</p>
 
-        <div class={`divider my-0 font-black uppercase tracking-wider text-base-content/40 ${TEXT.small}`}>
+        <p
+          class={`border-t border-base-200 pt-4 text-center font-black uppercase tracking-wide text-base-content/40 ${TEXT.small}`}
+        >
           Fine-tune the uncertainties
-        </div>
+        </p>
 
         <div class="flex flex-col gap-6">
           <StepSlider

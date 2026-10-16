@@ -46,6 +46,14 @@ describe('the instruction the household reads first', () => {
     expect(planCover(detergent, planStock(detergent))).toBe('3 units ≈ 90 days of cover.');
   });
 
+  it('asks for nothing by number when there is no reserve to rebuild', () => {
+    const noReserve = thing({ usageDays: 30, leadDays: 3, extraDays: 0 });
+
+    expect(planHeadline(planStock(noReserve))).toBe(
+      'Down to 1? Nothing is kept spare, so fetch the next unit as this one runs out.',
+    );
+  });
+
   it('says "unit" when there is exactly one', () => {
     const single = { ...detergent, leadDays: 0, extraDays: 1 };
     expect(planCover(single, planStock(single))).toBe('1 unit ≈ 30 days of cover.');

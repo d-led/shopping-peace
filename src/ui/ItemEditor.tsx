@@ -5,12 +5,16 @@ import { StepSlider } from './StepSlider';
 import { itemName, planCover, planHeadline, spareNote, spoilsWarning } from './copy';
 import { TEXT } from './text';
 
-/** Slider limits: wide enough for a year's worth of a slow item, tight enough
- *  to stay usable with a thumb. */
+/**
+ * Slider limits: wide enough for a year's worth of a slow item, tight enough to
+ * stay usable with a thumb. Every one starts where the plan starts making
+ * sense — no reserve is a choice a household is allowed to make, and the
+ * arithmetic has always handled it.
+ */
 export const LIMITS = {
   usageDays: { min: 1, max: 365 },
   leadDays: { min: 0, max: 60 },
-  extraDays: { min: 1, max: 180 },
+  extraDays: { min: 0, max: 180 },
   freshDays: { min: 0, max: FRESHNESS_NEVER },
 } as const;
 

@@ -614,6 +614,22 @@ describe('touching the numbers', () => {
     expect(saved(storage)[0]?.extraDays).toBe(90);
   });
 
+  it('lets the reserve be nothing at all, for a household living on the lead time', async () => {
+    const { container, storage } = openApp([detergent]);
+
+    enter(container, 'extra-days', '0');
+
+    await vi.waitFor(() => {
+      // Nothing spare to keep, so the tight level is the whole plan.
+      expect(value(container, 'target-stock')).toBe('1');
+    });
+    expect(value(container, 'reorder-point')).toBe('1');
+    expect(textOf(container)).toContain(
+      'Down to 1? Nothing is kept spare, so fetch the next unit as this one runs out.',
+    );
+    expect(saved(storage)[0]?.extraDays).toBe(0);
+  });
+
   it('steps a number with the ± buttons, for hands that cannot aim at a track', async () => {
     const { container } = openApp([detergent]);
 

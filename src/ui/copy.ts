@@ -7,8 +7,16 @@ export function itemName(item: StockItem): string {
   return item.name.trim() === '' ? UNNAMED_ITEM : item.name;
 }
 
-/** The one-line instruction a busy person reads from across the kitchen. */
+/**
+ * The one-line instruction a busy person reads from across the kitchen. With no
+ * reserve nothing is added on top of the tight level, so there is no quantity
+ * to name: the household is living on the lead time itself, and the next unit
+ * is fetched as the last one runs out.
+ */
 export function planHeadline(plan: StockPlan): string {
+  if (plan.fetchQuantity === 0) {
+    return `Down to ${plan.reorderPoint}? Nothing is kept spare, so fetch the next unit as this one runs out.`;
+  }
   return `Down to ${plan.reorderPoint}? Bring home ${plan.fetchQuantity} more and you're back at ${plan.targetStock}.`;
 }
 

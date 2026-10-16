@@ -62,7 +62,7 @@ export function starterPresets(createId: () => string = newId): StockItem[] {
     { id: createId(), name: 'Laundry detergent', emoji: '🧴', usageDays: 30, leadDays: 3, extraDays: 30, freshDays: never, packSize: one },
     // The household's own: a roll every two days, four days to fetch, a
     // fortnight of reserve, and jumbo packs of ten the only size sold.
-    { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageDays: 2, leadDays: 4, extraDays: 14, freshDays: never, packSize: 10 },
+    { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageDays: 2, leadDays: 4, extraDays: 7, freshDays: never, packSize: 10 },
     { id: createId(), name: 'Cat litter', emoji: '🐾', usageDays: 21, leadDays: 5, extraDays: 21, freshDays: never, packSize: one },
     // The perishable one, so the freshness slider can be seen doing something:
     // eaten over a fortnight, but sour a week after opening.

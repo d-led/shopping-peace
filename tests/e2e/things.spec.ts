@@ -194,7 +194,8 @@ test.describe('numbers being changed by hand', () => {
   test('steps with the ± buttons, which need no aiming', async ({ page }) => {
     await openAppWith(page, [detergent]);
 
-    await page.getByRole('button', { name: 'Increase 🛡️ Extra days to keep' }).click();
+    // Matched loosely on purpose: the wording of the label is copy that changes.
+    await page.getByRole('button', { name: /^Increase 🛡️/u }).click();
 
     await expect(page.locator('#extra-days')).toHaveValue('31');
     // 31 extra days no longer fit inside one 30-day unit.

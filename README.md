@@ -123,9 +123,16 @@ four days, three rolls of reserve, ten to a pack.
 
 The shelf ends up *above* the level the cards aim at, and that is the honest
 answer rather than a rounding error: the household wanted three spare rolls and
-could only buy ten, so it lands with eight spare instead of three. The reserve is
-inside the pack, not on top of it — adding a whole pack to the level the cards
-aim at would count the reserve twice.
+could only buy ten, so it lands with eight spare instead of three.
+
+Where this differs from the textbook bulk-quantity rule is the trigger, not the
+padding. That rule keeps the reserve intact *through* the wait, so it fetches
+when five rolls are left and adds a ten-pack to that — fifteen rolls of cupboard
+space. This app fetches when the reserve is spent (two rolls left, which still
+covers the four days), so the ten-pack arrives where the reserve used to be and
+twelve rolls is the most the shelf ever holds: the same protection against
+running out, three rolls less space, and a shelf space figure that is really the
+highest the cupboard gets.
 
 ## Running it
 

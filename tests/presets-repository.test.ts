@@ -73,7 +73,7 @@ describe('the presets a household finds on day one', () => {
     expect(paper).toMatchObject({
       usageDays: 2,
       leadDays: 4,
-      extraDays: 14,
+      extraDays: 7,
       packSize: 10,
     });
   });

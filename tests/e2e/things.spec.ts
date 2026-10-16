@@ -154,9 +154,9 @@ test.describe('the full screen of things', () => {
 
     await picker.getByRole('button', { name: '↩️ Restore defaults' }).click();
 
-    await expect(page.getByRole('status')).toContainText('Brought back 2 things');
+    await expect(page.getByRole('status')).toContainText('Brought back 4 things');
     await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/ })).toBeVisible();
-    await expect(picker.getByRole('button', { name: /🧻 Toilet paper/ })).toBeVisible();
+    await expect(picker.getByRole('button', { name: /🐾 Cat litter/ })).toBeVisible();
   });
 
   test('restore defaults says so when there is nothing to bring back', async ({ page }) => {
@@ -173,7 +173,7 @@ test.describe('the full screen of things', () => {
 
     await page.getByRole('button', { name: '↩️ Bring back the starter things' }).click();
 
-    await expect(page.getByRole('status')).toContainText('Brought back 3 things');
+    await expect(page.getByRole('status')).toContainText('Brought back 5 things');
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
   });
 });

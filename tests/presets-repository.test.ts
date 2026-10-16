@@ -44,18 +44,20 @@ describe('presets living in the browser', () => {
 });
 
 describe('the presets a household finds on day one', () => {
-  it('starts with three things to try', () => {
+  it('starts with five things to try', () => {
     expect(starterPresets(() => 'fixed').map((item) => item.name)).toEqual([
       '🧽 Dishwasher tabs',
+      '🫧 Dishwasher detergent',
       '🧴 Laundry detergent',
       '🧻 Toilet paper (jumbo)',
+      '🐾 Cat litter',
     ]);
   });
 
   it('gives every starter its own id', () => {
     let issued = 0;
     const ids = starterPresets(() => `id-${(issued += 1)}`).map((item) => item.id);
-    expect(new Set(ids).size).toBe(3);
+    expect(new Set(ids).size).toBe(5);
   });
 
   it('describes every starter in whole days', () => {

@@ -54,7 +54,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             tone="warning"
             title="Fetch more at"
             value={plan.reorderPoint}
-            caption="units left"
+            caption="stored units left"
             testId="reorder-point"
           />
         </div>
@@ -92,7 +92,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
           <StepSlider
             id="extra-days"
             tone="accent"
-            label="🛡️ Extra days to keep"
+            label="🛡️ Emergency days reserve"
             unit="day"
             value={item.extraDays}
             min={LIMITS.extraDays.min}

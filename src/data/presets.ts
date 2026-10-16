@@ -46,7 +46,9 @@ export class LocalStoragePresetRepository implements PresetRepository {
 export function starterPresets(createId: () => string = newId): StockItem[] {
   return [
     { id: createId(), name: '🧽 Dishwasher tabs', usageDays: 45, leadDays: 4, extraDays: 20 },
+    { id: createId(), name: '🫧 Dishwasher detergent', usageDays: 60, leadDays: 4, extraDays: 30 },
     { id: createId(), name: '🧴 Laundry detergent', usageDays: 30, leadDays: 3, extraDays: 60 },
     { id: createId(), name: '🧻 Toilet paper (jumbo)', usageDays: 14, leadDays: 2, extraDays: 21 },
+    { id: createId(), name: '🐾 Cat litter', usageDays: 21, leadDays: 5, extraDays: 42 },
   ];
 }

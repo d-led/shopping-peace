@@ -100,8 +100,8 @@ find_tool() {
 
 # The workflows are code too: a bad expression or a job that cannot start is
 # otherwise found by GitHub, at push time, which is the worst moment to hear it.
-# shellcheck is handed over rather than left to be discovered, because the
-# linter would quietly check less on a machine that does not have it.
+# The linter is handed the exact shell checker to run rather than left to find
+# one, since it would quietly check less on a machine that has none.
 stage_workflows() {
   local linter shell
   linter="$(find_tool actionlint)" || {
@@ -145,8 +145,14 @@ stage_coverage() {
 
 # Two halves: ask the linter for every function's complexity, then weigh each
 # one against its own coverage. The complexity rule at its usual threshold only
-# reports the offenders, so this asks for all of them.
+# reports the offenders, so this asks for all of them. Complexity on its own
+# says nothing about risk, so without the unit run there is no number to report.
 stage_metrics() {
+  if ! ls coverage/coverage-final.json >/dev/null 2>&1; then
+    echo "There is no unit coverage to weigh the complexity against."
+    echo "Run the unit stage first, or the whole gate with --full."
+    return 3
+  fi
   cat > "$REPORTS/oxlint-complexity.config.json" <<'CONFIG'
 {
   "rules": { "complexity": ["error", 1] },

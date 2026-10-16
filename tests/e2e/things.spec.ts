@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Page } from '@playwright/test';
 import { expect, test } from './support/coverage';
 import { openAppWith, openThingPicker, paintedFontSizes } from './support/app';
 import { detergent, tabs } from './support/things';
@@ -292,12 +293,8 @@ test.describe('files in and out', () => {
       }),
     );
 
-    await openThingPicker(page);
-    page.once('dialog', (dialog) => dialog.accept());
-    await page.locator('input[type="file"]').setInputFiles(file);
+    await importFile(page, file);
 
-    await expect(page.getByRole('status')).toContainText('Imported 1 thing');
-    await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
     // 20 days a unit, 2 days to fetch, 40 extra days: two spares.
     await expect(page.getByTestId('keep-at-least')).toHaveText('2');
 
@@ -308,19 +305,15 @@ test.describe('files in and out', () => {
 
   test('imports the file it used to write, with the picture inside the name', async ({ page }) => {
     await openAppWith(page, [detergent]);
+    // No version, no emoji field: what this app wrote before the format was
+    // versioned. The file is still read, and the picture is kept.
     const file = await writeTempFile(
       'older.json',
-      // No version, no emoji field: what this app wrote before the format was
-      // versioned. The file is still read, and the picture is kept.
       '[{"id": "soap", "name": "🧼 Dish soap", "usageDays": 20, "leadDays": 2, "extraDays": 40}]',
     );
 
-    await openThingPicker(page);
-    page.once('dialog', (dialog) => dialog.accept());
-    await page.locator('input[type="file"]').setInputFiles(file);
+    await importFile(page, file);
 
-    await expect(page.getByRole('status')).toContainText('Imported 1 thing');
-    await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
     // The picture came out of the name, and the name is just the name now.
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
     await openThingPicker(page);
@@ -360,6 +353,25 @@ test.describe('files in and out', () => {
     ).toBeVisible();
   });
 });
+
+/**
+ * The whole errand of importing a file: choose it, answer the question about
+ * replacing the shelf, and let the app say what came in and get out of the way.
+ * It is handed the file itself, so writing one — the I/O — stays with the test
+ * that has one to write.
+ *
+ * The tests about *not* importing — a file from a newer copy, a file that cannot
+ * be read — take those steps themselves: not importing is the behaviour they
+ * are there to pin down.
+ */
+async function importFile(page: Page, path: string): Promise<void> {
+  await openThingPicker(page);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('input[type="file"]').setInputFiles(path);
+
+  await expect(page.getByRole('status')).toContainText('Imported 1 thing');
+  await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
+}
 
 async function writeTempFile(name: string, contents: string): Promise<string> {
   const path = join(tmpdir(), `shopping-peace-${name}`);

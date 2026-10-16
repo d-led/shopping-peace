@@ -181,6 +181,17 @@ async function pickEmoji(container: HTMLElement, firstKeyword: string): Promise<
 }
 
 /**
+ * The whole errand of putting a picture on a thing: open the search, say what
+ * the picture is of, and take the one that comes back. Every picture test
+ * starts here, because this is where the household starts.
+ */
+async function pickPicture(container: HTMLElement, word: string): Promise<void> {
+  await openEmojiSearch(container);
+  enter(container, 'emoji-search', word);
+  await pickEmoji(container, word);
+}
+
+/**
  * Hands the picker's file input a file, the way the household's file dialog
  * would. Hono aliases `onChange` to the `input` event (React's habit), which is
  * the same event a real file dialog fires — along with `change` — so this is
@@ -460,15 +471,12 @@ describe('finding a picture for a thing', () => {
   it('puts the chosen picture in front of the name without touching the name', async () => {
     const { container, storage } = openApp([{ ...detergent, name: 'Bar soap', emoji: '' }]);
     await openThingPicker(container);
-
-    await openEmojiSearch(container);
-    enter(container, 'emoji-search', 'soap');
-    await pickEmoji(container, 'soap');
+    await pickPicture(container, 'soap');
 
     await vi.waitFor(() => {
-      expect(saved(storage)[0]?.emoji).toBe('🧼');
+      expect(saved(storage)[0]).toEqual({ ...detergent, name: 'Bar soap', emoji: '🧼' });
     });
-    expect(saved(storage)[0]?.name).toBe('Bar soap');
+    // The name is a name, still: the picture sits in front of it, not in it.
     expect(field(container, 'thing-name').value).toBe('Bar soap');
     expect(pickerButton(container, '🧼 Bar soap')).toBeDefined();
   });
@@ -476,25 +484,19 @@ describe('finding a picture for a thing', () => {
   it('swaps the picture instead of stacking a second one', async () => {
     const { container, storage } = openApp([detergent]);
     await openThingPicker(container);
-
-    await openEmojiSearch(container);
-    enter(container, 'emoji-search', 'soap');
-    await pickEmoji(container, 'soap');
+    await pickPicture(container, 'soap');
 
     await vi.waitFor(() => {
-      expect(saved(storage)[0]?.emoji).toBe('🧼');
+      expect(saved(storage)[0]).toEqual({ ...detergent, emoji: '🧼' });
     });
-    expect(saved(storage)[0]?.name).toBe('Laundry detergent');
+    // One picture, not two, and nothing else about the thing moved.
     expect(pickerButton(container, '🧼 Laundry detergent')).toBeDefined();
   });
 
   it('leaves the sheet open, with the name ready for what the picture is of', async () => {
     const { container } = openApp([{ ...detergent, name: 'Bar soap', emoji: '' }]);
     await openThingPicker(container);
-
-    await openEmojiSearch(container);
-    enter(container, 'emoji-search', 'soap');
-    await pickEmoji(container, 'soap');
+    await pickPicture(container, 'soap');
 
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(field(container, 'thing-name'));

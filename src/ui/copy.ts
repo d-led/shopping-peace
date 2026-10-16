@@ -147,6 +147,25 @@ export function resetNotice(discarded: number): string {
     : `Back to the starter things — ${countThings(discarded)} of yours deleted.`;
 }
 
+/**
+ * A notice says its piece and goes. Three words a second is a household reading
+ * over the sink rather than a novel, and the two seconds before that are for
+ * noticing that something appeared at all. Nothing says less than three seconds
+ * or longer than ten, however long the sentence is: a line that will not go
+ * away is a line in the way.
+ */
+const WORDS_PER_SECOND = 3;
+const NOTICING_SECONDS = 2;
+const LEAST_SECONDS = 3;
+const MOST_SECONDS = 10;
+
+export function readingTime(text: string): number {
+  const words = text.split(/\s+/u).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
+  const seconds = Math.ceil(NOTICING_SECONDS + words / WORDS_PER_SECOND);
+
+  return Math.min(MOST_SECONDS, Math.max(LEAST_SECONDS, seconds)) * 1000;
+}
+
 /** What a reset throws away is everything, so it asks first. */
 export function resetQuestion(count: number): string {
   return `Delete all ${countThings(count)} and start again from the starter ones?`;

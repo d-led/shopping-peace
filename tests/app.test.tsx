@@ -695,6 +695,25 @@ describe('being told what just happened', () => {
       expect(container.querySelector('[role="status"]')).toBeNull();
     });
   });
+
+  it('takes it away by itself once the household has had time to read it', async () => {
+    const { container } = openApp([detergent]);
+    await openThingPicker(container);
+    stopTheDownload();
+
+    pickerButton(container, 'Export all').click();
+    await vi.waitFor(() => {
+      expect(container.querySelector('[role="status"]')).not.toBeNull();
+    });
+
+    // "Exported 1 thing." is three words, so three seconds of screen time.
+    await vi.waitFor(
+      () => {
+        expect(container.querySelector('[role="status"]')).toBeNull();
+      },
+      { timeout: 5000 },
+    );
+  });
 });
 
 describe('starting again from the starter things', () => {

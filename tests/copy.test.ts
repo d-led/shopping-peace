@@ -15,6 +15,7 @@ import {
   pictureButtonLabel,
   planCover,
   planHeadline,
+  readingTime,
   resetNotice,
   resetQuestion,
   spoilsWarning,
@@ -237,5 +238,24 @@ describe('words for the things that happen to a shelf', () => {
     expect(resetQuestion(2)).toBe(
       'Delete all 2 things and start again from the starter ones?',
     );
+  });
+});
+
+describe('how long a notice stays on screen', () => {
+  it('gives a short line the three seconds every line gets', () => {
+    expect(readingTime('Exported 2 things.')).toBe(3000);
+  });
+
+  it('gives a longer line longer, at three words a second', () => {
+    // Ten words at three a second, and two seconds to notice it arrived.
+    expect(readingTime('Back to the starter things — 1 thing of yours deleted.')).toBe(6000);
+  });
+
+  it('stops at ten seconds, however much there is to read', () => {
+    expect(readingTime('something went wrong '.repeat(20))).toBe(10_000);
+  });
+
+  it('counts words, not the punctuation between them', () => {
+    expect(readingTime('… — !')).toBe(3000);
   });
 });

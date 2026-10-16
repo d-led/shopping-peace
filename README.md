@@ -380,6 +380,9 @@ Rules the screen follows, since it is used with wet hands:
   `dblclick`: it is also how you zoom;
 - every tap target is thumb-sized, with ± buttons beside each slider for hands
   that cannot aim at a track;
+- a notice says its piece and goes by itself — three seconds for a short line,
+  longer for a longer one at three words a second, never more than ten — and the
+  ✕ is there for anyone who reads faster;
 - nothing is written in a colour the contrast rule rejects — muted text stays at
   70 % of `base-content`, and the theme's error red is darkened in
   `src/style.css`, where the reason is written down.

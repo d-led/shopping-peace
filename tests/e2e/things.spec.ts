@@ -241,6 +241,21 @@ test.describe('files in and out', () => {
     expect(file.things).toEqual([detergent, tabs]);
   });
 
+  test('says what happened, and then gets out of the way on its own', async ({ page }) => {
+    await openAppWith(page, [detergent, tabs]);
+    await openThingPicker(page);
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('dialog').getByRole('button', { name: 'Export all' }).click(),
+    ]);
+    await download.path();
+
+    await expect(page.getByRole('status')).toContainText('Exported 2 things.');
+    // Three words and a picture of a message: three seconds, then gone.
+    await expect(page.getByRole('status')).toHaveCount(0, { timeout: 8000 });
+  });
+
   test('exports one thing, in a file named after it', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);

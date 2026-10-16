@@ -1,4 +1,6 @@
 /** @jsxImportSource hono/jsx/dom */
+import { useEffect } from 'hono/jsx/dom';
+import { readingTime } from './copy';
 import { TEXT } from './text';
 
 /** Something the household should know, said once and then dismissed. */
@@ -14,9 +16,21 @@ export interface NoticeBarProps {
 
 /**
  * The line at the bottom of the screen: what just happened, in the household's
- * own words, and a way to make it go away.
+ * own words, and a way to make it go away. It goes away on its own as well —
+ * long enough to read, no longer.
  */
 export function NoticeBar({ notice, onDismiss }: NoticeBarProps) {
+  useEffect(() => {
+    if (notice === null) {
+      return;
+    }
+    // Keyed on the notice itself, so the same sentence arriving twice — the
+    // same export pressed twice — gets its own reading time rather than what is
+    // left of the first one's.
+    const timer = setTimeout(onDismiss, readingTime(notice.text));
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   if (notice === null) {
     return null;
   }

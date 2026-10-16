@@ -7,11 +7,12 @@ import { FRESHNESS_NEVER, type StockItem } from '../src/domain/stock-item';
 import { FakeStorage } from './support/fake-storage';
 import { thing } from './support/items';
 
-const detergent = thing({ id: 'detergent', name: '🧴 Laundry detergent' });
+const detergent = thing({ id: 'detergent', name: 'Laundry detergent', emoji: '🧴' });
 
 const tabs = thing({
   id: 'tabs',
-  name: '🧽 Dishwasher tabs',
+  name: 'Dishwasher tabs',
+  emoji: '🧽',
   usageDays: 45,
   leadDays: 4,
   extraDays: 20,
@@ -51,7 +52,7 @@ function openApp(stored?: readonly StockItem[]): App {
 
 describe('opening the app', () => {
   it('opens the first thing when this browser has nothing yet', () => {
-    expect(openApp().store.getState().selected?.name).toBe('🧴 Laundry detergent');
+    expect(openApp().store.getState().selected?.name).toBe('Laundry detergent');
   });
 
   it('writes the starter things down, so the next visit shows the same ones', () => {
@@ -117,15 +118,15 @@ describe('things being added and edited', () => {
   it('saves every change straight away, with no save button anywhere', () => {
     const { store, stored } = openApp([detergent]);
     store.add();
-    store.rename('brand-new', '🧻 Toilet paper');
-    expect(stored().find((item) => item.id === 'brand-new')?.name).toBe('🧻 Toilet paper');
+    store.rename('brand-new', 'Toilet paper');
+    expect(stored().find((item) => item.id === 'brand-new')?.name).toBe('Toilet paper');
   });
 
   it('renames only the thing that was touched', () => {
     const { store } = openApp([detergent, tabs]);
     store.rename('tabs', 'Fairy tabs');
     expect(store.getState().items.map((item) => item.name)).toEqual([
-      '🧴 Laundry detergent',
+      'Laundry detergent',
       'Fairy tabs',
     ]);
   });
@@ -141,6 +142,40 @@ describe('things being added and edited', () => {
     const { store, stored } = openApp([detergent]);
     store.adjust('detergent', { freshDays: 7 });
     expect(stored()[0]?.freshDays).toBe(7);
+  });
+});
+
+describe('the picture beside the name', () => {
+  it('starts a new thing with no picture at all', () => {
+    const { store } = openApp([detergent]);
+
+    expect(store.add().emoji).toBe('');
+  });
+
+  it('sets the picture without touching the name', () => {
+    const { store, stored } = openApp([detergent]);
+
+    store.setEmoji('detergent', '🧼');
+
+    expect(store.getState().selected).toEqual({ ...detergent, emoji: '🧼' });
+    expect(stored()[0]?.name).toBe('Laundry detergent');
+  });
+
+  it('takes a picture typed in front of a name as the picture itself', () => {
+    const { store, stored } = openApp([detergent]);
+
+    store.rename('detergent', '🧼 Dish soap');
+
+    expect(store.getState().selected).toEqual({ ...detergent, name: 'Dish soap', emoji: '🧼' });
+    expect(stored()[0]?.emoji).toBe('🧼');
+  });
+
+  it('leaves a picture alone when a name with no picture in it is typed', () => {
+    const { store, stored } = openApp([detergent]);
+
+    store.rename('detergent', 'Dish soap');
+
+    expect(stored()[0]).toEqual({ ...detergent, name: 'Dish soap' });
   });
 });
 
@@ -206,7 +241,7 @@ describe('bringing the starter things back', () => {
   });
 
   it('leaves the things the household thought up alone', () => {
-    const mine = thing({ id: 'mine', name: '🧼 Dish soap', usageDays: 20, extraDays: 40 });
+    const mine = thing({ id: 'mine', name: 'Dish soap', emoji: '🧼', usageDays: 20, extraDays: 40 });
     const { store, stored } = openApp([mine]);
 
     store.restoreDefaults();

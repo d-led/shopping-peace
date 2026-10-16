@@ -59,13 +59,20 @@ function scoreOf(option: EmojiOption, words: readonly string[]): number {
 }
 
 /**
- * The prefix a name already has: one pictograph, plus any variation selector
- * or zero-width joiner that trails it.
+ * The prefix a name has when the picture was written into the text itself: one
+ * pictograph, plus any variation selector or zero-width joiner that trails it.
  */
 const LEADING_EMOJI = /^\p{Extended_Pictographic}(?:\u200d|\ufe0f)*\s*/u;
 
-/** The name with `symbol` in front of it, replacing any emoji already there. */
-export function withEmoji(name: string, symbol: string): string {
-  const bare = name.replace(LEADING_EMOJI, '');
-  return bare === '' ? symbol : `${symbol} ${bare}`;
+/**
+ * A name that carries its picture in the text, taken apart. Files written
+ * before the picture had a field of its own look like this, so they are split
+ * on the way in — and only there: what somebody types stays as they typed it.
+ */
+export function splitEmoji(name: string): { name: string; emoji: string } {
+  const match = LEADING_EMOJI.exec(name);
+  if (match === null) {
+    return { name, emoji: '' };
+  }
+  return { name: name.slice(match[0].length).trim(), emoji: match[0].trim() };
 }

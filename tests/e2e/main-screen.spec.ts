@@ -1,16 +1,13 @@
 import { expect, test } from './support/coverage';
-import type { StockItem } from '../../src/domain/stock-item';
 import { openAppWith, openFreshApp, paintedFontSizes } from './support/app';
+import { perishable } from './support/things';
 
-/** Eaten over a fortnight, but sour a week after opening. */
-const perishable: StockItem = {
-  id: 'butter',
-  name: '🧈 Butter',
-  usageDays: 14,
-  leadDays: 2,
-  extraDays: 7,
-  freshDays: 7,
-};
+/**
+ * What the screen looks like, and what it promises about a household's hands:
+ * the numbers fit, nothing scrolls sideways, the text is big enough to read at
+ * arm's length. This is the spec the two small screens run, because this is the
+ * part that genuinely differs by device.
+ */
 
 test.describe('the screen a household opens', () => {
   test('shows the numbers for the first thing straight away', async ({ page }) => {
@@ -19,8 +16,9 @@ test.describe('the screen a household opens', () => {
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
     await expect(page.getByText('Keep at least')).toBeVisible();
     await expect(page.getByText('Fetch more at')).toBeVisible();
-    await expect(page.getByTestId('reorder-point')).toHaveText('1');
-    await expect(page.getByTestId('target-stock')).toHaveText('2');
+    // One spare above what the four-day wait eats, so fetching starts at none.
+    await expect(page.getByTestId('keep-at-least')).toHaveText('1');
+    await expect(page.getByTestId('fetch-more-at')).toHaveText('0');
     await expect(page.getByText('Saved as you go', { exact: false })).toBeVisible();
   });
 
@@ -49,7 +47,7 @@ test.describe('the screen a household opens', () => {
 
     expect(await sideways(), 'the picker is wider than the screen').toBeLessThanOrEqual(0);
 
-    await page.getByRole('button', { name: /Emoji/u }).click();
+    await page.getByRole('button', { name: /Picture/u }).click();
 
     expect(await sideways(), 'the emoji search is wider than the screen').toBeLessThanOrEqual(0);
   });
@@ -57,7 +55,7 @@ test.describe('the screen a household opens', () => {
   test('puts both numbers above the fold, with no scrolling at all', async ({ page }) => {
     await openFreshApp(page);
 
-    const keep = await page.getByTestId('target-stock').boundingBox();
+    const keep = await page.getByTestId('keep-at-least').boundingBox();
     const viewport = page.viewportSize();
 
     expect(keep).not.toBeNull();
@@ -69,8 +67,8 @@ test.describe('the screen a household opens', () => {
     await openFreshApp(page);
 
     const thing = await page.locator('[aria-haspopup="dialog"]').boundingBox();
-    const keep = await page.getByTestId('target-stock').boundingBox();
-    const fetchAt = await page.getByTestId('reorder-point').boundingBox();
+    const keep = await page.getByTestId('keep-at-least').boundingBox();
+    const fetchAt = await page.getByTestId('fetch-more-at').boundingBox();
 
     expect(thing!.y).toBeLessThan(keep!.y);
     expect(keep!.x).toBeLessThan(fetchAt!.x);
@@ -103,7 +101,8 @@ test.describe('the screen a household opens', () => {
     await openAppWith(page, [perishable]);
 
     await expect(page.getByTestId('spoil-warning')).toContainText('It turns 7 days after opening');
-    await expect(page.getByTestId('target-stock')).toHaveText('2');
+    await expect(page.getByTestId('spoil-warning')).toContainText('really gone in 7 days');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('1');
   });
 
   test('says nothing about turning for a thing that keeps', async ({ page }) => {
@@ -122,6 +121,20 @@ test.describe('the screen a household opens', () => {
     await page.locator('#fresh-days').fill('365');
 
     await expect(page.getByText('never spoils')).toBeVisible();
+  });
+
+  test('keeps the days-of-cover figure for a screen with room for it', async ({ page }) => {
+    await openFreshApp(page);
+    const cover = page.getByText('days of cover');
+    const wide = (page.viewportSize()?.width ?? 0) >= 640;
+
+    if (wide) {
+      await expect(cover).toBeVisible();
+      return;
+    }
+    // On a phone that line belongs to the warning and to nothing else: the
+    // figure is a nicety, and the screen has no room for one.
+    await expect(cover).toBeHidden();
   });
 
   test('says where it came from, and which commit this copy is', async ({ page }) => {

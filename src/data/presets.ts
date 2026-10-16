@@ -46,13 +46,13 @@ export class LocalStoragePresetRepository implements PresetRepository {
 export function starterPresets(createId: () => string = newId): StockItem[] {
   const never = FRESHNESS_NEVER;
   return [
-    { id: createId(), name: '🧽 Dishwasher tabs', usageDays: 45, leadDays: 4, extraDays: 20, freshDays: never },
-    { id: createId(), name: '🫧 Dishwasher detergent', usageDays: 60, leadDays: 4, extraDays: 30, freshDays: never },
-    { id: createId(), name: '🧴 Laundry detergent', usageDays: 30, leadDays: 3, extraDays: 60, freshDays: never },
-    { id: createId(), name: '🧻 Toilet paper (jumbo)', usageDays: 14, leadDays: 2, extraDays: 21, freshDays: never },
-    { id: createId(), name: '🐾 Cat litter', usageDays: 21, leadDays: 5, extraDays: 42, freshDays: never },
+    { id: createId(), name: 'Dishwasher tabs', emoji: '🧽', usageDays: 45, leadDays: 4, extraDays: 20, freshDays: never },
+    { id: createId(), name: 'Dishwasher detergent', emoji: '🫧', usageDays: 60, leadDays: 4, extraDays: 30, freshDays: never },
+    { id: createId(), name: 'Laundry detergent', emoji: '🧴', usageDays: 30, leadDays: 3, extraDays: 60, freshDays: never },
+    { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageDays: 14, leadDays: 2, extraDays: 21, freshDays: never },
+    { id: createId(), name: 'Cat litter', emoji: '🐾', usageDays: 21, leadDays: 5, extraDays: 42, freshDays: never },
     // The perishable one, so the freshness slider can be seen doing something:
     // eaten over a fortnight, but sour a week after opening.
-    { id: createId(), name: '🧈 Butter', usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7 },
+    { id: createId(), name: 'Butter', emoji: '🧈', usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7 },
   ];
 }

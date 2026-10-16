@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'hono/jsx/dom';
-import { withEmoji } from '../data/emoji';
 import type { StockItem } from '../domain/stock-item';
 import { EmojiPicker } from './EmojiPicker';
-import { itemName, itemSummary } from './copy';
+import { Icon } from './Icon';
+import { itemLabel, itemSummary, pictureButtonLabel } from './copy';
 import { tapWatcher } from './taps';
 import { TEXT } from './text';
 import { THING_NAME_FIELD_ID, focusThingNameSoon } from './thing-name';
@@ -12,6 +12,8 @@ export interface ThingPickerProps {
   readonly currentId: string;
   readonly onSelect: (id: string) => void;
   readonly onRename: (id: string, name: string) => void;
+  /** Sets the character in front of the name; the name itself is untouched. */
+  readonly onEmoji: (emoji: string) => void;
   readonly onAdd: () => void;
   readonly onDelete: (item: StockItem) => void;
   /** Writes every thing to one file. */
@@ -36,6 +38,7 @@ export function ThingPicker({
   currentId,
   onSelect,
   onRename,
+  onEmoji,
   onAdd,
   onDelete,
   onExportAll,
@@ -59,14 +62,16 @@ export function ThingPicker({
   // One watcher for the whole sheet, so it can tell a second tap on a thing
   // from a first tap on the one below it.
   const taps = useRef(tapWatcher());
+  // The picture button and the search it opens, so a click anywhere else can be
+  // told apart from a click inside.
+  const pictureBlock = useRef<HTMLDivElement | null>(null);
 
-  // Naming and emoji go together: after a picture is picked, the caret belongs
-  // in the name, ready for what it is a picture of.
-  const putEmojiInFrontOf = (symbol: string) => {
-    if (current === undefined) {
-      return;
-    }
-    onRename(current.id, withEmoji(current.name, symbol));
+  // Naming and picture go together: picking one settles it, folds the search
+  // away — no confirming step — and puts the caret back in the name, ready for
+  // what the picture is of.
+  const chooseEmoji = (symbol: string) => {
+    onEmoji(symbol);
+    setPickingEmoji(false);
     focusThingNameSoon();
   };
 
@@ -76,8 +81,17 @@ export function ThingPicker({
       role="dialog"
       aria-modal="true"
       aria-label="Which thing?"
+      onClick={(event: MouseEvent) => {
+        // Anything the household taps that is not the picture button or the
+        // search under it means they are done with the picture.
+        if (pickingEmoji && !(pictureBlock.current?.contains(event.target as Node) ?? false)) {
+          setPickingEmoji(false);
+        }
+      }}
     >
-      <header class="navbar shrink-0 gap-1.5 md:gap-2 bg-base-200 border-b border-base-300 px-2 md:px-6">
+      {/* A plain box, not a <header>: a header inside a dialog is a second
+          banner landmark, and a page has room for one. */}
+      <div class="navbar shrink-0 gap-1.5 md:gap-2 bg-base-200 border-b border-base-300 px-2 md:px-6">
         <h2 class={`min-w-0 flex-1 font-black tracking-tight ${TEXT.body}`}>Which thing?</h2>
         <button
           type="button"
@@ -97,7 +111,7 @@ export function ThingPicker({
         >
           ✓ OK
         </button>
-      </header>
+      </div>
 
       <div class="flex-1 overflow-y-auto overflow-x-hidden p-2 md:p-6">
         <ul class="flex flex-col gap-1.5 md:gap-2 max-w-3xl mx-auto">
@@ -127,9 +141,9 @@ export function ThingPicker({
                     class={`block break-words leading-tight font-bold ${TEXT.body}`}
                     data-testid="picker-thing-name"
                   >
-                    {itemName(item)}
+                    {itemLabel(item)}
                   </span>
-                  <span class={`block break-words leading-tight opacity-70 ${TEXT.small}`}>
+                  <span class={`block break-words leading-tight ${TEXT.small}`}>
                     {itemSummary(item)}
                   </span>
                 </span>
@@ -143,7 +157,7 @@ export function ThingPicker({
           ))}
         </ul>
         {items.length === 0 && (
-          <p class={`text-center text-base-content/60 py-6 ${TEXT.body}`}>Nothing here yet.</p>
+          <p class={`text-center text-base-content/70 py-6 ${TEXT.body}`}>Nothing here yet.</p>
         )}
       </div>
 
@@ -152,7 +166,7 @@ export function ThingPicker({
           {current !== undefined && (
             <div>
               <label
-                class={`block font-black uppercase tracking-wider text-base-content/60 mb-1 ${TEXT.small}`}
+                class={`block font-black uppercase tracking-wider text-base-content/70 mb-1 ${TEXT.small}`}
                 for={THING_NAME_FIELD_ID}
               >
                 What is it called?
@@ -167,42 +181,64 @@ export function ThingPicker({
                   onRename(current.id, (event.target as HTMLInputElement).value)
                 }
               />
-              <button
-                type="button"
-                class={`btn btn-lg w-full h-auto rounded-none mt-2 ${TEXT.body}`}
-                aria-expanded={pickingEmoji ? 'true' : 'false'}
-                title="Find an emoji by what it is"
-                onClick={() => setPickingEmoji(!pickingEmoji)}
+              <div
+                ref={pictureBlock}
+                // The picture is settled the moment the household taps
+                // something else: the search folds away whether or not one was
+                // picked, so nothing has to be confirmed. Focus moving out is
+                // a tab or a tap on a field; a click on something that cannot
+                // hold focus — a row, the background — is the other half.
+                onFocusOut={(event: FocusEvent) => {
+                  const next = event.relatedTarget as Node | null;
+                  const stillInside = pictureBlock.current?.contains(next) ?? false;
+                  if (!stillInside) {
+                    setPickingEmoji(false);
+                  }
+                }}
               >
-                🙂 Emoji
-              </button>
-              {pickingEmoji && <EmojiPicker onPick={putEmojiInFrontOf} />}
+                <button
+                  type="button"
+                  class={`btn btn-lg w-full h-auto rounded-none mt-2 ${TEXT.body}`}
+                  aria-label={`${pictureButtonLabel(current)} — change it`}
+                  aria-expanded={pickingEmoji ? 'true' : 'false'}
+                  title="Find a picture by what it is"
+                  onClick={() => setPickingEmoji(!pickingEmoji)}
+                >
+                  {pictureButtonLabel(current)}
+                </button>
+                {pickingEmoji && <EmojiPicker onPick={chooseEmoji} />}
+              </div>
             </div>
           )}
 
-          <div class="flex flex-wrap gap-2">
+          <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
             <button
               type="button"
-              class={`btn btn-lg flex-1 min-w-[7rem] rounded-none ${TEXT.body}`}
+              class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.body}`}
               aria-label="Export all"
               title="Every thing, as one file"
               onClick={onExportAll}
             >
-              📤 All
+              <Icon symbol="📤" />
+              Export all
             </button>
             {current !== undefined && (
               <button
                 type="button"
-                class={`btn btn-lg flex-1 min-w-[7rem] rounded-none ${TEXT.body}`}
+                class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.body}`}
                 aria-label="Export this one"
                 title="Just the thing on screen"
                 onClick={onExportCurrent}
               >
-                📤 This one
+                <Icon symbol="📤" />
+                Export this one
               </button>
             )}
-            <label class={`btn btn-lg flex-1 min-w-[7rem] rounded-none ${TEXT.body}`}>
-              📥 Import
+            <label
+              class={`btn btn-lg col-span-2 gap-1 px-2 rounded-none md:col-span-1 md:gap-2 md:px-4 ${TEXT.body}`}
+            >
+              <Icon symbol="📥" />
+              Import
               <input
                 type="file"
                 accept="application/json,.json"

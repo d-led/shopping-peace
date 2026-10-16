@@ -12,15 +12,20 @@ export interface KpiCardProps {
   readonly title: string;
   readonly value: number;
   readonly caption: string;
+  /** What the number means, for a pointer that rests on it. */
+  readonly hint?: string;
   readonly testId: string;
 }
 
 /** A solid, high-contrast box that stays readable from a step back. */
-export function KpiCard({ tone, title, value, caption, testId }: KpiCardProps) {
+export function KpiCard({ tone, title, value, caption, hint, testId }: KpiCardProps) {
   return (
-    <div class={`min-w-0 rounded-2xl border-2 p-3 md:p-4 text-center ${TONE_CARD[tone]}`}>
+    <div
+      class={`min-w-0 rounded-2xl border-2 p-3 md:p-4 text-center ${TONE_CARD[tone]}`}
+      title={hint}
+    >
       <span
-        class={`block font-black uppercase tracking-tight md:tracking-wide opacity-75 break-words ${TEXT.small}`}
+        class={`block font-black uppercase tracking-tight md:tracking-wide break-words ${TEXT.small}`}
       >
         {title}
       </span>
@@ -30,7 +35,7 @@ export function KpiCard({ tone, title, value, caption, testId }: KpiCardProps) {
       >
         {value}
       </span>
-      <span class={`block font-semibold opacity-80 mt-1 break-words ${TEXT.small}`}>
+      <span class={`block font-semibold mt-1 break-words ${TEXT.small}`}>
         {caption}
       </span>
     </div>

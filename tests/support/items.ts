@@ -20,5 +20,5 @@ export function requirements(overrides: Partial<StockRequirements> = {}): StockR
 
 /** A named preset, so a test only spells out what it is actually about. */
 export function thing(overrides: Partial<StockItem> = {}): StockItem {
-  return { id: 'the-thing', name: 'The thing', ...requirements(), ...overrides };
+  return { id: 'the-thing', name: 'The thing', emoji: '', ...requirements(), ...overrides };
 }

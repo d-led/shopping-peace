@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   InvalidPresetFileError,
+  PRESET_FILE_VERSION,
   exportFilename,
+  onePresetFilename,
   parsePresets,
   serializePresets,
 } from '../src/data/presets-file';
@@ -10,7 +12,8 @@ import { thing } from './support/items';
 
 const detergent = thing({
   id: 'detergent',
-  name: '🧴 Laundry detergent',
+  name: 'Laundry detergent',
+  emoji: '🧴',
   usageDays: 30,
   leadDays: 3,
   extraDays: 30,
@@ -18,6 +21,9 @@ const detergent = thing({
 
 /** A file written before the freshness slider existed. */
 const withoutFreshness = '{"usageDays": 30, "leadDays": 3, "extraDays": 30}';
+
+/** The shape this app wrote before the file had a version or a picture field. */
+const legacy = '[{"name": "🧴 Laundry detergent", "usageDays": 30, "leadDays": 3, "extraDays": 30}]';
 
 describe('presets travelling as a file', () => {
   it('reads back exactly what it wrote', () => {
@@ -28,10 +34,53 @@ describe('presets travelling as a file', () => {
     expect(parsePresets(serializePresets([]))).toEqual([]);
   });
 
+  it('says what it is and when it was written, so a household can place it', () => {
+    const file = JSON.parse(serializePresets([detergent], new Date('2026-10-16T08:00:00Z')));
+
+    expect(file).toMatchObject({
+      format: 'shopping-peace',
+      version: PRESET_FILE_VERSION,
+      exported: '2026-10-16T08:00:00.000Z',
+    });
+    expect(file.things).toHaveLength(1);
+  });
+
+  it('writes the picture as a field of its own, out of the name', () => {
+    const { things } = JSON.parse(serializePresets([detergent]));
+
+    expect(things[0]).toMatchObject({ name: 'Laundry detergent', emoji: '🧴' });
+  });
+
   it('names the file after the day it was exported', () => {
     expect(exportFilename(new Date('2026-10-16T08:00:00Z'))).toBe(
       'shopping-peace-presets-2026-10-16.json',
     );
+  });
+
+  it('names a single-thing export after the thing', () => {
+    expect(onePresetFilename('Laundry detergent', new Date('2026-10-16T08:00:00Z'))).toBe(
+      'shopping-peace-laundry-detergent-2026-10-16.json',
+    );
+  });
+
+  it('still has a filename to offer when a name is all punctuation', () => {
+    expect(onePresetFilename('!!!', new Date('2026-10-16T08:00:00Z'))).toBe(
+      'shopping-peace-preset-2026-10-16.json',
+    );
+  });
+});
+
+describe('files written before the format was versioned', () => {
+  it('still reads a bare list of things', () => {
+    expect(parsePresets(`[${withoutFreshness}]`)[0]?.name).toBe(UNNAMED_ITEM);
+  });
+
+  it('takes the picture that was kept inside the name and puts it aside', () => {
+    expect(parsePresets(legacy)[0]).toMatchObject({ name: 'Laundry detergent', emoji: '🧴' });
+  });
+
+  it('leaves a name without a picture exactly as it was', () => {
+    expect(parsePresets(`[${withoutFreshness}]`)[0]?.emoji).toBe('');
   });
 });
 
@@ -58,8 +107,18 @@ describe('files that are not preset files', () => {
     expect(() => parsePresets('this is not json')).toThrow(InvalidPresetFileError);
   });
 
-  it('refuses JSON that is not a list', () => {
-    expect(() => parsePresets('{"usageDays": 30}')).toThrow(/list of presets/u);
+  it('refuses a file with no version, rather than guessing what it is', () => {
+    expect(() => parsePresets('{"things": []}')).toThrow(/has no version/u);
+  });
+
+  it('refuses an object with no list of things in it', () => {
+    expect(() => parsePresets('{"version": 1}')).toThrow(/list of presets/u);
+  });
+
+  it('refuses a file from a newer copy of the app, and says which', () => {
+    expect(() => parsePresets('{"version": 99, "things": []}')).toThrow(
+      /newer Shopping Peace \(version 99; this copy reads 1\)/u,
+    );
   });
 
   it('refuses a list of things that are not presets', () => {
@@ -82,6 +141,12 @@ describe('files that are not preset files', () => {
     expect(() =>
       parsePresets('[{"name": 42, "usageDays": 30, "leadDays": 3, "extraDays": 0}]'),
     ).toThrow(/not text/u);
+  });
+
+  it('refuses a picture that is not text', () => {
+    expect(() =>
+      parsePresets('[{"name": "Soap", "emoji": 42, "usageDays": 30, "leadDays": 3, "extraDays": 0}]'),
+    ).toThrow(/emoji is not text/u);
   });
 
   it('refuses a shelf life before opening', () => {

@@ -1,3 +1,4 @@
+import { splitEmoji } from '../data/emoji';
 import type { PresetRepository } from '../data/presets';
 import type { SelectionRepository } from '../data/selection';
 import { newId } from '../domain/ids';
@@ -90,6 +91,7 @@ export class ItemStore {
     const item: StockItem = {
       id: this.#createId(),
       name: NAME_FOR_NEW_ITEM,
+      emoji: '',
       ...DEFAULTS_FOR_NEW_ITEM,
     };
     this.#items = [...this.#items, item];
@@ -110,8 +112,19 @@ export class ItemStore {
     this.#commit();
   }
 
+  /**
+   * Sets the name. A character typed in front of it counts as the picture, so
+   * the habit of putting one in the name still works — without ending up
+   * stacked beside a picture that was already chosen.
+   */
   rename(id: string, name: string): void {
-    this.#update(id, { name });
+    const typed = splitEmoji(name);
+    this.#update(id, typed.emoji === '' ? { name } : typed);
+  }
+
+  /** Sets the character in front of the name. The name itself is untouched. */
+  setEmoji(id: string, emoji: string): void {
+    this.#update(id, { emoji });
   }
 
   adjust(id: string, requirements: Partial<StockRequirements>): void {

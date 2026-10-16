@@ -3,6 +3,16 @@
   themes: cupcake --default;
 }
 
+/* Cupcake's error red is light enough that a label written in it fails the
+   contrast rule (axe, color-contrast, on the small Delete button). Darken the
+   pair for both the text and the solid fill, so anything error-coloured stays
+   readable on the light theme. */
+:root,
+[data-theme='cupcake'] {
+  --color-error: oklch(48% 0.19 25);
+  --color-error-content: oklch(98% 0.01 25);
+}
+
 /* Kitchen mode: no accidental text selection, no double-tap zoom while handling
    a drippy bottle with one hand. */
 @layer base {

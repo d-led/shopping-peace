@@ -2,7 +2,7 @@ import { FRESHNESS_NEVER, type StockItem, type StockRequirements } from '../doma
 import { planStock, spoilsBeforeEmpty } from '../domain/stock-plan';
 import { KpiCard } from './KpiCard';
 import { StepSlider } from './StepSlider';
-import { itemName, planCover, planHeadline, spareNote, spoilsWarning } from './copy';
+import { fetchCard, itemLabel, keepCard, planCover, planHeadline, spoilsWarning } from './copy';
 import { TEXT } from './text';
 
 /**
@@ -26,12 +26,14 @@ export interface ItemEditorProps {
 
 export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProps) {
   const plan = planStock(item);
+  const keep = keepCard(plan);
+  const fetch = fetchCard(plan);
 
   return (
-    <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300">
+    <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300 rounded-none sm:rounded-box">
       <div class="card-body min-w-0 p-4 md:p-8 gap-4 md:gap-6">
         <div class="min-w-0">
-          <span class={`block font-black uppercase tracking-wider text-base-content/60 mb-1 ${TEXT.small}`}>
+          <span class={`block font-black uppercase tracking-wider text-base-content/70 mb-1 ${TEXT.small}`}>
             The thing
           </span>
           <button
@@ -40,47 +42,58 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             aria-haspopup="dialog"
             onClick={onOpenThingPicker}
           >
-            <span class="block min-w-0 text-left font-bold break-words">{itemName(item)}</span>
+            <span class="block min-w-0 text-left font-bold break-words">{itemLabel(item)}</span>
             <span aria-hidden="true" class="shrink-0 opacity-60">
               ▾
             </span>
           </button>
         </div>
 
-        {spoilsBeforeEmpty(item) && (
+        <div class="grid grid-cols-2 gap-3 md:gap-4">
+          <KpiCard
+            tone="success"
+            title="Keep at least"
+            value={keep.value}
+            caption={keep.caption}
+            hint="The reserve: what you hold on top of what the wait eats up."
+            testId="keep-at-least"
+          />
+          <KpiCard
+            tone="warning"
+            title="Fetch more at"
+            value={fetch.value}
+            caption={fetch.caption}
+            hint="Shop when the last spare is opened: the wait would otherwise eat what is left."
+            testId="fetch-more-at"
+          />
+        </div>
+
+        <p class={`text-center font-bold leading-snug ${TEXT.body}`}>{planHeadline(plan)}</p>
+
+        {/* One slot, one line tall either way: a thing that turns says so where
+            the cover figure would otherwise sit, so a warning adds no height of
+            its own. The figure itself is a nicety, and a phone screen has no
+            room for niceties — it keeps that line for the warning alone. */}
+        {spoilsBeforeEmpty(item) ? (
           <p
-            class={`alert alert-warning rounded-none ${TEXT.small}`}
+            class={`alert alert-warning rounded-none py-1 ${TEXT.small}`}
             role="alert"
             data-testid="spoil-warning"
           >
             ⏰ {spoilsWarning(item)}
           </p>
+        ) : (
+          <p
+            class={`hidden text-center leading-tight text-base-content/70 sm:block ${TEXT.small}`}
+          >
+            {planCover(item, plan)}
+          </p>
         )}
 
-        <div class="grid grid-cols-2 gap-3 md:gap-4">
-          <KpiCard
-            tone="success"
-            title="Keep at least"
-            value={plan.targetStock}
-            caption={spareNote(plan)}
-            testId="target-stock"
-          />
-          <KpiCard
-            tone="warning"
-            title="Fetch more at"
-            value={plan.reorderPoint}
-            caption="stored units left"
-            testId="reorder-point"
-          />
-        </div>
-
-        <p class={`text-center font-bold leading-snug ${TEXT.body}`}>{planHeadline(plan)}</p>
-        <p class={`text-center text-base-content/60 ${TEXT.small}`}>{planCover(item, plan)}</p>
-
         <p
-          class={`border-t border-base-200 pt-4 text-center font-black uppercase tracking-wide text-base-content/40 ${TEXT.small}`}
+          class={`border-t border-base-200 pt-4 text-center font-black uppercase tracking-wide text-base-content/70 ${TEXT.small}`}
         >
-          Fine-tune the uncertainties
+          Fine-tune the parameters
         </p>
 
         <div class="flex flex-col gap-6">
@@ -121,6 +134,13 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             unit="day"
             minLabel="spoils at once"
             maxLabel="never spoils"
+            // Said on hover as well as in the banner: this is the dial that
+            // makes the numbers above look wrong until you know why.
+            hint={
+              spoilsBeforeEmpty(item)
+                ? 'It turns before a unit is used up, so the plan counts each unit as gone when it turns.'
+                : 'How long it stays good once it is opened. The top of the range means it keeps.'
+            }
             value={item.freshDays}
             min={LIMITS.freshDays.min}
             max={LIMITS.freshDays.max}
@@ -128,7 +148,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
           />
         </div>
 
-        <p class={`text-center text-base-content/50 ${TEXT.small}`}>
+        <p class={`text-center text-base-content/70 ${TEXT.small}`}>
           Saved as you go · delete and rename live under the thing's name
         </p>
       </div>

@@ -11,9 +11,16 @@ kitchen:
 | what                                        | example               |
 | ------------------------------------------- | --------------------- |
 | **The thing**                               | 🧴 Laundry detergent   |
-| **Keep at least**                           | `2` units             |
-| **Fetch more at**                           | `1` unit left         |
-| Down to 1? Bring home 1 more …              | … and you're back at 2 |
+| **Keep at least**                           | `1` unit spare        |
+| **Fetch more at**                           | `0` spare units left  |
+| Down to 1 unit? Bring home 1 more …         | … and you're back at 2 |
+
+Both cards count the **reserve**: the units held on top of what a wait eats up.
+Counting that rather than the whole shelf is what gives the second number
+something to say — *keep one spare, and shop again when the last one is opened* —
+where "keep two units, fetch at one" made the reader do the subtraction. With the
+reserve set to zero there is no counter to watch, so the cards fall back to the
+tight level and say that nothing is kept spare.
 
 ## The arithmetic
 
@@ -42,9 +49,9 @@ $$
 
 | what            | in the words of the screen                                          |
 | --------------- | ------------------------------------------------------------------- |
-| reorder point   | **Fetch more at** — the units a wait would eat, so fetch below this  |
-| spare units     | how much of **Keep at least** is on top of that                      |
-| target stock    | **Keep at least** — the level to come back to                        |
+| reorder point   | *Down to …?* in the headline — the units a wait would eat, so shop before the shelf is that low |
+| spare units     | **Keep at least** — the reserve; the **Fetch more at** card is where it runs out |
+| target stock    | the level a fetch brings you back to, also in the headline           |
 | fetch quantity  | how many to bring home when you fetch                                |
 
 Two deliberate decisions, and one place this differs from the textbook formula:
@@ -75,10 +82,13 @@ A shelf life longer than the unit lasts changes nothing, and 365 days is the
 slider's top end, which reads as **never spoils**. Files written before the
 slider existed are read the same way.
 
-When `freshDays` is shorter than `usageDays`, the screen says so out loud above
-the numbers, because they will look higher than the eating rate suggests. A
-household that eats two units a week and buys two at a time wastes one of them,
-and a plan that pretends otherwise is worse than no plan.
+When `freshDays` is shorter than `usageDays`, the screen says so out loud — in
+the same slot the "days of cover" line would otherwise fill, so the warning
+costs no height of its own — because the numbers will look higher than the
+eating rate suggests. A household that eats two units a week and buys two at a
+time wastes one of them, and a plan that pretends otherwise is worse than no
+plan. The cover figure only appears from 640 px up: on a phone that line is
+there for the warning, and for nothing else.
 
 ## Running it
 
@@ -93,11 +103,12 @@ npm run dev          # http://localhost:5173, hot reload while you edit
 | `npm test`          | unit and component tests (Vitest + jsdom)                  |
 | `npm run test:watch`| the same, watching for changes                             |
 | `npm run coverage`  | unit tests with a coverage report in `coverage/`            |
-| `npm run test:e2e`  | browser tests on iPhone, iPad and desktop (Playwright)      |
+| `npm run test:e2e`  | browser tests: the phone screens, then the desktop            |
 | `npm run typecheck` | `tsc --noEmit`                                             |
 | `npm run build`     | typecheck, then build into `dist/`                         |
 | `npm run preview`   | serve a build you already made                             |
-| `npm run gate`      | the whole quality gate (below)                             |
+| `npm run gate`      | the quality gate, the everyday half of it (below)          |
+| `npm run gate:full` | the quality gate, slow stages included                     |
 
 `npm run test:e2e` starts its own server: Playwright builds the app and serves
 `dist/` with the small dependency-free server in `tests/e2e/server.mjs`, so
@@ -110,32 +121,48 @@ npx playwright install chromium webkit
 ## The quality gate
 
 ```bash
-./quality-gate.sh              # everything, then a table saying what failed
-./quality-gate.sh --fast       # skip mutation testing, which is the slow one
+./quality-gate.sh              # the everyday bar: about 40 seconds
+./quality-gate.sh --full       # everything, including the slow stages
 ./quality-gate.sh --only lint,unit
-./quality-gate.sh --list       # the stages, and the bar each one holds
+./quality-gate.sh --skip e2e
+./quality-gate.sh --list       # the checks, what each costs, and its bar
 ```
 
-Nine stages, and the bars all live at the top of `quality-gate.sh` so there is
-never a question of which number a check compared against:
+Nine checks, split by what they cost. Six finish in seconds and run by
+default; the other two take minutes, and only `--full` runs them:
 
-| stage        | what it holds to                                                    |
-| ------------ | ------------------------------------------------------------------- |
-| `types`      | `tsc --noEmit`                                                       |
-| `lint`       | `oxlint` with no findings                                            |
-| `duplicates` | `jscpd`: at most 1% duplicated lines in `src/` and `tests/`           |
-| `unit`       | Vitest with coverage, all green                                      |
-| `properties` | the fast-check properties at 1000 runs each                          |
-| `e2e`        | Playwright on three devices, against an instrumented build            |
-| `coverage`   | at least 95% of `src/` lines, unit and browser runs *together*        |
-| `metrics`    | complexity ≤ 8 and CRAP ≤ 10, per function                           |
-| `mutation`   | Stryker: at least 85% of mutants killed                              |
+- `e2e` is a production build plus 70 browser tests — the two phone screens and
+  the desktop;
+- `coverage` is the unit and browser line counts *together*, so it needs that
+  run to have happened (asked for on its own, it says exactly that and reports
+  "not measurable" rather than a smaller number wearing the same name).
+
+Mutation testing is deliberately *not* one of them, and the reason is worth
+saying out loud: `@stryker-mutator/vitest-runner` 10 reports no tests per mutant
+under vitest 5, so a sweep of its 15k mutants spends hours arriving at "every
+mutant survived" — a fact about the tool, not about these tests. `npm run
+mutation` still runs it for anybody who wants to see that with their own eyes,
+and `node scripts/mutation-report.mjs --break 85` reads the report it leaves.
+
+The bars all live at the top of `quality-gate.sh`, so there is never a question
+of which number a check compared against:
+
+| stage        | cost  | what it holds to                                                    |
+| ------------ | ----- | ------------------------------------------------------------------- |
+| `types`      | quick | `tsc --noEmit`                                                       |
+| `lint`       | quick | `oxlint` with no findings                                            |
+| `duplicates` | quick | `jscpd`: at most 1% duplicated lines in `src/` and `tests/`           |
+| `unit`       | quick | Vitest with coverage, all green                                      |
+| `properties` | quick | the fast-check properties at 1000 runs each                          |
+| `metrics`    | quick | complexity ≤ 8 and CRAP ≤ 10, per function                           |
+| `e2e`        | slow  | Playwright: the phone screens, then the desktop, axe included         |
+| `coverage`   | slow  | at least 95% of `src/` lines, unit and browser runs *together*        |
 
 Every stage writes a log to `reports/logs/`, and the reports themselves land in
 `reports/` (`coverage.txt`, `crap.txt`, `jscpd/`, `mutation/index.html`). The
 gate deletes them before it starts, so a stale report can never pass a stage.
 
-Two of those stages are worth explaining:
+Three of those checks are worth explaining, and one thing inside `e2e`:
 
 - **Coverage is measured across both test runners.** Vitest instruments the
   TypeScript; the browser tests run against a build instrumented by
@@ -144,20 +171,28 @@ Two of those stages are worth explaining:
   can be the line after the one a reader sees — so `scripts/coverage-report.mjs`
   lets the unit run decide *which lines exist* and lets every run decide *which
   were reached*. A line the browser reached counts even if no unit test went
-  near it; a line nothing reached counts against the total. It sits at 98% of
-  about 270 lines, and the two lines it does not count are guards the DOM cannot
+  near it; a line nothing reached counts against the total. It sits at 99% of
+  about 330 lines, and the lines it does not count are guards the DOM cannot
   produce (a non-numeric number field, a picker open with no thing selected).
 - **CRAP** (`scripts/crap-report.mjs`) is the number that says where the next
   bug will be: `complexity² × (1 − coverage)³ + complexity`. A function is
   risky when it is complicated *and* thinly covered. Complexity comes from the
   same linter rule the gate enforces, asked for every function rather than only
   the offenders, so nothing is measured twice or measured differently.
-- **Mutation testing cannot be measured here yet**, and the gate says so rather
-  than reporting a number that describes the tool: `@stryker-mutator/vitest-runner`
-  10 executes no tests per mutant under vitest 5, so every mutant is reported as
-  survived. `scripts/mutation-report.mjs` notices exactly that and exits with
-  "not measurable", which the gate shows as `–` instead of `✓`. When the runner
-  catches up, the same command starts enforcing the 85% bar by itself.
+- **Accessibility is part of the browser run**, not a stage of its own, so it
+  cannot be skipped on its own. Playwright has no accessibility rules —
+  `tests/e2e/accessibility.spec.ts` drives
+  [axe-core](https://github.com/dequelabs/axe-core), the engine every
+  browser-based audit uses, Lighthouse (Google's) among them, over the main
+  screen, the spoilage warning, the picker and the picture search. It fails on
+  any finding, and it earned its keep immediately: muted text at 40–60 %
+  opacity is under 4.5:1 on this theme, `<header>` inside the dialog made a
+  second banner landmark, and the picture button was labelled "Emoji" while
+  reading "Picture".
+- **Mutation testing cannot be measured here**, and rather than report a number
+  that describes the tool, the gate leaves it to a command: run `npm run
+  mutation` when you want to see why, since the vitest runner reports no tests
+  per mutant and every mutant therefore comes back survived.
 
 
 ## Where the presets live
@@ -168,11 +203,40 @@ remembers **which thing was open**, so a reload lands where the household left
 off rather than at the top of the list; a thing that has since been deleted is
 simply forgotten.
 
-Exports come in two sizes and one format. **📤 All** writes every thing to
-`shopping-peace-presets-<date>.json`; **📤 This one** writes just the thing on
-screen to a file named after it, so two exports are told apart in a downloads
-folder. Both hold a *list* — of one, or of all — so import never has to know
-which it was given.
+Exports come in two sizes and one format, under two plainly named buttons —
+**📤 Export all**, **📤 Export this one**, **📥 Import**. **Export all** writes
+every thing to `shopping-peace-presets-<date>.json`; **Export this one** writes
+just the thing on screen to a file named after it, so two exports are told apart
+in a downloads folder. Both hold a *list* — of one, or of all — so import never
+has to know which it was given. Both write the same document:
+
+```json
+{
+  "format": "shopping-peace",
+  "version": 1,
+  "exported": "2026-10-16T08:00:00.000Z",
+  "things": [
+    {
+      "id": "a1b2c3",
+      "name": "Laundry detergent",
+      "emoji": "🧴",
+      "usageDays": 30,
+      "leadDays": 3,
+      "extraDays": 30,
+      "freshDays": 365
+    }
+  ]
+}
+```
+
+The object, rather than a bare list, is there so a file can say what it is
+(`format`), when it was written (`exported`) and — the reason it exists — which
+shape it is (`version`). A file written by a newer copy of the app is refused
+with a sentence naming both versions instead of being half-read. Import still
+takes the bare list this app wrote before the format was versioned, and a
+picture left inside a name is moved out of it and into the `emoji` field on the
+way in. A future icon set would arrive as a second field beside `emoji` — an id
+— rather than replacing the character.
 
 **📥 Import** replaces the whole shelf, so it asks first, naming how many things
 are about to be replaced. Saying no leaves everything exactly as it was.
@@ -184,14 +248,20 @@ the second time.
 
 ## Naming things
 
-A name is a short line of text with a picture on the front, and the picker has a
-small **🙂 Emoji** button for the picture. It opens a keyword search over the
+A name is a short line of text with a picture beside it, and the picker has a
+small **🙂 Picture** button for the picture. It opens a keyword search over the
 whole published emoji set — 1,391 of them — with the household's own words for
 everyday things leading it, so `milk` offers 🥛 before anything rarer, and
 `whale` still finds 🐋. Words match anywhere in a keyword and every word has to
-match, so `cat food` is narrower than `food`. Picking one puts it in front of
-the name, replacing any emoji already there, and hands the name back ready to
-type.
+match, so `cat food` is narrower than `food`.
+
+The picture is a field of its own, `emoji`, not part of the name: picking one
+sets it beside the name, replacing any picture already there, and hands the name
+back ready to type. The search folds away on its own — as soon as one is picked,
+or when the household taps anywhere else — so nothing has to be confirmed.
+Typing a picture in *front* of a name still counts as the picture, the habit
+works, and a file from before the split has its picture taken out of the name on
+import, which is the one place the two are pulled apart.
 
 Three things are deliberate:
 
@@ -214,15 +284,15 @@ siblings — Microsoft Fluent, Google Noto, Streamline, all aggregated by
 [Iconify](https://icon-sets.iconify.design/) — are the other way to go, and the
 only way to get a picture that looks *identical* on every device. They are
 artwork rather than data, so that road means bundling SVG files into `dist/`,
-storing an icon id in the name instead of a character, rendering SVG beside the
-text, and honouring the licences: OpenMoji is **CC BY-SA 4.0**, which asks for
-attribution *and* share-alike on whatever ships its data, while Fluent is MIT and
-Noto is Apache-2.0.
+storing an icon id in a field of its own instead of a character, rendering SVG
+beside the text, and honouring the licences: OpenMoji is **CC BY-SA 4.0**, which
+asks for attribution *and* share-alike on whatever ships its data, while Fluent
+is MIT and Noto is Apache-2.0.
 
 ## Layout
 
 ```
-quality-gate.sh    the local gate: the stages, and the bar each one holds
+quality-gate.sh    the local gate: the stages, what each costs, and its bar
 tsconfig.json      strict, noUncheckedIndexedAccess, no implicit any
 stryker.config.mjs which code gets mutated, and how much has to die
 .jscpd.json        what counts as a duplicate, and how much is too much
@@ -241,13 +311,19 @@ src/
 tests/
   *.test.ts(x)     unit and component tests
   e2e/             Playwright specs, one embedded static server, coverage fixture
+                   (`main-screen` and `touch` on the two small screens,
+                   `things` and `accessibility` on the desktop)
 reports/           the gate's artefacts, rebuilt every run (git-ignored)
 ```
 
 Rules the screen follows, since it is used with wet hands:
 
-- three text sizes for the whole app, defined in `src/ui/text.ts`;
+- three reading sizes for the whole app, defined in `src/ui/text.ts` — pictures
+  in front of labels are sized as pictures, since nobody reads an 📤;
 - nothing wider than the screen — no sideways scrolling anywhere;
+- a phone gets the whole screen: the page padding, the card's rounded corners
+  and the "days of cover" figure all appear from 640 px up, and a small screen
+  keeps that line for the warning;
 - the two numbers are visible without scrolling, on a 375 px phone;
 - switching things keeps the sheet open, so the one you just picked can be
   renamed before you close it;
@@ -256,7 +332,10 @@ Rules the screen follows, since it is used with wet hands:
   counts the taps itself, because a phone does not report that gesture as a
   `dblclick`: it is also how you zoom;
 - every tap target is thumb-sized, with ± buttons beside each slider for hands
-  that cannot aim at a track.
+  that cannot aim at a track;
+- nothing is written in a colour the contrast rule rejects — muted text stays at
+  70 % of `base-content`, and the theme's error red is darkened in
+  `src/style.css`, where the reason is written down.
 
 ## Deploying
 

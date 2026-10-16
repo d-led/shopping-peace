@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EMOJI_CATALOGUE } from '../src/data/emoji-catalogue';
-import { searchEmoji, withEmoji } from '../src/data/emoji';
+import { searchEmoji, splitEmoji } from '../src/data/emoji';
 import { HOUSEHOLD_EMOJI } from '../src/data/household-emoji';
 import { buildCatalogue } from '../scripts/build-emoji-catalogue.mjs';
 
@@ -108,21 +108,33 @@ describe('the set that search runs over', () => {
   });
 });
 
-describe('putting an emoji in front of a name', () => {
-  it('adds one to a name that has none', () => {
-    expect(withEmoji('Laundry detergent', '🧴')).toBe('🧴 Laundry detergent');
+describe('taking a name that carries its own picture apart', () => {
+  it('leaves a name that has no picture alone', () => {
+    expect(splitEmoji('Laundry detergent')).toEqual({
+      name: 'Laundry detergent',
+      emoji: '',
+    });
   });
 
-  it('swaps the one that is already there rather than stacking them', () => {
-    expect(withEmoji('🧴 Laundry detergent', '🧼')).toBe('🧼 Laundry detergent');
+  it('takes the picture off the front', () => {
+    expect(splitEmoji('🧴 Laundry detergent')).toEqual({
+      name: 'Laundry detergent',
+      emoji: '🧴',
+    });
   });
 
-  it('is happy with a name that is only an emoji so far', () => {
-    expect(withEmoji('', '🧽')).toBe('🧽');
-    expect(withEmoji('🧽', '🧼')).toBe('🧼');
+  it('is happy with a name that is only a picture', () => {
+    expect(splitEmoji('🧽')).toEqual({ name: '', emoji: '🧽' });
   });
 
-  it('leaves a name that starts with a word, however odd, untouched', () => {
-    expect(withEmoji('Dishwasher tabs', '🧽')).toBe('🧽 Dishwasher tabs');
+  it('takes off the variation selector too, so the picture is one character', () => {
+    expect(splitEmoji('🗑️ Bin bags')).toEqual({ name: 'Bin bags', emoji: '🗑️' });
+  });
+
+  it('does not go looking for a picture in the middle of a name', () => {
+    expect(splitEmoji('Dish soap 🧼 refill')).toEqual({
+      name: 'Dish soap 🧼 refill',
+      emoji: '',
+    });
   });
 });

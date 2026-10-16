@@ -6,14 +6,14 @@
 # ends with a table saying which one failed. Bars live here, in one place, so
 # there is never a question of which number a check was comparing against.
 #
-#   ./quality-gate.sh                  the lot
-#   ./quality-gate.sh --fast           skip mutation testing (the slow one)
+#   ./quality-gate.sh                  the everyday bar: seconds, not minutes
+#   ./quality-gate.sh --full           the lot, slow stages included
 #   ./quality-gate.sh --only lint,unit run just those stages
 #   ./quality-gate.sh --skip e2e       everything but those
-#   ./quality-gate.sh --list           what the stages are
+#   ./quality-gate.sh --list           what the stages are, and what each costs
 #
-# Artefacts land in reports/: one log per stage, plus the coverage, CRAP,
-# duplication and mutation reports, so a failure can be read after the fact.
+# Artefacts land in reports/: one log per stage, plus the coverage, CRAP and
+# duplication reports, so a failure can be read after the fact.
 
 set -uo pipefail
 
@@ -36,12 +36,22 @@ MAX_CRAP="${MAX_CRAP:-10}"
 MAX_DUPLICATION="${MAX_DUPLICATION:-1}"
 # Property tests get their own, longer run: they are how the edges get found.
 FC_RUNS="${FC_RUNS:-1000}"
-# Share of mutants the tests have to kill.
-MUTATION_BREAK="${MUTATION_BREAK:-85}"
 
 # ----------------------------------------------------------------- stages ----
 # Bash 3.2 has no associative arrays, so this is a bare list plus a lookup.
-STAGES="types lint duplicates unit properties e2e coverage metrics mutation"
+#
+# Mutation testing is not here. @stryker-mutator/vitest-runner 10 reports no
+# tests per mutant under vitest 5, so a sweep of 15k mutants spends hours
+# arriving at "every one survived" — a number about the tool, not the tests.
+# `npm run mutation` still runs it for anybody who wants to see that, and
+# `node scripts/mutation-report.mjs --break 85` reads the report it leaves.
+STAGES="types lint duplicates unit properties e2e coverage metrics"
+
+# The stages that take minutes:
+#   e2e      a production build, then 70 browser tests on three devices;
+#   coverage the figure is unit + browser together, so it needs that run.
+# Everything else finishes in seconds. Only --full runs these.
+SLOW_STAGES="e2e coverage"
 
 stage_title() {
   case "$1" in
@@ -50,15 +60,25 @@ stage_title() {
     duplicates) echo "jscpd, at most ${MAX_DUPLICATION}% duplicated lines" ;;
     unit) echo "vitest with coverage, all green" ;;
     properties) echo "fast-check at ${FC_RUNS} runs per property" ;;
-    e2e) echo "playwright on iPhone, iPad and desktop, all green" ;;
+    e2e) echo "playwright: the phone screens and the desktop, all green" ;;
     coverage) echo "unit + browser coverage, at least ${MIN_LINES}% of lines" ;;
     metrics) echo "complexity ≤ ${MAX_COMPLEXITY}, CRAP ≤ ${MAX_CRAP}, per function" ;;
-    mutation) echo "stryker, at least ${MUTATION_BREAK}% of mutants killed" ;;
     *)
       echo "unknown stage $1" >&2
       return 1
       ;;
   esac
+}
+
+# What a stage costs, so nobody reaches for the expensive one by accident.
+stage_cost() {
+  for name in $SLOW_STAGES; do
+    if [ "$1" = "$name" ]; then
+      echo "slow"
+      return
+    fi
+  done
+  echo "quick"
 }
 
 stage_types() { npm run typecheck; }
@@ -80,7 +100,16 @@ stage_properties() {
 
 stage_e2e() { COVERAGE_E2E=1 npx playwright test; }
 
-stage_coverage() { node scripts/coverage-report.mjs --min-lines "$MIN_LINES"; }
+# The combined figure needs both runs: without the browser's half it would be a
+# smaller number wearing the same name.
+stage_coverage() {
+  if ! ls coverage-e2e/*.json >/dev/null 2>&1; then
+    echo "There is no browser coverage to add to the unit run."
+    echo "Run the e2e stage first, or the whole gate with --full."
+    return 3
+  fi
+  node scripts/coverage-report.mjs --min-lines "$MIN_LINES"
+}
 
 # Two halves: ask the linter for every function's complexity, then weigh each
 # one against its own coverage. The complexity rule at its usual threshold only
@@ -95,13 +124,6 @@ CONFIG
   npx oxlint --config "$REPORTS/oxlint-complexity.config.json" \
     --format=json src > "$REPORTS/oxlint-complexity.json" 2>/dev/null
   node scripts/crap-report.mjs --max-crap "$MAX_CRAP" --max-complexity "$MAX_COMPLEXITY"
-}
-
-stage_mutation() {
-  # Stryker's exit code is the threshold's opinion; the report script judges the
-  # result and can also find the run unsound, which is a third answer.
-  npx stryker run || true
-  node scripts/mutation-report.mjs --break "$MUTATION_BREAK"
 }
 
 # ---------------------------------------------------------------- driver -----
@@ -126,11 +148,11 @@ dim() {
 # The stage list travels as plain words, not an array: macOS ships bash 3.2,
 # which treats "${empty[@]}" as an unbound variable under `set -u`.
 chosen="${STAGES[*]}"
-fast=0
+full=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --fast) fast=1 ;;
+    --full) full=1 ;;
     --only)
       chosen="${2:-}"
       chosen="${chosen//,/ }"
@@ -151,12 +173,12 @@ while [ $# -gt 0 ]; do
       ;;
     --list)
       for stage in ${STAGES[*]}; do
-        printf '  %-11s %s\n' "$stage" "$(stage_title "$stage")"
+        printf '  %-11s %-6s %s\n' "$stage" "$(stage_cost "$stage")" "$(stage_title "$stage")"
       done
       exit 0
       ;;
     -h | --help)
-      sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -167,10 +189,16 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-if [ "$fast" = 1 ]; then
+# Without --full the slow stages are left out, however they were asked for.
+left_out_slow=0
+if [ "$full" = 0 ]; then
   kept=""
   for stage in $chosen; do
-    [ "$stage" = "mutation" ] || kept="$kept $stage"
+    if [ "$(stage_cost "$stage")" = slow ]; then
+      left_out_slow=1
+    else
+      kept="$kept $stage"
+    fi
   done
   chosen="$kept"
 fi
@@ -240,6 +268,13 @@ fi
 
 if [ "$skipped" != 0 ]; then
   printf '\n%s\n' "$(dim "$skipped stage(s) could not be measured here — the logs above say why.")"
+fi
+
+if [ "$left_out_slow" = 1 ]; then
+  printf '\n%s\n' "$(dim "Left out: ${SLOW_STAGES// /, } — minutes rather than seconds.")"
+  printf '\n%s\n' "$(green "Ready for the next save.")"
+  printf '%s\n' "$(dim "./quality-gate.sh --full runs the lot, and that is the push bar.")"
+  exit 0
 fi
 
 printf '\n%s\n' "$(green "Ready to push.")"

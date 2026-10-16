@@ -1,5 +1,6 @@
 import { newId } from '../domain/ids';
 import { FRESHNESS_NEVER, UNNAMED_ITEM, type StockItem } from '../domain/stock-item';
+import { splitEmoji } from './emoji';
 
 /** Raised when an imported file cannot be understood. */
 export class InvalidPresetFileError extends Error {
@@ -9,8 +10,36 @@ export class InvalidPresetFileError extends Error {
   }
 }
 
-export function serializePresets(items: readonly StockItem[]): string {
-  return JSON.stringify(items, null, 2);
+/** What an export calls itself, so a file can be recognised for what it is. */
+export const PRESET_FILE_FORMAT = 'shopping-peace';
+
+/**
+ * The version of the format, raised when the shape changes in a way that older
+ * copies of the app could not read. A file from a newer version is refused
+ * with an explanation rather than half-read.
+ */
+export const PRESET_FILE_VERSION = 1;
+
+/** An export: the things, and enough about the file to place it. */
+export interface PresetFile {
+  readonly format: typeof PRESET_FILE_FORMAT;
+  readonly version: number;
+  /** When it was written, so a household with three copies can tell them apart. */
+  readonly exported: string;
+  readonly things: readonly StockItem[];
+}
+
+export function serializePresets(
+  items: readonly StockItem[],
+  exportedAt: Date = new Date(),
+): string {
+  const file: PresetFile = {
+    format: PRESET_FILE_FORMAT,
+    version: PRESET_FILE_VERSION,
+    exported: exportedAt.toISOString(),
+    things: items,
+  };
+  return JSON.stringify(file, null, 2);
 }
 
 export function exportFilename(date: Date): string {
@@ -40,15 +69,12 @@ function slugOf(name: string): string {
 }
 
 /**
- * Reads the export format back in. Strict about the numbers that drive the
- * maths, forgiving about a missing name or id.
+ * Reads the export format back in: strict about the numbers that drive the
+ * maths, forgiving about a missing name, emoji or id. Files written before the
+ * format was versioned — a bare list of things — are still read.
  */
 export function parsePresets(text: string, createId: () => string = newId): StockItem[] {
-  const parsed = parseJson(text);
-  if (!Array.isArray(parsed)) {
-    throw new InvalidPresetFileError('This file should contain a list of presets.');
-  }
-  return parsed.map((entry, index) => toStockItem(entry, index, createId));
+  return thingsIn(parseJson(text)).map((entry, index) => toStockItem(entry, index, createId));
 }
 
 function parseJson(text: string): unknown {
@@ -59,20 +85,68 @@ function parseJson(text: string): unknown {
   }
 }
 
+/** The things in a file, from either shape the format has ever had. */
+function thingsIn(parsed: unknown): readonly unknown[] {
+  if (Array.isArray(parsed)) {
+    return parsed;
+  }
+  if (!isRecord(parsed)) {
+    throw new InvalidPresetFileError('This file should contain a list of presets.');
+  }
+  checkVersion(parsed.version);
+  if (!Array.isArray(parsed.things)) {
+    throw new InvalidPresetFileError('This file should contain a list of presets.');
+  }
+  return parsed.things;
+}
+
+function checkVersion(version: unknown): void {
+  if (typeof version !== 'number') {
+    throw new InvalidPresetFileError(
+      `This file has no version, so it cannot be read as a ${PRESET_FILE_FORMAT} file.`,
+    );
+  }
+  if (version > PRESET_FILE_VERSION) {
+    throw new InvalidPresetFileError(
+      `This file was written by a newer Shopping Peace (version ${version}; this copy reads ${PRESET_FILE_VERSION}).`,
+    );
+  }
+}
+
 function toStockItem(entry: unknown, index: number, createId: () => string): StockItem {
   if (!isRecord(entry)) {
     throw new InvalidPresetFileError(`Preset ${position(index)} is not an object.`);
   }
   const where = `Preset ${position(index)}`;
+  const named = nameAndEmoji(entry, where);
   return {
     id: readId(entry.id, createId),
-    name: readName(entry.name, where),
+    name: named.name,
+    emoji: named.emoji,
     usageDays: readNumber(entry.usageDays, where, 'usageDays', 1),
     leadDays: readNumber(entry.leadDays, where, 'leadDays', 0),
     extraDays: readNumber(entry.extraDays, where, 'extraDays', 0),
     // Files written before the freshness slider existed mean "never spoils".
     freshDays: readNumber(entry.freshDays ?? FRESHNESS_NEVER, where, 'freshDays', 0),
   };
+}
+
+/**
+ * The name and the picture beside it. The picture has had a field of its own
+ * since version 1; a file that does not mention one kept the emoji inside the
+ * text, and that is the one place the two are pulled apart.
+ */
+function nameAndEmoji(
+  entry: Record<string, unknown>,
+  where: string,
+): { name: string; emoji: string } {
+  const written = readOptionalText(entry.name, where, 'name');
+  const named =
+    'emoji' in entry
+      ? { name: written, emoji: readOptionalText(entry.emoji, where, 'emoji') }
+      : splitEmoji(written);
+
+  return { name: named.name.trim() === '' ? UNNAMED_ITEM : named.name, emoji: named.emoji };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -83,14 +157,15 @@ function readId(value: unknown, createId: () => string): string {
   return typeof value === 'string' && value !== '' ? value : createId();
 }
 
-function readName(value: unknown, where: string): string {
+/** Text that may be missing, but has to be text when it is there. */
+function readOptionalText(value: unknown, where: string, field: string): string {
   if (value === undefined || value === null) {
-    return UNNAMED_ITEM;
+    return '';
   }
   if (typeof value !== 'string') {
-    throw new InvalidPresetFileError(`${where} has a name that is not text.`);
+    throw new InvalidPresetFileError(`${where}: ${field} is not text.`);
   }
-  return value.trim() === '' ? UNNAMED_ITEM : value;
+  return value;
 }
 
 function readNumber(value: unknown, where: string, field: string, minimum: number): number {

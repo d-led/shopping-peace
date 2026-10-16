@@ -8,7 +8,7 @@ import { FRESHNESS_NEVER } from '../src/domain/stock-item';
 import { FakeStorage } from './support/fake-storage';
 import { thing } from './support/items';
 
-const detergent = thing({ id: 'detergent', name: '🧴 Laundry detergent' });
+const detergent = thing({ id: 'detergent', name: 'Laundry detergent', emoji: '🧴' });
 
 function repositoryFor(storage: FakeStorage): LocalStoragePresetRepository {
   return new LocalStoragePresetRepository(storage);
@@ -41,13 +41,20 @@ describe('presets living in the browser', () => {
 describe('the presets a household finds on day one', () => {
   it('starts with something to fetch, something to wash, and something that keeps', () => {
     expect(starterPresets(() => 'fixed').map((item) => item.name)).toEqual([
-      '🧽 Dishwasher tabs',
-      '🫧 Dishwasher detergent',
-      '🧴 Laundry detergent',
-      '🧻 Toilet paper (jumbo)',
-      '🐾 Cat litter',
-      '🧈 Butter',
+      'Dishwasher tabs',
+      'Dishwasher detergent',
+      'Laundry detergent',
+      'Toilet paper (jumbo)',
+      'Cat litter',
+      'Butter',
     ]);
+  });
+
+  it('gives every starter a picture of its own, beside the name', () => {
+    const starters = starterPresets(() => 'fixed');
+
+    expect(starters.every((starter) => starter.emoji !== '')).toBe(true);
+    expect(starters.map((starter) => starter.emoji)).toEqual(['🧽', '🫧', '🧴', '🧻', '🐾', '🧈']);
   });
 
   it('gives every starter its own id', () => {
@@ -73,6 +80,6 @@ describe('the presets a household finds on day one', () => {
     const perishable = starterPresets(() => 'fixed').filter(
       (starter) => starter.freshDays < FRESHNESS_NEVER,
     );
-    expect(perishable.map((starter) => starter.name)).toEqual(['🧈 Butter']);
+    expect(perishable.map((starter) => starter.name)).toEqual(['Butter']);
   });
 });

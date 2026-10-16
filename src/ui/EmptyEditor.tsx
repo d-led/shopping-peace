@@ -13,13 +13,13 @@ export function EmptyEditor({
   readonly onRestoreDefaults: () => void;
 }) {
   return (
-    <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300">
+    <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300 rounded-none sm:rounded-box">
       <div class="card-body min-w-0 items-center text-center py-16 gap-4">
         <span class={TEXT.display} aria-hidden="true">
           🧺
         </span>
         <h2 class={`font-black ${TEXT.body}`}>No things yet</h2>
-        <p class={`text-base-content/60 max-w-sm ${TEXT.small}`}>
+        <p class={`text-base-content/70 max-w-sm ${TEXT.small}`}>
           Add your first thing — dish tabs, detergent, toilet paper. The numbers follow within
           seconds.
         </p>

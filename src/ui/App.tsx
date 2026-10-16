@@ -95,7 +95,9 @@ export function App({ store }: { readonly store: ItemStore }) {
         <h1 class={`font-black tracking-tight ${TEXT.body}`}>🛒 Shopping Peace</h1>
       </header>
 
-      <main class="max-w-2xl mx-auto p-3 md:p-6 pb-24">
+      {/* No padding until there is room for it: on a phone the card is the
+          screen, edges and all. */}
+      <main class="max-w-2xl mx-auto pb-24 sm:p-3 sm:pb-24 md:p-6">
         {selected === null ? (
           <EmptyEditor onAdd={addThing} onRestoreDefaults={restoreDefaults} />
         ) : (
@@ -121,6 +123,7 @@ export function App({ store }: { readonly store: ItemStore }) {
           // the thing they just picked, and the ✕ is right there when they are done.
           onSelect={(id: string) => store.select(id)}
           onRename={(id: string, name: string) => store.rename(id, name)}
+          onEmoji={(emoji: string) => store.setEmoji(selected.id, emoji)}
           onAdd={addThing}
           onDelete={deleteThing}
           onExportAll={exportAll}

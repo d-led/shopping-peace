@@ -18,7 +18,7 @@ export default {
     'src/domain/**/*.ts',
     'src/data/**/*.ts',
     'src/app/**/*.ts',
-    'src/ui/plan-copy.ts',
+    'src/ui/copy.ts',
     // Nothing branches here: a baked-in constant and a URL.
     '!src/build.ts',
     '!src/**/*.d.ts',

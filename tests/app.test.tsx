@@ -12,7 +12,8 @@ import { FakeStorage } from './support/fake-storage';
 /** 1 unit lasts 30 days, 3 days to fetch, 30 extra days kept: fetch at 1, keep 2. */
 const detergent: StockItem = {
   id: 'detergent',
-  name: '🧴 Laundry detergent',
+  name: 'Laundry detergent',
+  emoji: '🧴',
   usageDays: 30,
   leadDays: 3,
   extraDays: 30,
@@ -22,7 +23,8 @@ const detergent: StockItem = {
 /** A fast-used thing with a long wait: fetch at 5, keep 8. */
 const tabs: StockItem = {
   id: 'tabs',
-  name: '🧽 Dishwasher tabs',
+  name: 'Dishwasher tabs',
+  emoji: '🧽',
   usageDays: 10,
   leadDays: 45,
   extraDays: 30,
@@ -32,7 +34,8 @@ const tabs: StockItem = {
 /** Eaten over a fortnight, but sour a week after opening: the plan counts 7. */
 const butter: StockItem = {
   id: 'butter',
-  name: '🧈 Butter',
+  name: 'Butter',
+  emoji: '🧈',
   usageDays: 14,
   leadDays: 2,
   extraDays: 7,
@@ -158,9 +161,9 @@ function emojiChoice(container: HTMLElement, firstKeyword: string): HTMLButtonEl
   return found;
 }
 
-/** Opens the emoji search, and waits for the browser to paint it. */
+/** Opens the picture search, and waits for the browser to paint it. */
 async function openEmojiSearch(container: HTMLElement): Promise<void> {
-  pickerButton(container, 'Emoji').click();
+  pickerButton(container, 'Picture').click();
   await vi.waitFor(() => {
     expect(container.querySelector('#emoji-search')).not.toBeNull();
   });
@@ -228,13 +231,13 @@ describe('what the household sees first', () => {
     expect(
       appearsBefore(
         button(container, '🧴 Laundry detergent'),
-        container.querySelector('[data-testid="target-stock"]'),
+        container.querySelector('[data-testid="keep-at-least"]'),
       ),
     ).toBe(true);
     expect(
       appearsBefore(
-        container.querySelector('[data-testid="target-stock"]'),
-        container.querySelector('[data-testid="reorder-point"]'),
+        container.querySelector('[data-testid="keep-at-least"]'),
+        container.querySelector('[data-testid="fetch-more-at"]'),
       ),
     ).toBe(true);
   });
@@ -243,10 +246,12 @@ describe('what the household sees first', () => {
     const { container } = openApp([detergent]);
 
     expect(textOf(container)).toContain('🧴 Laundry detergent');
-    expect(value(container, 'target-stock')).toBe('2');
-    expect(value(container, 'reorder-point')).toBe('1');
-    expect(textOf(container)).toContain("Down to 1? Bring home 1 more and you're back at 2.");
-    expect(textOf(container)).toContain('units — 1 spare');
+    // A spare is a unit held on top of what the wait eats: one here, so the
+    // card counts one. Fetching starts the moment that spare is opened.
+    expect(value(container, 'keep-at-least')).toBe('1');
+    expect(textOf(container)).toContain('unit spare');
+    expect(value(container, 'fetch-more-at')).toBe('0');
+    expect(textOf(container)).toContain("Down to 1 unit? Bring home 1 more and you're back at 2.");
   });
 
   it('keeps renaming and deleting off the main screen', () => {
@@ -287,10 +292,9 @@ describe('the full screen of things', () => {
     // Still every bit as open: the household may well want to rename it next.
     expect(picker(container)).not.toBeNull();
     await vi.waitFor(() => {
-      expect(field(container, 'thing-name').value).toBe('🧽 Dishwasher tabs');
+      expect(field(container, 'thing-name').value).toBe('Dishwasher tabs');
     });
-    expect(value(container, 'target-stock')).toBe('8');
-    expect(value(container, 'reorder-point')).toBe('5');
+    expect(value(container, 'keep-at-least')).toBe('3');
   });
 
   it('lets you rename the thing you just switched to, before closing', async () => {
@@ -299,7 +303,7 @@ describe('the full screen of things', () => {
     await openThingPicker(container);
     pickerButton(container, '🧽 Dishwasher tabs').click();
     await vi.waitFor(() => {
-      expect(field(container, 'thing-name').value).toBe('🧽 Dishwasher tabs');
+      expect(field(container, 'thing-name').value).toBe('Dishwasher tabs');
     });
 
     enter(container, 'thing-name', 'Fairy tabs');
@@ -308,10 +312,10 @@ describe('the full screen of things', () => {
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
     });
-    expect(textOf(container)).toContain('Fairy tabs');
+    expect(textOf(container)).toContain('🧽 Fairy tabs');
     expect(saved(storage).find((item) => item.id === 'tabs')?.name).toBe('Fairy tabs');
     expect(saved(storage).find((item) => item.id === 'detergent')?.name).toBe(
-      '🧴 Laundry detergent',
+      'Laundry detergent',
     );
   });
 
@@ -342,7 +346,7 @@ describe('the full screen of things', () => {
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
     });
-    expect(value(container, 'target-stock')).toBe('2');
+    expect(value(container, 'keep-at-least')).toBe('1');
   });
 
   it('picks whichever thing was tapped twice, then leaves', async () => {
@@ -354,8 +358,7 @@ describe('the full screen of things', () => {
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
     });
-    expect(value(container, 'target-stock')).toBe('8');
-    expect(value(container, 'reorder-point')).toBe('5');
+    expect(value(container, 'keep-at-least')).toBe('3');
   });
 
   it('leaves one tap alone: it only picks the thing', async () => {
@@ -365,7 +368,7 @@ describe('the full screen of things', () => {
     pickerButton(container, '🧽 Dishwasher tabs').click();
 
     await vi.waitFor(() => {
-      expect(value(container, 'target-stock')).toBe('8');
+      expect(value(container, 'keep-at-least')).toBe('3');
     });
     expect(picker(container)).not.toBeNull();
   });
@@ -388,12 +391,14 @@ describe('the full screen of things', () => {
     const { container, storage } = openApp([detergent]);
 
     await openThingPicker(container);
-    enter(container, 'thing-name', '🧼 Dish soap');
+    enter(container, 'thing-name', 'Dish soap');
 
     await vi.waitFor(() => {
-      expect(textOf(picker(container) ?? container)).toContain('🧼 Dish soap');
+      expect(textOf(picker(container) ?? container)).toContain('Dish soap');
     });
-    expect(saved(storage)[0]?.name).toBe('🧼 Dish soap');
+    expect(saved(storage)[0]?.name).toBe('Dish soap');
+    // The picture in front has nothing to do with the name: it stays put.
+    expect(saved(storage)[0]?.emoji).toBe('🧴');
   });
 
   it('deletes the thing you are looking at, after asking', async () => {
@@ -441,13 +446,13 @@ describe('the full screen of things', () => {
       expect(saved(storage)).toHaveLength(1);
     });
     // A brand new thing starts as 1 unit per 30 days, 3 days to fetch, 30 extra days.
-    expect(value(container, 'target-stock')).toBe('2');
+    expect(value(container, 'keep-at-least')).toBe('1');
   });
 });
 
 describe('finding a picture for a thing', () => {
-  it('offers emoji for what was typed, and puts the chosen one in front of the name', async () => {
-    const { container, storage } = openApp([{ ...detergent, name: 'Bar soap' }]);
+  it('puts the chosen picture in front of the name without touching the name', async () => {
+    const { container, storage } = openApp([{ ...detergent, name: 'Bar soap', emoji: '' }]);
     await openThingPicker(container);
 
     await openEmojiSearch(container);
@@ -455,13 +460,15 @@ describe('finding a picture for a thing', () => {
     await pickEmoji(container, 'soap');
 
     await vi.waitFor(() => {
-      expect(field(container, 'thing-name').value).toBe('🧼 Bar soap');
+      expect(saved(storage)[0]?.emoji).toBe('🧼');
     });
-    expect(saved(storage)[0]?.name).toBe('🧼 Bar soap');
+    expect(saved(storage)[0]?.name).toBe('Bar soap');
+    expect(field(container, 'thing-name').value).toBe('Bar soap');
+    expect(pickerButton(container, '🧼 Bar soap')).toBeDefined();
   });
 
-  it('swaps the emoji in front instead of stacking a second one', async () => {
-    const { container, storage } = openApp([{ ...detergent, name: '🧴 Laundry detergent' }]);
+  it('swaps the picture instead of stacking a second one', async () => {
+    const { container, storage } = openApp([detergent]);
     await openThingPicker(container);
 
     await openEmojiSearch(container);
@@ -469,12 +476,14 @@ describe('finding a picture for a thing', () => {
     await pickEmoji(container, 'soap');
 
     await vi.waitFor(() => {
-      expect(saved(storage)[0]?.name).toBe('🧼 Laundry detergent');
+      expect(saved(storage)[0]?.emoji).toBe('🧼');
     });
+    expect(saved(storage)[0]?.name).toBe('Laundry detergent');
+    expect(pickerButton(container, '🧼 Laundry detergent')).toBeDefined();
   });
 
   it('leaves the sheet open, with the name ready for what the picture is of', async () => {
-    const { container } = openApp([{ ...detergent, name: 'Bar soap' }]);
+    const { container } = openApp([{ ...detergent, name: 'Bar soap', emoji: '' }]);
     await openThingPicker(container);
 
     await openEmojiSearch(container);
@@ -485,6 +494,24 @@ describe('finding a picture for a thing', () => {
       expect(document.activeElement).toBe(field(container, 'thing-name'));
     });
     expect(picker(container)).not.toBeNull();
+    // Picking one is the whole of it: the search folds away by itself.
+    expect(container.querySelector('#emoji-search')).toBeNull();
+  });
+
+  it('takes a tap somewhere else as the picture being settled', async () => {
+    const { container } = openApp([detergent]);
+    await openThingPicker(container);
+    await openEmojiSearch(container);
+    enter(container, 'emoji-search', 'soap');
+
+    field(container, 'emoji-search').focus();
+    field(container, 'thing-name').focus();
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('#emoji-search')).toBeNull();
+    });
+    // Nothing was picked, so the picture the thing already had is left alone.
+    expect(pickerButton(container, '🧴 Laundry detergent')).toBeDefined();
   });
 
   it('narrows as more words are typed, and says so when nothing is left', async () => {
@@ -524,16 +551,16 @@ describe('files in and out', () => {
     pickFile(
       container,
       JSON.stringify([
-        { id: 'soap', name: '🧼 Dish soap', usageDays: 20, leadDays: 2, extraDays: 40 },
+        { id: 'soap', name: 'Dish soap', emoji: '🧼', usageDays: 20, leadDays: 2, extraDays: 40 },
       ]),
     );
 
     await vi.waitFor(() => {
-      expect(saved(storage)[0]?.name).toBe('🧼 Dish soap');
+      expect(saved(storage)[0]?.name).toBe('Dish soap');
     });
     expect(textOf(container)).toContain('Imported 1 thing.');
     // 20 days a unit, 2 days to fetch, 40 extra days: one tight, two spare.
-    expect(value(container, 'target-stock')).toBe('3');
+    expect(value(container, 'keep-at-least')).toBe('2');
   });
 
   it('asks before a file replaces the shelf, and keeps it when told no', async () => {
@@ -555,6 +582,36 @@ describe('files in and out', () => {
     });
     expect(saved(storage)).toEqual([detergent]);
     expect(textOf(container)).not.toContain('Imported');
+  });
+
+  it('takes an older file, which kept the emoji inside the name', async () => {
+    const { container, storage } = openApp([detergent]);
+    await openThingPicker(container);
+    answerTheQuestionWith(true);
+
+    // What this app wrote before the picture had a field of its own.
+    pickFile(container, '[{"name": "🧼 Dish soap", "usageDays": 20, "leadDays": 2, "extraDays": 40}]');
+
+    await vi.waitFor(() => {
+      expect(saved(storage)[0]?.emoji).toBe('🧼');
+    });
+    expect(saved(storage)[0]?.name).toBe('Dish soap');
+  });
+
+  it('refuses a file from a newer copy of the app instead of half-reading it', async () => {
+    const { container, storage } = openApp([detergent]);
+    await openThingPicker(container);
+    answerTheQuestionWith(true);
+
+    pickFile(
+      container,
+      JSON.stringify({ format: 'shopping-peace', version: 99, exported: 'then', things: [] }),
+    );
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('newer Shopping Peace');
+    });
+    expect(saved(storage)).toEqual([detergent]);
   });
 
   it('says how many things are about to be replaced', async () => {
@@ -670,7 +727,7 @@ describe('bringing the starter things back', () => {
       expect(saved(storage)).toHaveLength(2);
     });
     expect(textOf(container)).toContain('Brought back 2 things.');
-    expect(value(container, 'target-stock')).toBe('2');
+    expect(value(container, 'keep-at-least')).toBe('1');
   });
 });
 
@@ -681,10 +738,8 @@ describe('touching the numbers', () => {
     enter(container, 'lead-days', '45');
 
     await vi.waitFor(() => {
-      expect(value(container, 'reorder-point')).toBe('2');
+      expect(textOf(container)).toContain("Down to 2 units? Bring home 1 more and you're back at 3.");
     });
-    expect(value(container, 'target-stock')).toBe('3');
-    expect(textOf(container)).toContain("Down to 2? Bring home 1 more and you're back at 3.");
     expect(saved(storage)[0]?.leadDays).toBe(45);
   });
 
@@ -696,7 +751,7 @@ describe('touching the numbers', () => {
     enter(container, 'usage-days', '10');
 
     await vi.waitFor(() => {
-      expect(value(container, 'target-stock')).toBe('4');
+      expect(value(container, 'keep-at-least')).toBe('3');
     });
     expect(textOf(container)).toContain('4 units ≈ 40 days of cover.');
     expect(saved(storage)[0]?.usageDays).toBe(10);
@@ -708,9 +763,9 @@ describe('touching the numbers', () => {
     enter(container, 'extra-days-slider', '90');
 
     await vi.waitFor(() => {
-      expect(value(container, 'target-stock')).toBe('4');
+      expect(value(container, 'keep-at-least')).toBe('3');
     });
-    expect(textOf(container)).toContain('3 spare');
+    expect(textOf(container)).toContain('units spare');
     expect(saved(storage)[0]?.extraDays).toBe(90);
   });
 
@@ -721,11 +776,13 @@ describe('touching the numbers', () => {
 
     await vi.waitFor(() => {
       // Nothing spare to keep, so the tight level is the whole plan.
-      expect(value(container, 'target-stock')).toBe('1');
+      expect(textOf(container)).toContain('unit — nothing spare');
     });
-    expect(value(container, 'reorder-point')).toBe('1');
+    expect(value(container, 'keep-at-least')).toBe('1');
+    expect(textOf(container)).toContain('unit left');
+    expect(value(container, 'fetch-more-at')).toBe('1');
     expect(textOf(container)).toContain(
-      'Down to 1? Nothing is kept spare, so fetch the next unit as this one runs out.',
+      'Down to 1 unit? Nothing is kept spare, so fetch the next unit as this one runs out.',
     );
     expect(saved(storage)[0]?.extraDays).toBe(0);
   });
@@ -738,13 +795,13 @@ describe('touching the numbers', () => {
       expect(field(container, 'extra-days').value).toBe('31');
     });
     // 31 extra days no longer fit inside a single 30-day unit.
-    expect(value(container, 'target-stock')).toBe('3');
+    expect(value(container, 'keep-at-least')).toBe('2');
 
     button(container, 'Decrease 🛡️').click();
     await vi.waitFor(() => {
       expect(field(container, 'extra-days').value).toBe('30');
     });
-    expect(value(container, 'target-stock')).toBe('2');
+    expect(value(container, 'keep-at-least')).toBe('1');
   });
 
   it('ignores a half-typed number instead of guessing', () => {
@@ -753,7 +810,7 @@ describe('touching the numbers', () => {
     enter(container, 'lead-days', '');
 
     expect(saved(storage)[0]?.leadDays).toBe(3);
-    expect(value(container, 'reorder-point')).toBe('1');
+    expect(value(container, 'keep-at-least')).toBe('1');
   });
 });
 
@@ -761,16 +818,23 @@ describe('a thing that turns before it is finished', () => {
   it('counts a unit as gone when it turns, in the numbers a household reads', () => {
     const { container } = openApp([butter]);
 
-    expect(value(container, 'target-stock')).toBe('2');
-    expect(textOf(container)).toContain('2 units ≈ 14 days of cover.');
+    expect(value(container, 'keep-at-least')).toBe('1');
+    expect(textOf(container)).toContain("Down to 1 unit? Bring home 1 more and you're back at 2.");
   });
 
   it('says out loud why the numbers are higher than the eating rate suggests', () => {
     const { container } = openApp([butter]);
 
     expect(container.querySelector('[data-testid="spoil-warning"]')?.textContent).toContain(
-      'It turns 7 days after opening, though one unit lasts 14 days — the plan counts a unit as gone in 7 days.',
+      'It turns 7 days after opening, so a unit is really gone in 7 days, not the 14 days it takes to use up.',
     );
+  });
+
+  it('writes the warning where the cover line would be, rather than above the cards', () => {
+    const { container } = openApp([butter]);
+
+    // One slot, so the warning costs no height of its own.
+    expect(textOf(container)).not.toContain('days of cover');
   });
 
   it('keeps quiet about spoiling for a thing that keeps', () => {
@@ -790,7 +854,7 @@ describe('a thing that turns before it is finished', () => {
       );
     });
     // A day is the shortest a unit can count as: 2 for the wait, 7 spare.
-    expect(value(container, 'target-stock')).toBe('9');
+    expect(value(container, 'keep-at-least')).toBe('7');
     expect(saved(storage)[0]?.freshDays).toBe(0);
   });
 

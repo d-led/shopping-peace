@@ -22,6 +22,8 @@ export interface StepSliderProps {
   readonly minLabel?: string;
   /** Wording for the top of the range, where the bare number misleads. */
   readonly maxLabel?: string;
+  /** Said on hover, for a number that needs a word with it. */
+  readonly hint?: string;
   readonly onChange: (value: number) => void;
 }
 
@@ -40,6 +42,7 @@ export function StepSlider({
   tone,
   minLabel,
   maxLabel,
+  hint,
   onChange,
 }: StepSliderProps) {
   // An imported preset may sit outside the usual range; widen the track rather
@@ -60,7 +63,7 @@ export function StepSlider({
   };
 
   return (
-    <div class="w-full min-w-0">
+    <div class="w-full min-w-0" title={hint}>
       <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <label class={`min-w-0 flex-auto font-bold ${TEXT.body}`} for={id}>
           {label}
@@ -83,7 +86,7 @@ export function StepSlider({
               }
             }}
           />
-          <span class={`font-bold text-base-content/60 ${TEXT.small}`}>
+          <span class={`font-bold text-base-content/70 ${TEXT.small}`}>
             {ending ?? (value === 1 ? unit : `${unit}s`)}
           </span>
         </span>
@@ -104,6 +107,10 @@ export function StepSlider({
           max={highest}
           step={1}
           value={value}
+          // The track is a second way into the same number, so it carries the
+          // same name as the label beside it: an unlabelled slider is a
+          // control a screen reader announces as nothing at all.
+          aria-label={label}
           class={`range range-lg min-w-0 flex-1 ${TONE_RANGE[tone]}`}
           onInput={(event) => commit(Number((event.target as HTMLInputElement).value))}
         />

@@ -31,7 +31,7 @@ export function EmojiPicker({ onPick }: EmojiPickerProps) {
         onInput={(event) => setQuery((event.target as HTMLInputElement).value)}
       />
       {matches.length === 0 ? (
-        <p class={`text-base-content/60 ${TEXT.small}`}>
+        <p class={`text-base-content/70 ${TEXT.small}`}>
           Nothing here for “{query}” — try a plainer word.
         </p>
       ) : (

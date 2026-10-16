@@ -17,10 +17,19 @@ export interface StockRequirements {
   readonly freshDays: number;
 }
 
-/** A named preset: the "THING" plus how it is used. */
+/** A named preset: the "THING", how it is used, and the picture in front of it. */
 export interface StockItem extends StockRequirements {
   readonly id: string;
   readonly name: string;
+  /**
+   * The character in front of the name, or an empty string for none.
+   *
+   * Kept apart from the name so the picture can be swapped without touching
+   * what the thing is called, and so a file carries it as data rather than as
+   * part of a sentence. A picture from an icon set would arrive as its own
+   * field beside this one rather than as a second kind of name.
+   */
+  readonly emoji: string;
 }
 
 /** Shown instead of a blank title, so a preset is never nameless on screen. */

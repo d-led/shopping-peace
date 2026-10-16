@@ -27,7 +27,7 @@ export interface SourceStampProps {
 export function SourceStamp({ sha }: SourceStampProps) {
   return (
     <p
-      class={`flex flex-wrap items-center justify-center gap-2 text-base-content/60 ${TEXT.small}`}
+      class={`flex flex-wrap items-center justify-center gap-2 text-base-content/70 ${TEXT.small}`}
     >
       <a
         class="inline-flex items-center gap-2 underline"

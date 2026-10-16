@@ -1,30 +1,16 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './support/coverage';
-import { FRESHNESS_NEVER, type StockItem } from '../../src/domain/stock-item';
 import { openAppWith, openFreshApp, openThingPicker, paintedFontSizes } from './support/app';
+import { detergent, tabs } from './support/things';
 
-/** 1 unit lasts 30 days, 3 days to fetch, 30 extra: fetch at 1, keep 2. */
-const detergent: StockItem = {
-  id: 'detergent',
-  name: '🧴 Laundry detergent',
-  usageDays: 30,
-  leadDays: 3,
-  extraDays: 30,
-  freshDays: FRESHNESS_NEVER,
-};
-
-/** Fast used, slow to fetch: fetch at 5, keep 8. */
-const tabs: StockItem = {
-  id: 'tabs',
-  name: '🧽 Dishwasher tabs',
-  usageDays: 10,
-  leadDays: 45,
-  extraDays: 30,
-  freshDays: FRESHNESS_NEVER,
-};
+/**
+ * The picker: switching, renaming, deleting, and the files that travel in and
+ * out. Checked on the desktop rather than on all three device profiles — the
+ * page load is the same one, and what differs by device (layout, touch, the
+ * two-tap gesture) lives in `main-screen.spec.ts` and `touch.spec.ts`.
+ */
 
 test.describe('the full screen of things', () => {
   test('lists every thing, and switching keeps the sheet open for editing', async ({ page }) => {
@@ -46,70 +32,13 @@ test.describe('the full screen of things', () => {
 
     // The sheet stays put, and now points at the thing that was just picked.
     await expect(picker).toBeVisible();
-    await expect(page.locator('#thing-name')).toHaveValue('🧽 Dishwasher tabs');
-    await expect(page.getByTestId('reorder-point')).toHaveText('5');
-    await expect(page.getByTestId('target-stock')).toHaveText('8');
+    await expect(page.locator('#thing-name')).toHaveValue('Dishwasher tabs');
+    // Three spares, and fetching starts the moment the last one is opened.
+    await expect(page.getByTestId('keep-at-least')).toHaveText('3');
+    await expect(page.getByTestId('fetch-more-at')).toHaveText('0');
 
     await picker.getByRole('button', { name: 'OK' }).click();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
-  });
-
-  test('takes two taps on a thing as OK', async ({ page, hasTouch }) => {
-    await openAppWith(page, [detergent, tabs]);
-    await openThingPicker(page);
-    const row = page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u });
-
-    await tapTwice(page, row, hasTouch);
-
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
-    await expect(page.getByTestId('reorder-point')).toHaveText('5');
-  });
-
-  test('takes two taps on a touch screen, which is not a double click', async ({
-    page,
-    hasTouch,
-  }) => {
-    // The gesture a phone actually performs. A double *click* is a mouse one,
-    // and a phone does not report a double tap as `dblclick` at all.
-    test.skip(!hasTouch, 'this gesture needs a touch screen');
-    await openAppWith(page, [detergent, tabs]);
-    await openThingPicker(page);
-    const row = page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u });
-
-    await tapTwice(page, row, true);
-
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
-  });
-
-  test('leaves a single tap short of leaving', async ({ page }) => {
-    await openAppWith(page, [detergent, tabs]);
-    await openThingPicker(page);
-
-    await page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
-
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.locator('#thing-name')).toHaveValue('🧽 Dishwasher tabs');
-  });
-
-  test('renames the thing you just switched to, before closing', async ({ page }) => {
-    await openAppWith(page, [detergent, tabs]);
-    await openThingPicker(page);
-    const picker = page.getByRole('dialog');
-
-    await picker.getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
-    await expect(page.locator('#thing-name')).toHaveValue('🧽 Dishwasher tabs');
-
-    await page.locator('#thing-name').fill('Fairy tabs');
-    await picker.getByRole('button', { name: 'OK' }).click();
-
-    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Fairy tabs');
-
-    // A reload opens the first thing again, but the new name stuck.
-    await page.reload();
-    await openThingPicker(page);
-    await expect(page.getByRole('dialog').getByRole('button', { name: /Fairy tabs/u })).toBeVisible();
   });
 
   test('uses no more than three text sizes here either', async ({ page }) => {
@@ -144,26 +73,30 @@ test.describe('the full screen of things', () => {
     await page.reload();
 
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
-    await expect(page.getByTestId('reorder-point')).toHaveText('5');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('3');
   });
 
-  test('finds an emoji by what it is, and puts it in front of the name', async ({ page }) => {
+  test('takes the picture it is offered, and leaves the name alone', async ({ page }) => {
     await openAppWith(page, [detergent]);
     await openThingPicker(page);
     const picker = page.getByRole('dialog');
 
-    await picker.getByRole('button', { name: /Emoji/u }).click();
+    await picker.getByRole('button', { name: /Picture/u }).click();
     await page.locator('#emoji-search').fill('milk');
     await picker.getByRole('button', { name: 'milk', exact: true }).click();
 
-    await expect(page.locator('#thing-name')).toHaveValue('🥛 Laundry detergent');
+    // The picture has a field of its own: the name is still just the name.
+    await expect(page.locator('#thing-name')).toHaveValue('Laundry detergent');
     // The sheet stays open, and the caret is back in the name.
     await expect(page.locator('#thing-name')).toBeFocused();
 
+    // Typing a picture in front of the name is still taken as the picture.
     await page.locator('#thing-name').fill('🥛 Semi-skimmed milk');
     await picker.getByRole('button', { name: 'OK' }).click();
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🥛 Semi-skimmed milk');
+    await openThingPicker(page);
+    await expect(page.locator('#thing-name')).toHaveValue('Semi-skimmed milk');
   });
 
   test('adds a thing from the + button and hands over the name field', async ({ page }) => {
@@ -243,6 +176,7 @@ test.describe('the full screen of things', () => {
 
     await expect(page.getByRole('status')).toContainText('Brought back 6 things');
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('1');
 
     // Brought back is not "shown once": the shelf they land on is written down.
     await page.reload();
@@ -256,11 +190,16 @@ test.describe('numbers being changed by hand', () => {
 
     await page.locator('#lead-days').fill('45');
 
-    await expect(page.getByTestId('reorder-point')).toHaveText('2');
-    await expect(page.getByTestId('target-stock')).toHaveText('3');
+    // A 45-day wait no longer fits inside one 30-day unit, so the tight level
+    // becomes two units and the headline says so.
+    await expect(
+      page.getByText("Down to 2 units? Bring home 1 more and you're back at 3."),
+    ).toBeVisible();
     await page.reload();
     await expect(page.locator('#lead-days')).toHaveValue('45');
-    await expect(page.getByTestId('target-stock')).toHaveText('3');
+    await expect(
+      page.getByText("Down to 2 units? Bring home 1 more and you're back at 3."),
+    ).toBeVisible();
   });
 
   test('steps with the ± buttons, which need no aiming', async ({ page }) => {
@@ -270,8 +209,8 @@ test.describe('numbers being changed by hand', () => {
     await page.getByRole('button', { name: /^Increase 🛡️/u }).click();
 
     await expect(page.locator('#extra-days')).toHaveValue('31');
-    // 31 extra days no longer fit inside one 30-day unit.
-    await expect(page.getByTestId('target-stock')).toHaveText('3');
+    // 31 extra days no longer fit inside one 30-day unit, so a second spare.
+    await expect(page.getByTestId('keep-at-least')).toHaveText('2');
   });
 });
 
@@ -279,10 +218,14 @@ test.describe('files in and out', () => {
   test('exports every thing as a dated JSON file', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
+    const exportAll = page.getByRole('dialog').getByRole('button', { name: 'Export all' });
+
+    // The button says what it does, in the words a household would use.
+    await expect(exportAll).toContainText('Export all');
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('dialog').getByRole('button', { name: 'Export all' }).click(),
+      exportAll.click(),
     ]);
 
     expect(download.suggestedFilename()).toMatch(
@@ -290,7 +233,15 @@ test.describe('files in and out', () => {
     );
     const exported = await download.path();
     expect(exported).not.toBeNull();
-    expect(JSON.parse(await readFile(exported!, 'utf8'))).toEqual([detergent, tabs]);
+    const file = JSON.parse(await readFile(exported!, 'utf8'));
+
+    // A file that says what it is and when it was written, holding the things.
+    expect(file).toMatchObject({
+      format: 'shopping-peace',
+      version: 1,
+      exported: expect.any(String),
+    });
+    expect(file.things).toEqual([detergent, tabs]);
   });
 
   test('exports one thing, in a file named after it', async ({ page }) => {
@@ -310,17 +261,23 @@ test.describe('files in and out', () => {
     );
     const exported = await download.path();
     expect(exported).not.toBeNull();
-    // A list of one, so import cannot tell the difference.
-    expect(JSON.parse(await readFile(exported!, 'utf8'))).toEqual([tabs]);
+    // One thing in the same shape as the whole shelf, so import cannot tell the
+    // difference.
+    expect(JSON.parse(await readFile(exported!, 'utf8')).things).toEqual([tabs]);
   });
 
   test('imports presets from a file and says so', async ({ page }) => {
     await openAppWith(page, [detergent]);
     const file = await writeTempFile(
       'import.json',
-      JSON.stringify([
-        { id: 'soap', name: '🧼 Dish soap', usageDays: 20, leadDays: 2, extraDays: 40 },
-      ]),
+      JSON.stringify({
+        format: 'shopping-peace',
+        version: 1,
+        exported: '2026-10-16T08:00:00.000Z',
+        things: [
+          { id: 'soap', name: 'Dish soap', emoji: '🧼', usageDays: 20, leadDays: 2, extraDays: 40 },
+        ],
+      }),
     );
 
     await openThingPicker(page);
@@ -329,12 +286,33 @@ test.describe('files in and out', () => {
 
     await expect(page.getByRole('status')).toContainText('Imported 1 thing');
     await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
-    // 20 days a unit, 2 days to fetch, 40 extra days: one tight, two spare.
-    await expect(page.getByTestId('target-stock')).toHaveText('3');
+    // 20 days a unit, 2 days to fetch, 40 extra days: two spares.
+    await expect(page.getByTestId('keep-at-least')).toHaveText('2');
 
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
-    await expect(page.getByTestId('target-stock')).toHaveText('3');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('2');
+  });
+
+  test('imports the file it used to write, with the picture inside the name', async ({ page }) => {
+    await openAppWith(page, [detergent]);
+    const file = await writeTempFile(
+      'older.json',
+      // No version, no emoji field: what this app wrote before the format was
+      // versioned. The file is still read, and the picture is kept.
+      '[{"id": "soap", "name": "🧼 Dish soap", "usageDays": 20, "leadDays": 2, "extraDays": 40}]',
+    );
+
+    await openThingPicker(page);
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('input[type="file"]').setInputFiles(file);
+
+    await expect(page.getByRole('status')).toContainText('Imported 1 thing');
+    await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
+    // The picture came out of the name, and the name is just the name now.
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
+    await openThingPicker(page);
+    await expect(page.locator('#thing-name')).toHaveValue('Dish soap');
   });
 
   test('asks before a file replaces the shelf, and keeps it when told no', async ({ page }) => {
@@ -375,31 +353,4 @@ async function writeTempFile(name: string, contents: string): Promise<string> {
   const path = join(tmpdir(), `shopping-peace-${name}`);
   await writeFile(path, contents);
   return path;
-}
-
-/**
- * Two taps on the same thing, quickly.
- *
- * Deliberately not `locator.click()` twice: that checks the element is stable
- * and enabled in between, which on a busy machine takes longer than the app's
- * own window for "that was a double tap" — and the timing is the thing under
- * test here. Same place, same element, a few milliseconds apart, which is what
- * a thumb does.
- */
-async function tapTwice(page: Page, row: Locator, touch: boolean): Promise<void> {
-  const box = await row.boundingBox();
-  if (box === null) {
-    throw new Error('The thing to tap has no box on screen.');
-  }
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-
-  if (touch) {
-    await page.touchscreen.tap(x, y);
-    await page.touchscreen.tap(x, y);
-    return;
-  }
-
-  await page.mouse.click(x, y);
-  await page.mouse.click(x, y);
 }

@@ -65,6 +65,17 @@ export function App({ store }: { readonly store: ItemStore }) {
     }
   };
 
+  const restoreDefaults = () => {
+    const restored = store.restoreDefaults();
+    setNotice({
+      tone: 'success',
+      text:
+        restored === 0
+          ? 'The starter things are all here already.'
+          : `Brought back ${countThings(restored)}.`,
+    });
+  };
+
   return (
     <div class="min-h-screen">
       <header class="navbar bg-primary text-primary-content shadow-md sticky top-0 z-50 px-3 md:px-6">
@@ -73,7 +84,7 @@ export function App({ store }: { readonly store: ItemStore }) {
 
       <main class="max-w-2xl mx-auto p-3 md:p-6 pb-24">
         {selected === null ? (
-          <EmptyEditor onAdd={addThing} />
+          <EmptyEditor onAdd={addThing} onRestoreDefaults={restoreDefaults} />
         ) : (
           <ItemEditor
             item={selected}
@@ -97,7 +108,8 @@ export function App({ store }: { readonly store: ItemStore }) {
           onDelete={deleteThing}
           onExport={exportPresets}
           onImport={importPresets}
-          onClose={() => setPickerOpen(false)}
+          onRestoreDefaults={restoreDefaults}
+          onConfirm={() => setPickerOpen(false)}
         />
       )}
 
@@ -124,7 +136,13 @@ export function App({ store }: { readonly store: ItemStore }) {
   );
 }
 
-function EmptyEditor({ onAdd }: { readonly onAdd: () => void }) {
+function EmptyEditor({
+  onAdd,
+  onRestoreDefaults,
+}: {
+  readonly onAdd: () => void;
+  readonly onRestoreDefaults: () => void;
+}) {
   return (
     <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300">
       <div class="card-body min-w-0 items-center text-center py-16 gap-4">
@@ -142,6 +160,13 @@ function EmptyEditor({ onAdd }: { readonly onAdd: () => void }) {
           onClick={onAdd}
         >
           + New thing
+        </button>
+        <button
+          type="button"
+          class={`btn btn-sm rounded-none ${TEXT.small}`}
+          onClick={onRestoreDefaults}
+        >
+          ↩️ Bring back the starter things
         </button>
       </div>
     </section>

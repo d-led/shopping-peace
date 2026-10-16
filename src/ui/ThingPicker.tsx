@@ -15,7 +15,10 @@ export interface ThingPickerProps {
   readonly onDelete: (item: StockItem) => void;
   readonly onExport: () => void;
   readonly onImport: (event: Event) => void;
-  readonly onClose: () => void;
+  /** Brings back any starter preset that is missing. Never removes anything. */
+  readonly onRestoreDefaults: () => void;
+  /** Leaves the sheet. Everything is already saved, so this is just "done". */
+  readonly onConfirm: () => void;
 }
 
 /**
@@ -33,17 +36,18 @@ export function ThingPicker({
   onDelete,
   onExport,
   onImport,
-  onClose,
+  onRestoreDefaults,
+  onConfirm,
 }: ThingPickerProps) {
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
+    const confirmOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        onConfirm();
       }
     };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [onClose]);
+    document.addEventListener('keydown', confirmOnEscape);
+    return () => document.removeEventListener('keydown', confirmOnEscape);
+  }, [onConfirm]);
 
   const current = items.find((item) => item.id === currentId);
 
@@ -67,12 +71,12 @@ export function ThingPicker({
         </button>
         <button
           type="button"
-          class={`btn btn-square btn-lg shrink-0 rounded-none ${TEXT.body}`}
-          aria-label="Close"
-          title="Close"
-          onClick={onClose}
+          class={`btn btn-primary btn-lg shrink-0 rounded-none ${TEXT.body}`}
+          aria-label="OK"
+          title="OK — done"
+          onClick={onConfirm}
         >
-          ✕
+          ✓ OK
         </button>
       </header>
 
@@ -89,6 +93,12 @@ export function ThingPicker({
                 }`}
                 aria-current={item.id === currentId ? 'true' : undefined}
                 onClick={() => onSelect(item.id)}
+                // A double press means "this one, and I am done": the usual
+                // way out of a picker on a touch screen.
+                onDblClick={() => {
+                  onSelect(item.id);
+                  onConfirm();
+                }}
               >
                 <span class="block min-w-0 flex-1">
                   <span
@@ -157,15 +167,26 @@ export function ThingPicker({
             </label>
           </div>
 
-          {current !== undefined && (
-            <button
-              type="button"
-              class={`btn btn-error btn-outline btn-lg w-full rounded-none ${TEXT.body}`}
-              onClick={() => onDelete(current)}
-            >
-              🗑️ Delete this thing
-            </button>
-          )}
+          <div class="flex flex-col gap-2 md:gap-3 border-t border-base-300 pt-2 md:pt-3">
+            <div class="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                class={`btn btn-sm rounded-none ${TEXT.small}`}
+                onClick={onRestoreDefaults}
+              >
+                ↩️ Restore defaults
+              </button>
+              {current !== undefined && (
+                <button
+                  type="button"
+                  class={`btn btn-error btn-outline btn-sm rounded-none ${TEXT.small}`}
+                  onClick={() => onDelete(current)}
+                >
+                  🗑️ Delete
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </footer>
     </div>

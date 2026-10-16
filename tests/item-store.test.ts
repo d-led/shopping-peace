@@ -124,6 +124,60 @@ describe('importing a file', () => {
   });
 });
 
+describe('bringing the starter things back', () => {
+  it('brings back only the ones that are gone', () => {
+    const { store } = openApp([detergent]);
+
+    expect(store.restoreDefaults()).toBe(1);
+
+    expect(store.getState().items.map((item) => item.name)).toEqual([
+      detergent.name,
+      tabs.name,
+    ]);
+  });
+
+  it('leaves the things the household thought up alone', () => {
+    const mine: StockItem = {
+      id: 'mine',
+      name: '🧼 Dish soap',
+      usageDays: 20,
+      leadDays: 2,
+      extraDays: 40,
+    };
+    const { store, stored } = openApp([mine]);
+
+    store.restoreDefaults();
+
+    expect(store.getState().items.map((item) => item.id)).toEqual(['mine', 'detergent', 'tabs']);
+    expect(stored().map((item) => item.id)).toEqual(['mine', 'detergent', 'tabs']);
+  });
+
+  it('recognises a starter by its name, however it got there', () => {
+    const { store } = openApp([{ ...detergent, id: 'copied-by-hand' }]);
+
+    expect(store.restoreDefaults()).toBe(1);
+  });
+
+  it('reports and does nothing when they are all there', () => {
+    const { store } = openApp([detergent, tabs]);
+    let calls = 0;
+    store.subscribe(() => {
+      calls += 1;
+    });
+
+    expect(store.restoreDefaults()).toBe(0);
+    expect(calls).toBe(0);
+  });
+
+  it('opens the first thing when the shelf had gone empty', () => {
+    const { store } = openApp([]);
+
+    store.restoreDefaults();
+
+    expect(store.getState().selected?.id).toBe('detergent');
+  });
+});
+
 describe('watching for changes', () => {
   it('tells every listener what the new state is', () => {
     const { store } = openApp([detergent]);
@@ -170,5 +224,18 @@ describe('watching for changes', () => {
     store.adjust('no-such-thing', { extraDays: 45 });
 
     expect(calls).toBe(0);
+  });
+
+  it('stays quiet when asked for the thing that is already open', () => {
+    const { store } = openApp([detergent, tabs]);
+    let calls = 0;
+    store.subscribe(() => {
+      calls += 1;
+    });
+
+    store.select('detergent');
+
+    expect(calls).toBe(0);
+    expect(store.getState().selected?.id).toBe('detergent');
   });
 });

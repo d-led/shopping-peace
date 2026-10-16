@@ -71,6 +71,11 @@ there is no save button, and nothing is ever sent anywhere. The thing picker
 exports them as a dated JSON file and reads one back in, so a household can move
 them between devices or keep a copy.
 
+**Restore defaults** brings back any of the three starter things that are no
+longer in the list, matched by name. It only ever adds: anything the household
+has added, renamed or retuned is left exactly as it is, so pressing it twice
+does nothing the second time.
+
 ## Layout
 
 ```
@@ -93,6 +98,8 @@ Rules the screen follows, since it is used with wet hands:
 - the two numbers are visible without scrolling, on a 375 px phone;
 - switching things keeps the sheet open, so the one you just picked can be
   renamed before you close it;
+- a double press on a thing picks it and leaves — the same as the **✓ OK**
+  button, and the usual way out of a picker on a touch screen;
 - every tap target is thumb-sized, with ± buttons beside each slider for hands
   that cannot aim at a track.
 

@@ -53,10 +53,12 @@ export function StepSlider({
   return (
     <div class="w-full min-w-0">
       <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-        <label class={`min-w-0 flex-auto font-bold ${TEXT.small}`} for={id}>
+        <label class={`min-w-0 flex-auto font-bold ${TEXT.body}`} for={id}>
           {label}
         </label>
-        <span class="flex shrink-0 items-center gap-1">
+        {/* On a narrow screen the number drops to its own line, and ms-auto
+            keeps it against the right edge rather than stranded on the left. */}
+        <span class="ms-auto flex shrink-0 items-center gap-1">
           <input
             id={id}
             type="number"

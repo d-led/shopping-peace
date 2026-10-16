@@ -58,6 +58,9 @@ export function paintedFontSizes(page: Page): Promise<string[]> {
   });
 }
 
+/** Either the numbers are there, or the screen is the "nothing yet" one. */
 async function mainScreenIsReady(page: Page): Promise<void> {
-  await expect(page.getByTestId('target-stock')).toBeVisible();
+  const numbers = page.getByTestId('target-stock');
+  const emptyShelf = page.getByRole('heading', { name: 'No things yet' });
+  await expect(numbers.or(emptyShelf)).toBeVisible();
 }

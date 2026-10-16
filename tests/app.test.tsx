@@ -32,7 +32,7 @@ function openApp(items: readonly StockItem[]) {
   const storage = new FakeStorage();
   storage.setItem(PRESETS_STORAGE_KEY, serializePresets(items));
   const store = new ItemStore(new LocalStoragePresetRepository(storage), {
-    starterItems: () => [],
+    starterItems: () => [detergent, tabs],
     createId: () => 'brand-new',
   });
   store.load();
@@ -109,6 +109,19 @@ function enter(container: HTMLElement, id: string, typed: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function doubleClick(element: HTMLElement): void {
+  element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+}
+
+/** A button inside the sheet, never the same-named one on the screen behind it. */
+function pickerButton(container: HTMLElement, label: string): HTMLButtonElement {
+  const dialog = picker(container);
+  if (dialog === null) {
+    throw new Error('The thing picker is not open.');
+  }
+  return button(dialog, label);
+}
+
 function saved(storage: FakeStorage): StockItem[] {
   return parsePresets(storage.getItem(PRESETS_STORAGE_KEY) ?? '[]');
 }
@@ -178,7 +191,7 @@ describe('the full screen of things', () => {
     const { container } = openApp([detergent, tabs]);
 
     await openThingPicker(container);
-    button(container, '🧽 Dishwasher tabs').click();
+    pickerButton(container, '🧽 Dishwasher tabs').click();
 
     // Still every bit as open: the household may well want to rename it next.
     expect(picker(container)).not.toBeNull();
@@ -193,13 +206,13 @@ describe('the full screen of things', () => {
     const { container, storage } = openApp([detergent, tabs]);
 
     await openThingPicker(container);
-    button(container, '🧽 Dishwasher tabs').click();
+    pickerButton(container, '🧽 Dishwasher tabs').click();
     await vi.waitFor(() => {
       expect(field(container, 'thing-name').value).toBe('🧽 Dishwasher tabs');
     });
 
     enter(container, 'thing-name', 'Fairy tabs');
-    button(container, 'Close').click();
+    button(container, 'OK').click();
 
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
@@ -211,11 +224,11 @@ describe('the full screen of things', () => {
     );
   });
 
-  it('closes when you press close, and on Escape', async () => {
+  it('leaves when you press OK, or press Escape', async () => {
     const { container } = openApp([detergent]);
 
     await openThingPicker(container);
-    button(container, 'Close').click();
+    button(container, 'OK').click();
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
     });
@@ -226,6 +239,32 @@ describe('the full screen of things', () => {
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
     });
+  });
+
+  it('takes a double press on the chosen thing as OK', async () => {
+    const { container } = openApp([detergent, tabs]);
+
+    await openThingPicker(container);
+    // 🧴 Laundry detergent is the one already open.
+    doubleClick(pickerButton(container, '🧴 Laundry detergent'));
+
+    await vi.waitFor(() => {
+      expect(picker(container)).toBeNull();
+    });
+    expect(value(container, 'target-stock')).toBe('2');
+  });
+
+  it('picks whichever thing is double pressed, then leaves', async () => {
+    const { container } = openApp([detergent, tabs]);
+
+    await openThingPicker(container);
+    doubleClick(pickerButton(container, '🧽 Dishwasher tabs'));
+
+    await vi.waitFor(() => {
+      expect(picker(container)).toBeNull();
+    });
+    expect(value(container, 'target-stock')).toBe('8');
+    expect(value(container, 'reorder-point')).toBe('5');
   });
 
   it('keeps importing and exporting off the main screen', async () => {
@@ -295,6 +334,44 @@ describe('the full screen of things', () => {
       expect(saved(storage)).toHaveLength(1);
     });
     // A brand new thing starts as 1 unit per 30 days, 3 days to fetch, 30 extra days.
+    expect(value(container, 'target-stock')).toBe('2');
+  });
+});
+
+describe('bringing the starter things back', () => {
+  it('brings back a starter thing that was thrown away', async () => {
+    const { container, storage } = openApp([tabs]);
+
+    await openThingPicker(container);
+    pickerButton(container, '↩️ Restore defaults').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(picker(container) ?? container)).toContain('🧴 Laundry detergent');
+    });
+    expect(saved(storage).map((item) => item.name)).toEqual([tabs.name, detergent.name]);
+    expect(textOf(container)).toContain('Brought back 1 thing.');
+  });
+
+  it('says so when they are all there', async () => {
+    const { container } = openApp([detergent, tabs]);
+
+    await openThingPicker(container);
+    pickerButton(container, '↩️ Restore defaults').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('The starter things are all here already.');
+    });
+  });
+
+  it('brings them back to a screen with nothing on it', async () => {
+    const { container, storage } = openApp([]);
+
+    button(container, '↩️ Bring back the starter things').click();
+
+    await vi.waitFor(() => {
+      expect(saved(storage)).toHaveLength(2);
+    });
+    expect(textOf(container)).toContain('Brought back 2 things.');
     expect(value(container, 'target-stock')).toBe('2');
   });
 });

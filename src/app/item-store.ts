@@ -56,15 +56,16 @@ export class ItemStore {
   load(): void {
     const stored = this.#repository.load();
     this.#items = stored ?? this.#starterItems();
-    this.#selectedId = this.#items[0]?.id ?? null;
+    this.#openSomethingIfNothingIsOpen();
     this.#refresh();
     if (stored === null) {
       this.#persist();
     }
   }
 
+  /** Opens another thing. Selecting the one already open changes nothing. */
   select(id: string): void {
-    if (!this.#items.some((item) => item.id === id)) {
+    if (id === this.#selectedId || !this.#items.some((item) => item.id === id)) {
       return;
     }
     this.#selectedId = id;
@@ -104,6 +105,25 @@ export class ItemStore {
     this.#update(id, requirements);
   }
 
+  /**
+   * Brings back any starter preset that is no longer in the list, matched by
+   * name. Nothing the household has added is touched and nothing is thrown
+   * away, so pressing it twice does nothing the second time.
+   *
+   * @returns how many things came back.
+   */
+  restoreDefaults(): number {
+    const alreadyThere = new Set(this.#items.map((item) => item.name));
+    const missing = this.#starterItems().filter((item) => !alreadyThere.has(item.name));
+    if (missing.length === 0) {
+      return 0;
+    }
+    this.#items = [...this.#items, ...missing];
+    this.#openSomethingIfNothingIsOpen();
+    this.#commit();
+    return missing.length;
+  }
+
   /** Replaces every preset, which is what importing a file does. */
   replaceAll(items: readonly StockItem[]): void {
     this.#items = items.map((item) => ({ ...item }));
@@ -129,6 +149,13 @@ export class ItemStore {
 
   #persist(): void {
     this.#repository.save(this.#items);
+  }
+
+  /** There is always something open, as long as there is something to open. */
+  #openSomethingIfNothingIsOpen(): void {
+    if (this.#selectedId === null) {
+      this.#selectedId = this.#items[0]?.id ?? null;
+    }
   }
 
   #refresh(): void {

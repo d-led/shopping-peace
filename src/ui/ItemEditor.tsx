@@ -72,7 +72,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
           <StepSlider
             id="usage-days"
             tone="primary"
-            label="🗓️ How long one unit lasts"
+            label="🗓️ One unit lasts"
             unit="day"
             value={item.usageDays}
             min={LIMITS.usageDays.min}
@@ -82,7 +82,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
           <StepSlider
             id="lead-days"
             tone="secondary"
-            label="🚚 Time to fetch it home"
+            label="🚚 Fetch takes"
             unit="day"
             value={item.leadDays}
             min={LIMITS.leadDays.min}

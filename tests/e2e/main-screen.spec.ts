@@ -69,6 +69,19 @@ test.describe('the screen a household opens', () => {
     expect(sizes.length, `sizes on screen: ${sizes.join(', ')}`).toBeLessThanOrEqual(3);
   });
 
+  test('sizes the slider labels to be read, not squinted at', async ({ page }) => {
+    await openFreshApp(page);
+
+    const labelSizes = await page.evaluate(() =>
+      [...document.querySelectorAll('main label')].map((label) =>
+        Number.parseFloat(getComputedStyle(label).fontSize),
+      ),
+    );
+
+    expect(labelSizes).toHaveLength(3);
+    expect(Math.min(...labelSizes), 'a slider label is caption-sized').toBeGreaterThanOrEqual(16);
+  });
+
   test('keeps renaming and deleting off the main screen', async ({ page }) => {
     await openFreshApp(page);
 

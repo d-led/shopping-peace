@@ -17,29 +17,51 @@ kitchen:
 
 ## The arithmetic
 
-Everything is measured in **days**, so nothing has to be converted by hand.
+Everything is measured in **days**, except where a unit is counted.
 
-```
-usageDays    how many days one unit lasts
-leadDays     how many days it takes to get a replacement home
-extraDays    extra days of stock kept on top of the tight level
-freshDays    how many days it stays good after opening (365 means "never spoils")
+$$
+\text{effective lifespan} = \min(\text{usageDays},\ \text{freshDays})
+$$
 
-effectiveUsageDays = min(usageDays, freshDays)   never below 1 day
+$$
+\text{daily usage rate} = \frac{1}{\text{effective lifespan}}
+\qquad\text{(units per day)}
+$$
 
-reorderPoint  = ceil(leadDays  / effectiveUsageDays)   when to start fetching again
-spareUnits    = ceil(extraDays / effectiveUsageDays)   whole units kept for surprises
-targetStock   = reorderPoint + spareUnits              how many to keep
-fetchQuantity = spareUnits                             how many to fetch at the trigger
-```
+$$
+\text{reorder point} = \left\lceil \text{daily usage rate} \times \text{leadDays} \right\rceil
+\qquad
+\text{spare units} = \left\lceil \text{daily usage rate} \times \text{extraDays} \right\rceil
+$$
 
-Two deliberate decisions:
+$$
+\text{target stock} = \text{reorder point} + \text{spare units}
+\qquad
+\text{fetch} = \text{spare units}
+$$
+
+| what            | in the words of the screen                                          |
+| --------------- | ------------------------------------------------------------------- |
+| reorder point   | **Fetch more at** — the units a wait would eat, so fetch below this  |
+| spare units     | how much of **Keep at least** is on top of that                      |
+| target stock    | **Keep at least** — the level to come back to                        |
+| fetch quantity  | how many to bring home when you fetch                                |
+
+Two deliberate decisions, and one place this differs from the textbook formula:
 
 - **The stock level stays tight.** It is only the units that would be used up
   while a replacement is on its way — no padding blurred into it.
 - **The spare is added on top**, in whole units, so the household can see which
   half is which. You cannot buy a third of a bottle, so each half is rounded up
-  on its own.
+  on its own: `ceil(a) + ceil(b)`, not `ceil(a + b)`. The classic
+  $ROP = \lceil \text{rate} \times \text{lead time} + \text{buffer stock} \rceil$
+  folds the buffer in and rounds once, and can land a whole unit below what this
+  app tells a household to keep — with a buffer small enough to vanish inside
+  the same ceiling, it would ask for no spare at all.
+
+`usageDays` is *how long one unit lasts*, so the daily rate is one unit over
+that many days. If you count in consumption per day instead, the two are
+reciprocal: the app's number is already the rate you would type.
 
 ### When a thing goes off before it is finished
 
@@ -163,19 +185,39 @@ the second time.
 ## Naming things
 
 A name is a short line of text with a picture on the front, and the picker has a
-small **🙂 Emoji** button for the picture. It opens a keyword search over about a
-hundred and forty household things — `milk`, `loo roll`, `cat litter` — instead
-of the keyboard of every emoji in Unicode. Words match anywhere in a keyword and
-every word has to match, so `cat food` is narrower than `food`. Picking one puts
-it in front of the name, replacing any emoji already there, and hands the name
-back ready to type.
+small **🙂 Emoji** button for the picture. It opens a keyword search over the
+whole published emoji set — 1,391 of them — with the household's own words for
+everyday things leading it, so `milk` offers 🥛 before anything rarer, and
+`whale` still finds 🐋. Words match anywhere in a keyword and every word has to
+match, so `cat food` is narrower than `food`. Picking one puts it in front of
+the name, replacing any emoji already there, and hands the name back ready to
+type.
 
-The catalogue lives in `src/data/emoji.ts` and is deliberately small and
-hand-written: it is offline, it needs no icon files, and a name holds one
-character rather than an icon id. Large open icon sets (OpenMoji, Fluent, Noto,
-Streamline, aggregated by [Iconify](https://icon-sets.iconify.design/)) are the
-other way to go if a picture has to look the same on every device — at the cost
-of bundling SVG assets and honouring each licence.
+Three things are deliberate:
+
+- **Only what one character can draw.** The set is filtered to symbols that are
+  a single code point, or one plus the variation selector that asks for the
+  coloured drawing of it. Joined-up sequences (🧑‍🍳, 🏳️‍🌈) are drawn differently
+  on every platform and look broken wherever the fonts disagree.
+- **Characters, not images.** A name holds a character, not an icon id, so
+  nothing has to be fetched and nothing has to be licensed as artwork. The cost
+  is that the drawing is whatever the device has — and the whole keyword set
+  costs about 16 kB gzipped.
+- **The words are generated, the household words are not.**
+  `src/data/emoji-catalogue.ts` comes from [emojilib](https://github.com/muan/emojilib)
+  (MIT) by way of `npm run build:catalogue`;
+  `src/data/household-emoji.ts` is hand-written. A test fails if the generated
+  file is out of step with the data it came from.
+
+[OpenMoji](https://github.com/hfg-gmuend/openmoji) (4,500+ emoji) and its
+siblings — Microsoft Fluent, Google Noto, Streamline, all aggregated by
+[Iconify](https://icon-sets.iconify.design/) — are the other way to go, and the
+only way to get a picture that looks *identical* on every device. They are
+artwork rather than data, so that road means bundling SVG files into `dist/`,
+storing an icon id in the name instead of a character, rendering SVG beside the
+text, and honouring the licences: OpenMoji is **CC BY-SA 4.0**, which asks for
+attribution *and* share-alike on whatever ships its data, while Fluent is MIT and
+Noto is Apache-2.0.
 
 ## Layout
 
@@ -187,12 +229,13 @@ stryker.config.mjs which code gets mutated, and how much has to die
 scripts/
   coverage-report.mjs  unit + browser line coverage, with a bar
   crap-report.mjs      complexity × coverage, per function
+  build-emoji-catalogue.mjs  the emoji set, from emojilib's data (MIT)
 src/
   domain/          the arithmetic and its vocabulary — no DOM, no storage
     stock-item.ts    usageDays, leadDays, extraDays, freshDays
     stock-plan.ts    planStock() -> reorderPoint, spareUnits, targetStock
-  data/            the JSON file format, where presets are kept, and the emoji
-                   catalogue behind the keyword search
+  data/            the JSON file format, where presets are kept, the thing that
+                   was open last, and the emoji behind the keyword search
   app/             ItemStore: the selected thing and every change, persisted
   ui/              Hono JSX components for the screen and the picker
 tests/
@@ -208,8 +251,10 @@ Rules the screen follows, since it is used with wet hands:
 - the two numbers are visible without scrolling, on a 375 px phone;
 - switching things keeps the sheet open, so the one you just picked can be
   renamed before you close it;
-- a double press on a thing picks it and leaves — the same as the **✓ OK**
-  button, and the usual way out of a picker on a touch screen;
+- two taps on a thing in quick succession pick it and leave — the same as the
+  **✓ OK** button, and the usual way out of a picker on a touch screen. The row
+  counts the taps itself, because a phone does not report that gesture as a
+  `dblclick`: it is also how you zoom;
 - every tap target is thumb-sized, with ± buttons beside each slider for hands
   that cannot aim at a track.
 
@@ -235,12 +280,14 @@ The GitHub mark in `src/ui/SourceStamp.tsx` is from
 [Octicons](https://github.com/primer/octicons) (MIT, © GitHub Inc.); its notice
 is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-No emoji artwork is bundled. The emoji in `src/data/emoji.ts` are plain Unicode
-characters drawn by whatever emoji font the device already has, and their
-keywords are hand-written here, so there is nothing to attribute. Shipping an
-icon set instead — [OpenMoji](https://github.com/hfg-gmuend/openmoji)
-(CC BY-SA 4.0, attribution required), Microsoft Fluent (MIT) or Google Noto
-(Apache-2.0) — would mean adding that licence to the notices file.
+No emoji artwork is bundled. The emoji are plain Unicode characters drawn by
+whatever emoji font the device already has, so no font licence applies; the
+words they are found by come from [emojilib](https://github.com/muan/emojilib)
+(MIT) and are generated into `src/data/emoji-catalogue.ts`. Shipping an icon set
+instead — [OpenMoji](https://github.com/hfg-gmuend/openmoji) (CC BY-SA 4.0,
+attribution *and* share-alike), Microsoft Fluent (MIT) or Google Noto
+(Apache-2.0) — would mean adding that licence, and its files, to the notices
+file and to `dist/`.
 
 ## License
 

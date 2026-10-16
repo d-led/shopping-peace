@@ -40,16 +40,18 @@ link to GitHub, which is the use GitHub's own guidelines cover.
 ## The emoji
 
 No emoji artwork is shipped. The app uses plain Unicode emoji characters —
-code points such as U+1F9F4 — written into `src/data/emoji.ts` and into a name,
-and drawn by whatever emoji font the device already has (Apple Color Emoji on
-iOS and macOS, Segoe UI Emoji on Windows, Noto Color Emoji on Android and most
-Linux desktops). Nothing is embedded, subset or redistributed, so no font
-licence and no icon-set licence applies.
+code points such as U+1F9F4 — and draws them with whatever emoji font the device
+already has (Apple Color Emoji on iOS and macOS, Segoe UI Emoji on Windows, Noto
+Color Emoji on Android and most Linux desktops). Nothing is embedded, subset or
+redistributed, so no font licence and no icon-set licence applies.
 
-The keywords that the search matches on are hand-written for this app, not
-copied from Unicode's CLDR data files. (Unicode's own data files carry the
-[Unicode License v3](https://www.unicode.org/license.txt) when they are
-shipped; none are.)
+The words the search matches on come from two places. The household words are
+hand-written here. Everything else is generated from
+[emojilib](https://github.com/muan/emojilib) (MIT, © Mu-An Chiou), whose keyword
+data is itself derived from Unicode's own annotations; the generator lives in
+`scripts/build-emoji-catalogue.mjs` and the generated file says so at the top.
+The Emoji characters remain the property of nobody and the drawings of the
+platform that makes them.
 
 A name stores the symbol as text, not as an image, so a device without a glyph
 for it shows a hollow box and everything else keeps working.

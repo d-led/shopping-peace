@@ -6,6 +6,8 @@ test.describe('the screen a household opens', () => {
     await openFreshApp(page);
 
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
+    await expect(page.getByText('Keep at least')).toBeVisible();
+    await expect(page.getByText('Fetch more at')).toBeVisible();
     await expect(page.getByTestId('reorder-point')).toHaveText('1');
     await expect(page.getByTestId('target-stock')).toHaveText('2');
     await expect(page.getByText('Saved as you go', { exact: false })).toBeVisible();

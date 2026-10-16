@@ -58,11 +58,6 @@ export function App({ store }: { readonly store: ItemStore }) {
     focusThingNameSoon();
   };
 
-  const chooseThing = (id: string) => {
-    store.select(id);
-    setPickerOpen(false);
-  };
-
   const deleteThing = (item: StockItem) => {
     const label = item.name.trim() === '' ? 'this thing' : item.name;
     if (window.confirm(`Delete ${label}?`)) {
@@ -94,7 +89,9 @@ export function App({ store }: { readonly store: ItemStore }) {
         <ThingPicker
           items={items}
           currentId={selected.id}
-          onSelect={chooseThing}
+          // Switching stays in the sheet: the household often wants to rename
+          // the thing they just picked, and the ✕ is right there when they are done.
+          onSelect={(id: string) => store.select(id)}
           onRename={(id: string, name: string) => store.rename(id, name)}
           onAdd={addThing}
           onDelete={deleteThing}

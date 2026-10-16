@@ -11,7 +11,7 @@ kitchen:
 | what                                        | example               |
 | ------------------------------------------- | --------------------- |
 | **The thing**                               | 🧴 Laundry detergent   |
-| **Keep up to**                              | `2` units             |
+| **Keep at least**                           | `2` units             |
 | **Fetch more at**                           | `1` unit left         |
 | Down to 1? Bring home 1 more …              | … and you're back at 2 |
 
@@ -91,6 +91,8 @@ Rules the screen follows, since it is used with wet hands:
 - three text sizes for the whole app, defined in `src/ui/text.ts`;
 - nothing wider than the screen — no sideways scrolling anywhere;
 - the two numbers are visible without scrolling, on a 375 px phone;
+- switching things keeps the sheet open, so the one you just picked can be
+  renamed before you close it;
 - every tap target is thumb-sized, with ± buttons beside each slider for hands
   that cannot aim at a track.
 

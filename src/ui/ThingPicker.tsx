@@ -54,7 +54,7 @@ export function ThingPicker({
       aria-modal="true"
       aria-label="Which thing?"
     >
-      <header class="navbar shrink-0 gap-2 bg-base-200 border-b border-base-300 px-3 md:px-6">
+      <header class="navbar shrink-0 gap-1.5 md:gap-2 bg-base-200 border-b border-base-300 px-2 md:px-6">
         <h2 class={`min-w-0 flex-1 font-black tracking-tight ${TEXT.body}`}>Which thing?</h2>
         <button
           type="button"
@@ -76,13 +76,13 @@ export function ThingPicker({
         </button>
       </header>
 
-      <div class="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6">
-        <ul class="flex flex-col gap-2 max-w-3xl mx-auto">
+      <div class="flex-1 overflow-y-auto overflow-x-hidden p-2 md:p-6">
+        <ul class="flex flex-col gap-1.5 md:gap-2 max-w-3xl mx-auto">
           {items.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
-                class={`btn w-full h-auto min-h-16 md:min-h-20 justify-start text-left normal-case px-4 py-3 rounded-none ${
+                class={`btn w-full h-auto min-h-14 md:min-h-16 justify-start text-left normal-case px-3 py-2 md:px-4 md:py-3 rounded-none ${
                   item.id === currentId
                     ? 'btn-primary'
                     : 'bg-base-100 border-2 border-base-300 hover:border-primary'
@@ -91,8 +91,13 @@ export function ThingPicker({
                 onClick={() => onSelect(item.id)}
               >
                 <span class="block min-w-0 flex-1">
-                  <span class={`block truncate font-bold ${TEXT.body}`}>{itemName(item)}</span>
-                  <span class={`block truncate opacity-70 mt-0.5 ${TEXT.small}`}>
+                  <span
+                    class={`block break-words leading-tight font-bold ${TEXT.body}`}
+                    data-testid="picker-thing-name"
+                  >
+                    {itemName(item)}
+                  </span>
+                  <span class={`block break-words leading-tight opacity-70 ${TEXT.small}`}>
                     {itemSummary(item)}
                   </span>
                 </span>
@@ -106,12 +111,12 @@ export function ThingPicker({
           ))}
         </ul>
         {items.length === 0 && (
-          <p class={`text-center text-base-content/60 py-8 ${TEXT.body}`}>Nothing here yet.</p>
+          <p class={`text-center text-base-content/60 py-6 ${TEXT.body}`}>Nothing here yet.</p>
         )}
       </div>
 
-      <footer class="shrink-0 bg-base-200 border-t border-base-300 p-3 md:p-6">
-        <div class="max-w-3xl mx-auto flex flex-col gap-3">
+      <footer class="shrink-0 bg-base-200 border-t border-base-300 p-2 md:p-6">
+        <div class="max-w-3xl mx-auto flex flex-col gap-2 md:gap-3">
           {current !== undefined && (
             <div>
               <label

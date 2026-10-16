@@ -45,7 +45,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
         <div class="grid grid-cols-2 gap-3 md:gap-4">
           <KpiCard
             tone="success"
-            title="Keep up to"
+            title="Keep at least"
             value={plan.targetStock}
             caption={spareNote(plan)}
             testId="target-stock"

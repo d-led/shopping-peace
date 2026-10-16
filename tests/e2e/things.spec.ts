@@ -24,17 +24,50 @@ const tabs: StockItem = {
 };
 
 test.describe('the full screen of things', () => {
-  test('lists every thing, and switches to the one that is tapped', async ({ page }) => {
+  test('lists every thing, and switching keeps the sheet open for editing', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
     const picker = page.getByRole('dialog');
 
     await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/ })).toBeVisible();
+
+    // No ellipsis anywhere: a long name wraps instead of being clipped.
+    const clipped = await picker
+      .getByTestId('picker-thing-name')
+      .evaluateAll(
+        (names) => names.filter((name) => name.scrollWidth > name.clientWidth + 1).length,
+      );
+    expect(clipped, 'a thing name is clipped with an ellipsis').toBe(0);
+
     await picker.getByRole('button', { name: /🧽 Dishwasher tabs/ }).click();
 
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // The sheet stays put, and now points at the thing that was just picked.
+    await expect(picker).toBeVisible();
+    await expect(page.locator('#thing-name')).toHaveValue('🧽 Dishwasher tabs');
     await expect(page.getByTestId('reorder-point')).toHaveText('5');
     await expect(page.getByTestId('target-stock')).toHaveText('8');
+
+    await picker.getByRole('button', { name: 'Close' }).click();
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
+  });
+
+  test('renames the thing you just switched to, before closing', async ({ page }) => {
+    await openAppWith(page, [detergent, tabs]);
+    await openThingPicker(page);
+    const picker = page.getByRole('dialog');
+
+    await picker.getByRole('button', { name: /🧽 Dishwasher tabs/ }).click();
+    await expect(page.locator('#thing-name')).toHaveValue('🧽 Dishwasher tabs');
+
+    await page.locator('#thing-name').fill('Fairy tabs');
+    await picker.getByRole('button', { name: 'Close' }).click();
+
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Fairy tabs');
+
+    // A reload opens the first thing again, but the new name stuck.
+    await page.reload();
+    await openThingPicker(page);
+    await expect(page.getByRole('dialog').getByRole('button', { name: /Fairy tabs/ })).toBeVisible();
   });
 
   test('uses no more than three text sizes here either', async ({ page }) => {

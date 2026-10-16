@@ -174,17 +174,41 @@ describe('the full screen of things', () => {
     expect(textOf(picker(container) ?? container)).toContain('🧽 Dishwasher tabs');
   });
 
-  it('switches to the thing that was pressed and gets out of the way', async () => {
+  it('switches to the thing that was pressed, and stays open for editing', async () => {
     const { container } = openApp([detergent, tabs]);
 
     await openThingPicker(container);
     button(container, '🧽 Dishwasher tabs').click();
 
+    // Still every bit as open: the household may well want to rename it next.
+    expect(picker(container)).not.toBeNull();
     await vi.waitFor(() => {
-      expect(picker(container)).toBeNull();
+      expect(field(container, 'thing-name').value).toBe('🧽 Dishwasher tabs');
     });
     expect(value(container, 'target-stock')).toBe('8');
     expect(value(container, 'reorder-point')).toBe('5');
+  });
+
+  it('lets you rename the thing you just switched to, before closing', async () => {
+    const { container, storage } = openApp([detergent, tabs]);
+
+    await openThingPicker(container);
+    button(container, '🧽 Dishwasher tabs').click();
+    await vi.waitFor(() => {
+      expect(field(container, 'thing-name').value).toBe('🧽 Dishwasher tabs');
+    });
+
+    enter(container, 'thing-name', 'Fairy tabs');
+    button(container, 'Close').click();
+
+    await vi.waitFor(() => {
+      expect(picker(container)).toBeNull();
+    });
+    expect(textOf(container)).toContain('Fairy tabs');
+    expect(saved(storage).find((item) => item.id === 'tabs')?.name).toBe('Fairy tabs');
+    expect(saved(storage).find((item) => item.id === 'detergent')?.name).toBe(
+      '🧴 Laundry detergent',
+    );
   });
 
   it('closes when you press close, and on Escape', async () => {

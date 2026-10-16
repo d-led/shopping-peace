@@ -45,7 +45,7 @@ FC_RUNS="${FC_RUNS:-1000}"
 # arriving at "every one survived" — a number about the tool, not the tests.
 # `npm run mutation` still runs it for anybody who wants to see that, and
 # `node scripts/mutation-report.mjs --break 85` reads the report it leaves.
-STAGES="types lint duplicates unit properties e2e coverage metrics"
+STAGES="types lint workflows duplicates unit properties e2e coverage metrics"
 
 # The stages that take minutes:
 #   e2e      a production build, then 70 browser tests on three devices;
@@ -57,6 +57,7 @@ stage_title() {
   case "$1" in
     types) echo "tsc --noEmit, no type errors" ;;
     lint) echo "oxlint, no findings" ;;
+    workflows) echo "actionlint on .github/workflows, shellcheck included" ;;
     duplicates) echo "jscpd, at most ${MAX_DUPLICATION}% duplicated lines" ;;
     unit) echo "vitest with coverage, all green" ;;
     properties) echo "fast-check at ${FC_RUNS} runs per property" ;;
@@ -84,6 +85,37 @@ stage_cost() {
 stage_types() { npm run typecheck; }
 
 stage_lint() { npx oxlint; }
+
+# actionlint is a Go tool rather than an npm one, so it is looked for on PATH
+# and then where `go install` puts things. shellcheck is looked up the same way.
+find_tool() {
+  if command -v "$1" >/dev/null 2>&1; then
+    command -v "$1"
+  elif [ -x "$HOME/go/bin/$1" ]; then
+    echo "$HOME/go/bin/$1"
+  else
+    return 1
+  fi
+}
+
+# The workflows are code too: a bad expression or a job that cannot start is
+# otherwise found by GitHub, at push time, which is the worst moment to hear it.
+# shellcheck is handed over rather than left to be discovered, because the
+# linter would quietly check less on a machine that does not have it.
+stage_workflows() {
+  local linter shell
+  linter="$(find_tool actionlint)" || {
+    echo "actionlint is not installed, so the workflows went unchecked."
+    echo "go install github.com/rhysd/actionlint/cmd/actionlint@latest"
+    return 3
+  }
+  shell="$(find_tool shellcheck)" || {
+    echo "shellcheck is not installed, and actionlint checks less without it."
+    echo "brew install shellcheck"
+    return 3
+  }
+  "$linter" -shellcheck "$shell"
+}
 
 stage_duplicates() { npx jscpd src tests --threshold "$MAX_DUPLICATION"; }
 

@@ -172,7 +172,7 @@ npx playwright install chromium webkit
 ./quality-gate.sh --list       # the checks, what each costs, and its bar
 ```
 
-Nine checks, split by what they cost. Six finish in seconds and run by
+Checks are split by what they cost. Some finish in seconds and run by
 default; the other two take minutes, and only `--full` runs them:
 
 - `e2e` is a production build plus 70 browser tests — the two phone screens and
@@ -195,12 +195,25 @@ of which number a check compared against:
 | ------------ | ----- | ------------------------------------------------------------------- |
 | `types`      | quick | `tsc --noEmit`                                                       |
 | `lint`       | quick | `oxlint` with no findings                                            |
+| `workflows`  | quick | `actionlint` over `.github/workflows`, shellcheck included           |
 | `duplicates` | quick | `jscpd`: at most 1% duplicated lines in `src/` and `tests/`           |
 | `unit`       | quick | Vitest with coverage, all green                                      |
 | `properties` | quick | the fast-check properties at 1000 runs each                          |
 | `metrics`    | quick | complexity ≤ 8 and CRAP ≤ 10, per function                           |
 | `e2e`        | slow  | Playwright: the phone screens, then the desktop, axe included         |
 | `coverage`   | slow  | at least 95% of `src/` lines, unit and browser runs *together*        |
+
+`workflows` is the one stage that is not an npm script: `actionlint` is a Go
+tool, and it wants `shellcheck` for the shell inside the `run:` steps. The gate
+finds both on `PATH` or in `$HOME/go/bin`, and hands the linter the exact
+`shellcheck` to use — left to itself it would check less on a machine that
+happens not to have one. With either missing, the stage reports "not measurable"
+and says which command installs it:
+
+```bash
+go install github.com/rhysd/actionlint/cmd/actionlint@latest
+brew install shellcheck   # or your package manager's shellcheck
+```
 
 Every stage writes a log to `reports/logs/`, and the reports themselves land in
 `reports/` (`coverage.txt`, `crap.txt`, `jscpd/`, `mutation/index.html`). The
@@ -390,18 +403,23 @@ Rules the screen follows, since it is used with wet hands:
 ## Deploying
 
 Pressing to `main` publishes to GitHub Pages through
-`.github/workflows/deploy.yml`. The build uses relative asset paths, so it works
-from a project URL such as `https://<user>.github.io/<repo>/`. Enable it once
-under **Settings → Pages → Source: GitHub Actions**.
+`.github/workflows/deploy.yml`, and only once the `CI` workflow has come back
+green for that same commit: the deploy waits on `workflow_run`, and builds the
+`head_sha` CI verified rather than whatever `main` points at. A red `main`
+therefore stays unpublished — the last good copy keeps serving — and
+`workflow_dispatch` is there to publish by hand. The build uses relative asset
+paths, so it works from a project URL such as
+`https://<user>.github.io/<repo>/`. Enable it once under
+**Settings → Pages → Source: GitHub Actions**.
 
 ### Which commit is this?
 
 The bottom of the screen carries the GitHub mark, linking to the source, next to
 the short commit the bundle was built from — so a copy on a phone can name its
 own version. That commit is baked in at build time (`define` in
-`vite.config.ts`): the Pages workflow hands over `github.sha` as `BUILD_SHA`, a
-local build asks `git rev-parse --short HEAD`, and a build with neither says
-`dev`.
+`vite.config.ts`): the Pages workflow hands over the commit CI checked — the
+`head_sha` of the run that triggered it — as `BUILD_SHA`, a local build asks
+`git rev-parse --short HEAD`, and a build with neither says `dev`.
 
 ## Attributions
 

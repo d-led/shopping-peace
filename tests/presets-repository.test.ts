@@ -57,6 +57,27 @@ describe('the presets a household finds on day one', () => {
     expect(starters.map((starter) => starter.emoji)).toEqual(['🧽', '🫧', '🧴', '🧻', '🐾', '🧈']);
   });
 
+  it('sells them in the pack sizes a European shop actually sells', () => {
+    const starter = (name: string) => starterPresets(() => 'fixed').find((s) => s.name === name);
+
+    // A box of tablets is thirty; jumbo toilet paper is ten to a pack.
+    expect(starter('Dishwasher tabs')?.packSize).toBe(30);
+    expect(starter('Toilet paper (jumbo)')?.packSize).toBe(10);
+    // The rest are bought one at a time.
+    expect(starter('Laundry detergent')?.packSize).toBe(1);
+  });
+
+  it('starts with the household\'s own toilet paper, to the day', () => {
+    const paper = starterPresets(() => 'fixed').find((s) => s.name === 'Toilet paper (jumbo)');
+
+    expect(paper).toMatchObject({
+      usageDays: 2,
+      leadDays: 4,
+      extraDays: 14,
+      packSize: 10,
+    });
+  });
+
   it('gives every starter its own id', () => {
     let issued = 0;
     const ids = starterPresets(() => `id-${(issued += 1)}`).map((item) => item.id);

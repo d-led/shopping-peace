@@ -33,9 +33,9 @@ test.describe('the full screen of things', () => {
     // The sheet stays put, and now points at the thing that was just picked.
     await expect(picker).toBeVisible();
     await expect(page.locator('#thing-name')).toHaveValue('Dishwasher tabs');
-    // Three spares, and fetching starts the moment the last one is opened.
+    // Three spares, plus the five units a forty-five day wait eats: eight.
     await expect(page.getByTestId('keep-at-least')).toHaveText('3');
-    await expect(page.getByTestId('fetch-more-at')).toHaveText('0');
+    await expect(page.getByTestId('fetch-more-at')).toHaveText('8');
 
     await picker.getByRole('button', { name: 'OK' }).click();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
@@ -173,7 +173,7 @@ test.describe('the full screen of things', () => {
 
     await expect(page.getByRole('status')).toContainText('Back to the starter things');
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
-    await expect(page.getByTestId('keep-at-least')).toHaveText('1');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('7');
 
     // Starting again is not "shown once": the shelf they land on is written down.
     await page.reload();
@@ -187,15 +187,15 @@ test.describe('numbers being changed by hand', () => {
 
     await page.locator('#lead-days').fill('45');
 
-    // A 45-day wait no longer fits inside one 30-day unit, so the tight level
-    // becomes two units and the headline says so.
+    // A 45-day wait eats two units instead of one, so the level to fetch at
+    // grows with it: two units of wait, one of reserve, one fetched.
     await expect(
-      page.getByText("Down to 2 units? Bring home 1 more and you're back at 3."),
+      page.getByText("Down to 3 units? Bring home 1 more and you're back at 4."),
     ).toBeVisible();
     await page.reload();
     await expect(page.locator('#lead-days')).toHaveValue('45');
     await expect(
-      page.getByText("Down to 2 units? Bring home 1 more and you're back at 3."),
+      page.getByText("Down to 3 units? Bring home 1 more and you're back at 4."),
     ).toBeVisible();
   });
 

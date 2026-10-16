@@ -249,12 +249,13 @@ describe('what the household sees first', () => {
     const { container } = openApp([detergent]);
 
     expect(textOf(container)).toContain('🧴 Laundry detergent');
-    // A spare is a unit held on top of what the wait eats: one here, so the
-    // card counts one. Fetching starts the moment that spare is opened.
+    // The reserve is one unit; the fetch level is that plus the unit a wait
+    // eats, so the two cards agree with each other.
     expect(value(container, 'keep-at-least')).toBe('1');
     expect(textOf(container)).toContain('unit spare');
-    expect(value(container, 'fetch-more-at')).toBe('0');
-    expect(textOf(container)).toContain("Down to 1 unit? Bring home 1 more and you're back at 2.");
+    expect(value(container, 'fetch-more-at')).toBe('2');
+    expect(textOf(container)).toContain('1 spare + 1 for the wait');
+    expect(textOf(container)).toContain("Down to 2 units? Bring home 1 more and you're back at 3.");
   });
 
   it('keeps renaming and deleting off the main screen', () => {
@@ -770,7 +771,7 @@ describe('touching the numbers', () => {
     enter(container, 'lead-days', '45');
 
     await vi.waitFor(() => {
-      expect(textOf(container)).toContain("Down to 2 units? Bring home 1 more and you're back at 3.");
+      expect(textOf(container)).toContain("Down to 3 units? Bring home 1 more and you're back at 4.");
     });
     expect(saved(storage)[0]?.leadDays).toBe(45);
   });
@@ -779,13 +780,13 @@ describe('touching the numbers', () => {
     const { container, storage } = openApp([detergent]);
 
     // A unit now lasts 10 days, so the same 3-day wait is a third of a unit —
-    // still a whole one — and 30 spare days become 3 units.
+    // still a whole one — and 30 reserve days become 3 units.
     enter(container, 'usage-days', '10');
 
     await vi.waitFor(() => {
       expect(value(container, 'keep-at-least')).toBe('3');
     });
-    expect(textOf(container)).toContain('4 units ≈ 40 days of cover.');
+    expect(textOf(container)).toContain('7 units ≈ 70 days of cover.');
     expect(saved(storage)[0]?.usageDays).toBe(10);
   });
 
@@ -842,9 +843,9 @@ describe('touching the numbers', () => {
     enter(container, 'pack-size', '10');
 
     await vi.waitFor(() => {
-      expect(textOf(container)).toContain("Bring home a 10-pack and you're back at 11.");
+      expect(textOf(container)).toContain("Bring home a 10-pack and you're back at 12.");
     });
-    expect(textOf(container)).toContain('11 units ≈ 330 days of cover.');
+    expect(textOf(container)).toContain('12 units ≈ 360 days of cover.');
     expect(saved(storage)[0]?.packSize).toBe(10);
   });
 
@@ -874,7 +875,7 @@ describe('a thing that turns before it is finished', () => {
     const { container } = openApp([butter]);
 
     expect(value(container, 'keep-at-least')).toBe('1');
-    expect(textOf(container)).toContain("Down to 1 unit? Bring home 1 more and you're back at 2.");
+    expect(textOf(container)).toContain("Down to 2 units? Bring home 1 more and you're back at 3.");
   });
 
   it('says out loud why the numbers are higher than the eating rate suggests', () => {

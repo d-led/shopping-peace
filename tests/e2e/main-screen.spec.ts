@@ -16,9 +16,10 @@ test.describe('the screen a household opens', () => {
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
     await expect(page.getByText('Keep at least')).toBeVisible();
     await expect(page.getByText('Fetch more at')).toBeVisible();
-    // One spare above what the four-day wait eats, so fetching starts at none.
-    await expect(page.getByTestId('keep-at-least')).toHaveText('1');
-    await expect(page.getByTestId('fetch-more-at')).toHaveText('0');
+    // A tablet a day, a box of thirty, a week of reserve, three days to fetch:
+    // hold seven spare, shop when the shelf is down to ten (7 + 3).
+    await expect(page.getByTestId('keep-at-least')).toHaveText('7');
+    await expect(page.getByTestId('fetch-more-at')).toHaveText('10');
     await expect(page.getByText('Saved as you go', { exact: false })).toBeVisible();
   });
 

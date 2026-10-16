@@ -28,12 +28,11 @@ export function pictureButtonLabel(item: StockItem): string {
 
 /**
  * The instruction a busy person reads from across the kitchen. With no reserve
- * nothing is added on top of the tight level, so there is no quantity to name:
- * the household is living on the lead time itself, and tops up as the shelf
- * reaches it.
+ * there is nothing on the shelf but the wait itself, so there is no quantity to
+ * name: the household tops up as the shelf reaches that level.
  */
 export function planHeadline(plan: StockPlan): string {
-  if (plan.fetchQuantity === 0) {
+  if (plan.reserveUnits === 0) {
     return `Down to ${units(plan.reorderPoint)}? Nothing is kept spare, so fetch ${packed(plan)} as this one runs out.`;
   }
   return `Down to ${units(plan.reorderPoint)}? Bring home ${packed(plan)} and you're back at ${plan.shelfAfterFetch}.`;
@@ -46,17 +45,17 @@ export function planHeadline(plan: StockPlan): string {
  * coming home with less than the household wanted.
  */
 function packed(plan: StockPlan): string {
-  const { packSize, packsPerFetch, fetchQuantity } = plan;
+  const { packSize, packsPerFetch, reserveUnits } = plan;
   if (packSize === 1) {
-    return fetchQuantity === 0 ? 'the next unit' : `${fetchQuantity} more`;
+    return reserveUnits === 0 ? 'the next unit' : `${plan.fetchQuantity} more`;
   }
   return packsPerFetch === 1 ? `a ${packSize}-pack` : `${packsPerFetch} packs of ${packSize}`;
 }
 
 /**
- * How long the shelf lasts once it has been topped up — the number a household
- * can picture, and the one that says how much cupboard space this needs. It
- * counts the packages, so it can be higher than the level the cards aim at.
+ * How long the shelf lasts once a fetch has landed — the number a household can
+ * picture, and the one that says how much cupboard space this needs. It counts
+ * the packages, so it can be higher than the reserve.
  */
 export function planCover(item: StockItem, plan: StockPlan): string {
   const cover = Math.round(plan.shelfAfterFetch * effectiveUsageDays(item));
@@ -79,28 +78,34 @@ export interface PlanCard {
 }
 
 /**
- * The reserve, as the counter a household watches: the units held on top of
- * what the wait eats. Counting the reserve rather than the whole shelf is what
- * makes the fetch level below mean something.
+ * The reserve, as the counter a household watches: the units kept above what a
+ * wait eats. It is not spent while an order travels — that is the whole point
+ * of a reserve — so this number stays true from one fetch to the next.
  *
  * With no reserve there is no counter to watch, so the card falls back to the
- * tight level itself and says that nothing is kept on top of it.
+ * level the shelf must not drop below and says that nothing is spare.
  */
 export function keepCard(plan: StockPlan): PlanCard {
-  if (plan.spareUnits === 0) {
-    return { value: plan.targetStock, caption: `${unitWord(plan.targetStock)} — nothing spare` };
+  if (plan.reserveUnits === 0) {
+    return { value: plan.reorderPoint, caption: `${unitWord(plan.reorderPoint)} — nothing spare` };
   }
-  return { value: plan.spareUnits, caption: `${unitWord(plan.spareUnits)} spare` };
+  return { value: plan.reserveUnits, caption: `${unitWord(plan.reserveUnits)} spare` };
 }
 
 /**
- * When to shop: the moment the last spare is opened. On a shelf with no reserve
- * that moment is the tight level itself, so the card counts stored units there.
+ * When to shop: the level the shelf is allowed to fall to, which is the wait
+ * plus the reserve. The caption adds the two up out loud, because a household
+ * counting bottles should not have to work out where the number came from.
  */
 export function fetchCard(plan: StockPlan): PlanCard {
-  return plan.spareUnits === 0
-    ? { value: plan.reorderPoint, caption: `${unitWord(plan.reorderPoint)} left` }
-    : { value: 0, caption: 'spare units left' };
+  const { reorderPoint, reserveUnits, waitUnits } = plan;
+  if (reserveUnits === 0 || waitUnits === 0) {
+    return { value: reorderPoint, caption: `${unitWord(reorderPoint)} left` };
+  }
+  return {
+    value: reorderPoint,
+    caption: `${reserveUnits} spare + ${waitUnits} for the wait`,
+  };
 }
 
 /** The subtitle under each thing in the picker. */

@@ -43,20 +43,21 @@ const butter = thing({
 });
 
 describe('the instruction the household reads first', () => {
-  it('reads as one sentence: when, how many, how many to keep', () => {
+  it('reads as one sentence: when, how many, how many to come home with', () => {
     expect(planHeadline(planStock(detergent))).toBe(
-      "Down to 1 unit? Bring home 2 more and you're back at 3.",
+      "Down to 3 units? Bring home 2 more and you're back at 5.",
     );
   });
 
   it('counts in whole units, so the number cannot be read as a reserve', () => {
     const slow = thing({ usageDays: 10, leadDays: 25, extraDays: 30 });
 
-    expect(planHeadline(planStock(slow))).toContain('Down to 3 units?');
+    // Three units of wait and three of reserve: shop at six.
+    expect(planHeadline(planStock(slow))).toContain('Down to 6 units?');
   });
 
-  it('translates what is kept into days of cover', () => {
-    expect(planCover(detergent, planStock(detergent))).toBe('3 units ≈ 90 days of cover.');
+  it('translates the shelf a fetch lands on into days of cover', () => {
+    expect(planCover(detergent, planStock(detergent))).toBe('5 units ≈ 150 days of cover.');
   });
 
   it('asks for nothing by number when there is no reserve to rebuild', () => {
@@ -76,52 +77,54 @@ describe('the instruction the household reads first', () => {
   });
 
   it('says "unit" when there is exactly one', () => {
-    const single = { ...detergent, leadDays: 0, extraDays: 1 };
+    const single = { ...detergent, leadDays: 0, extraDays: 0 };
     expect(planCover(single, planStock(single))).toBe('1 unit ≈ 30 days of cover.');
   });
 
   it('counts a perishable at the size it is really gone in', () => {
-    // Two units of butter, each gone a week after opening.
-    expect(planCover(butter, planStock(butter))).toBe('2 units ≈ 14 days of cover.');
+    // Three units of butter: one for the wait, one of reserve, one fetched —
+    // each gone a week after opening.
+    expect(planCover(butter, planStock(butter))).toBe('3 units ≈ 21 days of cover.');
   });
 });
 
-describe('fetching in packs, when the shop only sells packs', () => {
-  /** A roll every two days, four days to fetch, three rolls spare, ten to a pack. */
+describe('the household\'s own toilet paper, ten rolls at a time', () => {
+  /** A roll every two days, four days to fetch, a fortnight of reserve. */
   const paper = thing({
     id: 'paper',
-    name: 'Toilet paper',
+    name: 'Toilet paper (jumbo)',
     emoji: '🧻',
     usageDays: 2,
     leadDays: 4,
-    extraDays: 6,
+    extraDays: 14,
     packSize: 10,
   });
 
-  it('asks for a pack, and names the shelf that pack lands on', () => {
+  it('fetches at the level the shelf is allowed to fall to, not at the last roll', () => {
+    // Seven rolls of reserve plus the two a wait eats: fetch at nine.
     expect(planHeadline(planStock(paper))).toBe(
-      "Down to 2 units? Bring home a 10-pack and you're back at 12.",
+      "Down to 9 units? Bring home a 10-pack and you're back at 19.",
     );
   });
 
-  it('counts the shelf space a pack needs, not the level the cards aim at', () => {
-    // Twelve rolls, not the five aimed at: twelve is what arrives.
-    expect(planCover(paper, planStock(paper))).toBe('12 units ≈ 24 days of cover.');
+  it('counts the cupboard space the order point and the pack need together', () => {
+    // Nine rolls to fetch at, plus the pack of ten: nineteen.
+    expect(planCover(paper, planStock(paper))).toBe('19 units ≈ 38 days of cover.');
   });
 
-  it('counts several packs when one will not cover the spare', () => {
-    const many = thing({ ...paper, extraDays: 20, packSize: 4 });
+  it('counts several packs when one will not cover the reserve', () => {
+    const many = thing({ ...paper, packSize: 4 });
 
-    expect(planHeadline(planStock(many))).toContain('Bring home 3 packs of 4');
+    expect(planHeadline(planStock(many))).toContain('Bring home 2 packs of 4');
   });
 });
 
 describe('the two cards on the dashboard', () => {
-  it('counts the reserve, not the whole shelf, so the fetch level means something', () => {
+  it('counts the reserve, and says where the fetch level comes from', () => {
     const plan = planStock(thing({ usageDays: 30, leadDays: 3, extraDays: 60 }));
 
     expect(keepCard(plan)).toEqual({ value: 2, caption: 'units spare' });
-    expect(fetchCard(plan)).toEqual({ value: 0, caption: 'spare units left' });
+    expect(fetchCard(plan)).toEqual({ value: 3, caption: '2 spare + 1 for the wait' });
   });
 
   it('says "unit" when there is exactly one spare', () => {
@@ -130,7 +133,7 @@ describe('the two cards on the dashboard', () => {
     expect(keepCard(plan)).toEqual({ value: 1, caption: 'unit spare' });
   });
 
-  it('falls back to the tight level, and says so, when nothing is kept spare', () => {
+  it('falls back to the shelf level, and says so, when nothing is kept spare', () => {
     const plan = planStock(thing({ usageDays: 30, leadDays: 3, extraDays: 0 }));
 
     expect(keepCard(plan)).toEqual({ value: 1, caption: 'unit — nothing spare' });

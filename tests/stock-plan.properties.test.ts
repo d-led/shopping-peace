@@ -18,31 +18,33 @@ describe('the plan, for every household you could think of', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
         const plan = planStock(numbers);
-        expect(plan.reorderPoint * effectiveUsageDays(numbers)).toBeGreaterThanOrEqual(
+        expect(plan.waitUnits * effectiveUsageDays(numbers)).toBeGreaterThanOrEqual(
           numbers.leadDays,
         );
       }),
     );
   });
 
-  it('never keeps more than one whole unit beyond what the wait needs', () => {
+  it('never holds more for the wait than the wait needs, round-up aside', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
         const plan = planStock(numbers);
-        if (plan.reorderPoint === 0) {
+        if (plan.waitUnits === 0) {
           return;
         }
-        expect((plan.reorderPoint - 1) * effectiveUsageDays(numbers)).toBeLessThan(numbers.leadDays);
+        expect((plan.waitUnits - 1) * effectiveUsageDays(numbers)).toBeLessThan(numbers.leadDays);
       }),
     );
   });
 
-  it('adds the spare on top of the tight level rather than into it', () => {
+  it('puts the reserve inside the order point, where a safety stock belongs', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
         const plan = planStock(numbers);
-        expect(plan.targetStock).toBe(plan.reorderPoint + plan.spareUnits);
-        expect(plan.fetchQuantity).toBe(plan.spareUnits);
+
+        expect(plan.reorderPoint).toBe(plan.waitUnits + plan.reserveUnits);
+        // Whole packages, so the quantity is a multiple of the pack size.
+        expect(plan.fetchQuantity).toBe(plan.packsPerFetch * plan.packSize);
       }),
     );
   });
@@ -52,9 +54,9 @@ describe('the plan, for every household you could think of', () => {
       fc.property(wanted, (numbers) => {
         const plan = planStock(numbers);
         for (const count of [
+          plan.waitUnits,
+          plan.reserveUnits,
           plan.reorderPoint,
-          plan.spareUnits,
-          plan.targetStock,
           plan.fetchQuantity,
           plan.packsPerFetch,
           plan.shelfAfterFetch,
@@ -75,26 +77,28 @@ describe('the plan, for every household you could think of', () => {
         // A shop sells packages: never one of them split open.
         expect(brought % plan.packSize).toBe(0);
         expect(plan.packsPerFetch).toBeGreaterThanOrEqual(1);
-        // One package more than the spare would have covered the target too,
-        // so this is the fewest packs that hold the reserve the household asked
-        // for. With no reserve at all, one package is what a fetch means.
-        expect(brought).toBeGreaterThanOrEqual(plan.spareUnits);
-        if (plan.spareUnits > 0) {
-          expect(brought - plan.packSize).toBeLessThan(plan.spareUnits);
+        // This is the fewest packages that hold the reserve the household asked
+        // for; with no reserve at all, one package is what a fetch means.
+        expect(brought).toBeGreaterThanOrEqual(plan.reserveUnits);
+        if (plan.reserveUnits > 0) {
+          expect(brought - plan.packSize).toBeLessThan(plan.reserveUnits);
         }
         expect(plan.shelfAfterFetch).toBe(plan.reorderPoint + brought);
       }),
     );
   });
 
-  it('tops the shelf up to at least the level it aims at', () => {
+  it('never fills the shelf below the reserve it was asked to hold', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
         const plan = planStock(numbers);
 
         // Packages round the fetching up, never down: a household that wanted
-        // three spare units and can only buy tens comes home with ten.
-        expect(plan.shelfAfterFetch).toBeGreaterThanOrEqual(plan.targetStock);
+        // seven spare units and can only buy tens comes home with ten.
+        expect(plan.shelfAfterFetch).toBeGreaterThanOrEqual(plan.reserveUnits);
+        // Max target = order point + what was fetched, as the bulk-package
+        // formula puts it.
+        expect(plan.shelfAfterFetch).toBe(plan.reorderPoint + plan.fetchQuantity);
       }),
     );
   });
@@ -105,9 +109,11 @@ describe('the plan, for every household you could think of', () => {
         const before = planStock(numbers);
         const after = planStock({ ...numbers, extraDays: numbers.extraDays + more });
 
-        expect(after.targetStock).toBeGreaterThanOrEqual(before.targetStock);
-        // The tight level answers "how long until it runs out", not "how much do we like having".
-        expect(after.reorderPoint).toBe(before.reorderPoint);
+        expect(after.reserveUnits).toBeGreaterThanOrEqual(before.reserveUnits);
+        expect(after.reorderPoint).toBeGreaterThanOrEqual(before.reorderPoint);
+        // The wait answers "how long until it runs out", not "how much do we
+        // like having", so more reserve days cannot move it.
+        expect(after.waitUnits).toBe(before.waitUnits);
       }),
     );
   });
@@ -118,8 +124,8 @@ describe('the plan, for every household you could think of', () => {
         const before = planStock(numbers);
         const after = planStock({ ...numbers, leadDays: numbers.leadDays + longer });
 
+        expect(after.waitUnits).toBeGreaterThanOrEqual(before.waitUnits);
         expect(after.reorderPoint).toBeGreaterThanOrEqual(before.reorderPoint);
-        expect(after.targetStock).toBeGreaterThanOrEqual(before.targetStock);
       }),
     );
   });

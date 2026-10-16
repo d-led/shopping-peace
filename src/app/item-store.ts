@@ -25,6 +25,7 @@ const DEFAULTS_FOR_NEW_ITEM: StockRequirements = {
   leadDays: 3,
   extraDays: 30,
   freshDays: FRESHNESS_NEVER,
+  packSize: 1,
 };
 
 /**
@@ -132,22 +133,25 @@ export class ItemStore {
   }
 
   /**
-   * Brings back any starter preset that is no longer in the list, matched by
-   * name. Nothing the household has added is touched and nothing is thrown
-   * away, so pressing it twice does nothing the second time.
+   * Throws the shelf away and starts again from the starter things.
    *
-   * @returns how many things came back.
+   * The household's own things go, and so do their renames and their tuning:
+   * this is the way back to a state the app knows about, and it is the only
+   * thing here that loses data on purpose — the screen asks before calling it.
+   * The memory of which thing was open goes too, so the shelf that comes back
+   * is the starter one and nothing else.
+   *
+   * @returns how many of the household's own things were thrown away.
    */
-  restoreDefaults(): number {
-    const alreadyThere = new Set(this.#items.map((item) => item.name));
-    const missing = this.#starterItems().filter((item) => !alreadyThere.has(item.name));
-    if (missing.length === 0) {
-      return 0;
-    }
-    this.#items = [...this.#items, ...missing];
-    this.#openSomethingIfNothingIsOpen();
+  resetToDefaults(): number {
+    const starters = this.#starterItems();
+    const starterNames = new Set(starters.map((item) => item.name));
+    const discarded = this.#items.filter((item) => !starterNames.has(item.name)).length;
+
+    this.#items = starters;
+    this.#selectedId = this.#items[0]?.id ?? null;
     this.#commit();
-    return missing.length;
+    return discarded;
   }
 
   /** Replaces every preset, which is what importing a file does. */

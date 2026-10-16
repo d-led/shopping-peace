@@ -15,6 +15,15 @@ export interface StockRequirements {
    * Zero is for things that will not keep at all — fresh bread, milk.
    */
   readonly freshDays: number;
+  /**
+   * How many units arrive in one package at the shop: 10 rolls of toilet paper,
+   * 24 tins, 6 bottles. One means the thing is sold one at a time.
+   *
+   * It is not how the thing is used, so it does not touch the level kept at
+   * home — it only decides how that level gets topped up, since a shop sells
+   * packages and nobody sells three quarters of one.
+   */
+  readonly packSize: number;
 }
 
 /** A named preset: the "THING", how it is used, and the picture in front of it. */

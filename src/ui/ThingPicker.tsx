@@ -22,7 +22,7 @@ export interface ThingPickerProps {
   readonly onExportCurrent: () => void;
   readonly onImport: (event: Event) => void;
   /** Brings back any starter preset that is missing. Never removes anything. */
-  readonly onRestoreDefaults: () => void;
+  readonly onResetToDefaults: () => void;
   /** Leaves the sheet. Everything is already saved, so this is just "done". */
   readonly onConfirm: () => void;
 }
@@ -44,7 +44,7 @@ export function ThingPicker({
   onExportAll,
   onExportCurrent,
   onImport,
-  onRestoreDefaults,
+  onResetToDefaults,
   onConfirm,
 }: ThingPickerProps) {
   useEffect(() => {
@@ -253,9 +253,10 @@ export function ThingPicker({
               <button
                 type="button"
                 class={`btn btn-sm rounded-none ${TEXT.small}`}
-                onClick={onRestoreDefaults}
+                onClick={onResetToDefaults}
+                title="Throw everything away and start from the starter things"
               >
-                ↩️ Restore defaults
+                ↩️ Reset to defaults
               </button>
               {current !== undefined && (
                 <button

@@ -100,6 +100,16 @@ describe('presets that arrive incomplete', () => {
   it('takes an older file to mean "this keeps", not "this spoils today"', () => {
     expect(parsePresets(`[${withoutFreshness}]`)[0]?.freshDays).toBe(FRESHNESS_NEVER);
   });
+
+  it('takes a file with no pack size to mean sold one at a time', () => {
+    expect(parsePresets(`[${withoutFreshness}]`)[0]?.packSize).toBe(1);
+  });
+
+  it('refuses a pack of no units, which is not a thing a shop sells', () => {
+    expect(() =>
+      parsePresets('[{"name": "Soap", "usageDays": 30, "leadDays": 3, "extraDays": 0, "packSize": 0}]'),
+    ).toThrow(/Preset #1 needs packSize to be at least 1/u);
+  });
 });
 
 describe('files that are not preset files', () => {

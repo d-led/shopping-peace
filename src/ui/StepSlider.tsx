@@ -5,6 +5,7 @@ const TONE_RANGE = {
   secondary: 'range-secondary',
   accent: 'range-accent',
   info: 'range-info',
+  success: 'range-success',
 } as const;
 
 export type SliderTone = keyof typeof TONE_RANGE;

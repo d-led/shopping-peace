@@ -112,7 +112,11 @@ describe('things being added and edited', () => {
 
   it('gives a brand new thing numbers that already work', () => {
     const { store } = openApp([detergent]);
-    expect(store.add().freshDays).toBe(FRESHNESS_NEVER);
+    const added = store.add();
+
+    expect(added.freshDays).toBe(FRESHNESS_NEVER);
+    // Sold one at a time until the household says otherwise.
+    expect(added.packSize).toBe(1);
   });
 
   it('saves every change straight away, with no save button anywhere', () => {
@@ -228,51 +232,59 @@ describe('importing a file', () => {
   });
 });
 
-describe('bringing the starter things back', () => {
-  it('brings back only the ones that are gone', () => {
-    const { store } = openApp([detergent]);
+describe('starting again from the starter things', () => {
+  it('replaces the whole shelf with them', () => {
+    const mine = thing({ id: 'mine', name: 'Dish soap', emoji: '🧼', usageDays: 20, extraDays: 40 });
+    const { store, stored } = openApp([mine, detergent]);
 
-    expect(store.restoreDefaults()).toBe(1);
+    store.resetToDefaults();
 
+    expect(store.getState().items.map((item) => item.id)).toEqual(['detergent', 'tabs']);
+    expect(stored().map((item) => item.id)).toEqual(['detergent', 'tabs']);
+  });
+
+  it('throws away the household\'s own things, and says how many went', () => {
+    const mine = thing({ id: 'mine', name: 'Dish soap', emoji: '🧼', usageDays: 20, extraDays: 40 });
+    const { store } = openApp([mine, detergent]);
+
+    expect(store.resetToDefaults()).toBe(1);
+  });
+
+  it('has nothing of its own to report when the starters were all there', () => {
+    const { store } = openApp([tabs, detergent]);
+
+    expect(store.resetToDefaults()).toBe(0);
+  });
+
+  it('counts a starter the household renamed as something to lose', () => {
+    const { store } = openApp([{ ...detergent, name: 'Laundry liquid', usageDays: 90 }]);
+
+    // The name and the tuning go with the reset, even though the starter comes
+    // back: a renamed thing is the household's, not the app's.
+    expect(store.resetToDefaults()).toBe(1);
     expect(store.getState().items.map((item) => item.name)).toEqual([
-      detergent.name,
-      tabs.name,
+      'Laundry detergent',
+      'Dishwasher tabs',
     ]);
   });
 
-  it('leaves the things the household thought up alone', () => {
-    const mine = thing({ id: 'mine', name: 'Dish soap', emoji: '🧼', usageDays: 20, extraDays: 40 });
-    const { store, stored } = openApp([mine]);
+  it('forgets which thing was open, and opens the first starter instead', () => {
+    const app = openApp([detergent, tabs]);
+    app.store.select('tabs');
 
-    store.restoreDefaults();
+    app.store.resetToDefaults();
 
-    expect(store.getState().items.map((item) => item.id)).toEqual(['mine', 'detergent', 'tabs']);
-    expect(stored().map((item) => item.id)).toEqual(['mine', 'detergent', 'tabs']);
+    expect(app.store.getState().selected?.id).toBe('detergent');
+    expect(app.reopened().getState().selected?.id).toBe('detergent');
   });
 
-  it('recognises a starter by its name, however it got there', () => {
-    const { store } = openApp([thing({ ...detergent, id: 'copied-by-hand' })]);
+  it('is how an empty shelf gets the starters back', () => {
+    const { store, stored } = openApp([]);
 
-    expect(store.restoreDefaults()).toBe(1);
-  });
-
-  it('reports and does nothing when they are all there', () => {
-    const { store } = openApp([detergent, tabs]);
-    let calls = 0;
-    store.subscribe(() => {
-      calls += 1;
-    });
-
-    expect(store.restoreDefaults()).toBe(0);
-    expect(calls).toBe(0);
-  });
-
-  it('opens the first thing when the shelf had gone empty', () => {
-    const { store } = openApp([]);
-
-    store.restoreDefaults();
+    store.resetToDefaults();
 
     expect(store.getState().selected?.id).toBe('detergent');
+    expect(stored()).toEqual([detergent, tabs]);
   });
 });
 

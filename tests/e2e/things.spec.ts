@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from './support/coverage';
-import { openAppWith, openFreshApp, openThingPicker, paintedFontSizes } from './support/app';
+import { openAppWith, openThingPicker, paintedFontSizes } from './support/app';
 import { detergent, tabs } from './support/things';
 
 /**
@@ -144,14 +144,20 @@ test.describe('the full screen of things', () => {
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
   });
 
-  test('restore defaults brings back the starter things that were deleted', async ({ page }) => {
+  test('starts the shelf again from the starter things, after asking', async ({ page }) => {
     await openAppWith(page, [tabs]);
     await openThingPicker(page);
     const picker = page.getByRole('dialog');
 
-    await picker.getByRole('button', { name: '↩️ Restore defaults' }).click();
+    // Told no, the shelf is left exactly as it was.
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await picker.getByRole('button', { name: '↩️ Reset to defaults' }).click();
+    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toHaveCount(0);
 
-    await expect(page.getByRole('status')).toContainText('Brought back 5 things');
+    page.once('dialog', (dialog) => dialog.accept());
+    await picker.getByRole('button', { name: '↩️ Reset to defaults' }).click();
+
+    await expect(page.getByRole('status')).toContainText('Back to the starter things');
     await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toBeVisible();
     await expect(picker.getByRole('button', { name: /🧈 Butter/u })).toBeVisible();
 
@@ -160,25 +166,16 @@ test.describe('the full screen of things', () => {
     await expect(picker.getByRole('button', { name: /🧈 Butter/u })).toBeVisible();
   });
 
-  test('restore defaults says so when there is nothing to bring back', async ({ page }) => {
-    await openFreshApp(page);
-    await openThingPicker(page);
-
-    await page.getByRole('dialog').getByRole('button', { name: '↩️ Restore defaults' }).click();
-
-    await expect(page.getByRole('status')).toContainText('all here already');
-  });
-
-  test('brings the starter things back to an empty screen', async ({ page }) => {
+  test('starts the shelf again on an empty screen, without asking', async ({ page }) => {
     await openAppWith(page, []);
 
     await page.getByRole('button', { name: '↩️ Bring back the starter things' }).click();
 
-    await expect(page.getByRole('status')).toContainText('Brought back 6 things');
+    await expect(page.getByRole('status')).toContainText('Back to the starter things');
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
     await expect(page.getByTestId('keep-at-least')).toHaveText('1');
 
-    // Brought back is not "shown once": the shelf they land on is written down.
+    // Starting again is not "shown once": the shelf they land on is written down.
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
   });

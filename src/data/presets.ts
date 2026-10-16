@@ -45,14 +45,17 @@ export class LocalStoragePresetRepository implements PresetRepository {
 /** The presets a household finds on its first visit. */
 export function starterPresets(createId: () => string = newId): StockItem[] {
   const never = FRESHNESS_NEVER;
+  const one = 1;
   return [
-    { id: createId(), name: 'Dishwasher tabs', emoji: '🧽', usageDays: 45, leadDays: 4, extraDays: 20, freshDays: never },
-    { id: createId(), name: 'Dishwasher detergent', emoji: '🫧', usageDays: 60, leadDays: 4, extraDays: 30, freshDays: never },
-    { id: createId(), name: 'Laundry detergent', emoji: '🧴', usageDays: 30, leadDays: 3, extraDays: 60, freshDays: never },
-    { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageDays: 14, leadDays: 2, extraDays: 21, freshDays: never },
-    { id: createId(), name: 'Cat litter', emoji: '🐾', usageDays: 21, leadDays: 5, extraDays: 42, freshDays: never },
+    { id: createId(), name: 'Dishwasher tabs', emoji: '🧽', usageDays: 45, leadDays: 4, extraDays: 20, freshDays: never, packSize: one },
+    { id: createId(), name: 'Dishwasher detergent', emoji: '🫧', usageDays: 60, leadDays: 4, extraDays: 30, freshDays: never, packSize: one },
+    { id: createId(), name: 'Laundry detergent', emoji: '🧴', usageDays: 30, leadDays: 3, extraDays: 60, freshDays: never, packSize: one },
+    // Sold by the pack, which is the usual way of buying it: one roll lasts a
+    // fortnight, and the shop only has jumbo packs of ten.
+    { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageDays: 14, leadDays: 2, extraDays: 21, freshDays: never, packSize: 10 },
+    { id: createId(), name: 'Cat litter', emoji: '🐾', usageDays: 21, leadDays: 5, extraDays: 42, freshDays: never, packSize: one },
     // The perishable one, so the freshness slider can be seen doing something:
     // eaten over a fortnight, but sour a week after opening.
-    { id: createId(), name: 'Butter', emoji: '🧈', usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7 },
+    { id: createId(), name: 'Butter', emoji: '🧈', usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7, packSize: one },
   ];
 }

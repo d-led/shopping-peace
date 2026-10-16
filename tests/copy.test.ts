@@ -15,7 +15,8 @@ import {
   pictureButtonLabel,
   planCover,
   planHeadline,
-  restoredNotice,
+  resetNotice,
+  resetQuestion,
   spoilsWarning,
 } from '../src/ui/copy';
 import { thing } from './support/items';
@@ -65,6 +66,14 @@ describe('the instruction the household reads first', () => {
     );
   });
 
+  it('still asks for a pack when there is no reserve, because nothing smaller is sold', () => {
+    const noReserve = thing({ usageDays: 2, leadDays: 4, extraDays: 0, packSize: 10 });
+
+    expect(planHeadline(planStock(noReserve))).toBe(
+      'Down to 2 units? Nothing is kept spare, so fetch a 10-pack as this one runs out.',
+    );
+  });
+
   it('says "unit" when there is exactly one', () => {
     const single = { ...detergent, leadDays: 0, extraDays: 1 };
     expect(planCover(single, planStock(single))).toBe('1 unit ≈ 30 days of cover.');
@@ -73,6 +82,36 @@ describe('the instruction the household reads first', () => {
   it('counts a perishable at the size it is really gone in', () => {
     // Two units of butter, each gone a week after opening.
     expect(planCover(butter, planStock(butter))).toBe('2 units ≈ 14 days of cover.');
+  });
+});
+
+describe('fetching in packs, when the shop only sells packs', () => {
+  /** A roll every two days, four days to fetch, three rolls spare, ten to a pack. */
+  const paper = thing({
+    id: 'paper',
+    name: 'Toilet paper',
+    emoji: '🧻',
+    usageDays: 2,
+    leadDays: 4,
+    extraDays: 6,
+    packSize: 10,
+  });
+
+  it('asks for a pack, and names the shelf that pack lands on', () => {
+    expect(planHeadline(planStock(paper))).toBe(
+      "Down to 2 units? Bring home a 10-pack and you're back at 12.",
+    );
+  });
+
+  it('counts the shelf space a pack needs, not the level the cards aim at', () => {
+    // Twelve rolls, not the five aimed at: twelve is what arrives.
+    expect(planCover(paper, planStock(paper))).toBe('12 units ≈ 24 days of cover.');
+  });
+
+  it('counts several packs when one will not cover the spare', () => {
+    const many = thing({ ...paper, extraDays: 20, packSize: 4 });
+
+    expect(planHeadline(planStock(many))).toContain('Bring home 3 packs of 4');
   });
 });
 
@@ -120,6 +159,12 @@ describe('summarising a thing in the picker', () => {
   it('says "day" when there is exactly one', () => {
     expect(itemSummary({ ...detergent, usageDays: 1, leadDays: 1 })).toBe(
       '1 unit lasts 1 day · 1 day to fetch',
+    );
+  });
+
+  it('says how many come in a pack, so a shelf can be read at a glance', () => {
+    expect(itemSummary({ ...detergent, packSize: 10 })).toBe(
+      '1 unit lasts 30 days · 3 days to fetch · 10 per pack',
     );
   });
 });
@@ -180,10 +225,17 @@ describe('words for the things that happen to a shelf', () => {
   it('counts what came and went, in whole things', () => {
     expect(exportedNotice(3)).toBe('Exported 3 things.');
     expect(importedNotice(1)).toBe('Imported 1 thing.');
-    expect(restoredNotice(2)).toBe('Brought back 2 things.');
   });
 
-  it('makes nothing of a restore that had nothing to restore', () => {
-    expect(restoredNotice(0)).toBe('The starter things are all here already.');
+  it('says what a reset threw away, and stays quiet when it threw nothing away', () => {
+    expect(resetNotice(3)).toBe('Back to the starter things — 3 things of yours deleted.');
+    expect(resetNotice(1)).toBe('Back to the starter things — 1 thing of yours deleted.');
+    expect(resetNotice(0)).toBe('Back to the starter things.');
+  });
+
+  it('asks before a reset, naming how many things are about to go', () => {
+    expect(resetQuestion(2)).toBe(
+      'Delete all 2 things and start again from the starter ones?',
+    );
   });
 });

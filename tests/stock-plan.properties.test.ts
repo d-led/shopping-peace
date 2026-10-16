@@ -10,6 +10,7 @@ const wanted = fc.record({
   leadDays: fc.integer({ min: 0, max: 60 }),
   extraDays: fc.integer({ min: 0, max: 365 }),
   freshDays: fc.integer({ min: 0, max: FRESHNESS_NEVER }),
+  packSize: fc.integer({ min: 1, max: 48 }),
 });
 
 describe('the plan, for every household you could think of', () => {
@@ -55,10 +56,45 @@ describe('the plan, for every household you could think of', () => {
           plan.spareUnits,
           plan.targetStock,
           plan.fetchQuantity,
+          plan.packsPerFetch,
+          plan.shelfAfterFetch,
         ]) {
           expect(Number.isInteger(count)).toBe(true);
           expect(count).toBeGreaterThanOrEqual(0);
         }
+      }),
+    );
+  });
+
+  it('brings home whole packages, and never fewer than the target they cover', () => {
+    fc.assert(
+      fc.property(wanted, (numbers) => {
+        const plan = planStock(numbers);
+        const brought = plan.packsPerFetch * plan.packSize;
+
+        // A shop sells packages: never one of them split open.
+        expect(brought % plan.packSize).toBe(0);
+        expect(plan.packsPerFetch).toBeGreaterThanOrEqual(1);
+        // One package more than the spare would have covered the target too,
+        // so this is the fewest packs that hold the reserve the household asked
+        // for. With no reserve at all, one package is what a fetch means.
+        expect(brought).toBeGreaterThanOrEqual(plan.spareUnits);
+        if (plan.spareUnits > 0) {
+          expect(brought - plan.packSize).toBeLessThan(plan.spareUnits);
+        }
+        expect(plan.shelfAfterFetch).toBe(plan.reorderPoint + brought);
+      }),
+    );
+  });
+
+  it('tops the shelf up to at least the level it aims at', () => {
+    fc.assert(
+      fc.property(wanted, (numbers) => {
+        const plan = planStock(numbers);
+
+        // Packages round the fetching up, never down: a household that wanted
+        // three spare units and can only buy tens comes home with ten.
+        expect(plan.shelfAfterFetch).toBeGreaterThanOrEqual(plan.targetStock);
       }),
     );
   });

@@ -1,6 +1,6 @@
 import { expect, test } from './support/coverage';
 import { openAppWith, openFreshApp, paintedFontSizes } from './support/app';
-import { perishable } from './support/things';
+import { detergent, perishable } from './support/things';
 
 /**
  * What the screen looks like, and what it promises about a household's hands:
@@ -92,9 +92,21 @@ test.describe('the screen a household opens', () => {
     );
 
     // How long a unit lasts, how long a fetch takes, the emergency reserve,
-    // and how long the thing stays fresh after opening.
-    expect(labelSizes).toHaveLength(4);
+    // how long the thing stays fresh after opening, and how many come in a pack.
+    expect(labelSizes).toHaveLength(5);
     expect(Math.min(...labelSizes), 'a slider label is caption-sized').toBeGreaterThanOrEqual(16);
+  });
+
+  test('reads a pack size out loud, and still fits the screen', async ({ page }) => {
+    await openAppWith(page, [{ ...detergent, packSize: 10 }]);
+
+    await expect(page.getByText('Bring home a 10-pack')).toBeVisible();
+    await expect(page.locator('#pack-size')).toHaveValue('10');
+
+    const overflowBy = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflowBy, 'the page is wider than the screen').toBeLessThanOrEqual(0);
   });
 
   test('warns when a thing turns before a unit is finished', async ({ page }) => {

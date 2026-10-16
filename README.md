@@ -51,8 +51,11 @@ $$
 | --------------- | ------------------------------------------------------------------- |
 | reorder point   | *Down to …?* in the headline — the units a wait would eat, so shop before the shelf is that low |
 | spare units     | **Keep at least** — the reserve; the **Fetch more at** card is where it runs out |
-| target stock    | the level a fetch brings you back to, also in the headline           |
-| fetch quantity  | how many to bring home when you fetch                                |
+| target stock    | the level a fetch aims back for                                      |
+| fetch quantity  | how many units that would be, before a shop's pack size is taken into account |
+| pack size       | **Sold in packs of** — what one package holds; `1` is sold one at a time |
+| packs to fetch  | the *Bring home …* of the headline, once packs are in play            |
+| shelf after fetch | what the cupboard really holds then, and what **days of cover** counts |
 
 Two deliberate decisions, and one place this differs from the textbook formula:
 
@@ -89,6 +92,40 @@ eating rate suggests. A household that eats two units a week and buys two at a
 time wastes one of them, and a plan that pretends otherwise is worse than no
 plan. The cover figure only appears from 640 px up: on a phone that line is
 there for the warning, and for nothing else.
+
+### When the shop only sells packs
+
+A shop sells packages: ten rolls of toilet paper, twenty-four tins, six bottles.
+Nothing about that changes how the thing is *used*, so it does not touch the
+level kept at home — the cards stay in single units, because that is what a
+shelf is counted in. It changes the fetching, since nobody sells three quarters
+of a pack:
+
+$$
+\text{packs to fetch} = \max\left(1,\ \left\lceil \frac{\text{spare units}}{\text{pack size}} \right\rceil\right)
+\qquad
+\text{shelf after a fetch} = \text{reorder point} + \text{packs} \times \text{pack size}
+$$
+
+At least one pack, because one pack is the smallest thing a shop will sell: a
+household that keeps no reserve still comes home with a pack, and the headline
+says so rather than asking for a tenth of one.
+
+**Worked through: ten rolls at a time.** A roll lasts two days, fetching takes
+four days, three rolls of reserve, ten to a pack.
+
+| what the screen says | the numbers behind it |
+| -------------------- | --------------------- |
+| **Keep at least** `3` units spare | reserve $= \lceil 6 \text{ days} \div 2 \rceil = 3$ |
+| **Fetch more at** `0` spare units left | reorder point $= \lceil 4 \text{ days} \div 2 \rceil = 2$ |
+| *Down to 2 units? Bring home a 10-pack and you're back at 12.* | packs $= \lceil 3 \div 10 \rceil = 1$, shelf $= 2 + 10 = 12$ |
+| `12 units ≈ 24 days of cover.` | $12 \times 2$ days |
+
+The shelf ends up *above* the level the cards aim at, and that is the honest
+answer rather than a rounding error: the household wanted three spare rolls and
+could only buy ten, so it lands with eight spare instead of three. The reserve is
+inside the pack, not on top of it — adding a whole pack to the level the cards
+aim at would count the reserve twice.
 
 ## Running it
 
@@ -223,7 +260,8 @@ has to know which it was given. Both write the same document:
       "usageDays": 30,
       "leadDays": 3,
       "extraDays": 30,
-      "freshDays": 365
+      "freshDays": 365,
+      "packSize": 1
     }
   ]
 }
@@ -235,16 +273,18 @@ shape it is (`version`). A file written by a newer copy of the app is refused
 with a sentence naming both versions instead of being half-read. Import still
 takes the bare list this app wrote before the format was versioned, and a
 picture left inside a name is moved out of it and into the `emoji` field on the
-way in. A future icon set would arrive as a second field beside `emoji` — an id
-— rather than replacing the character.
+way in. A field the file does not mention is the safe one: no `freshDays` means
+it keeps, no `packSize` means sold one at a time. A future icon set would arrive
+as a second field beside `emoji` — an id — rather than replacing the character.
 
 **📥 Import** replaces the whole shelf, so it asks first, naming how many things
 are about to be replaced. Saying no leaves everything exactly as it was.
 
-**Restore defaults** brings back any starter thing that is no longer in the
-list, matched by name. It only ever adds: anything the household has added,
-renamed or retuned is left exactly as it is, so pressing it twice does nothing
-the second time.
+**Reset to defaults** throws the shelf away and starts again from the starter
+things: the household's own things, their renames and their tuning all go, and
+so does the memory of which thing was open. It is the only thing in the app that
+loses data on purpose, so it asks first and names how many things are about to
+go; on an empty shelf there is nothing to lose, and it just seeds the starters.
 
 ## Naming things
 

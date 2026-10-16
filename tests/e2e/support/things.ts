@@ -15,6 +15,7 @@ export const detergent: StockItem = {
   leadDays: 3,
   extraDays: 30,
   freshDays: FRESHNESS_NEVER,
+  packSize: 1,
 };
 
 /** Fast used, slow to fetch: 5 for the wait, 3 spare. */
@@ -26,6 +27,7 @@ export const tabs: StockItem = {
   leadDays: 45,
   extraDays: 30,
   freshDays: FRESHNESS_NEVER,
+  packSize: 1,
 };
 
 /** Eaten over a fortnight, but sour a week after opening: the plan counts 7. */
@@ -37,4 +39,5 @@ export const perishable: StockItem = {
   leadDays: 2,
   extraDays: 7,
   freshDays: 7,
+  packSize: 1,
 };

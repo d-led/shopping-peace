@@ -60,6 +60,60 @@ describe('how many to keep: the spare on top', () => {
   });
 });
 
+describe('fetching by the pack, which is how a shop sells things', () => {
+  /** Toilet paper: a roll every two days, four days to fetch, three rolls spare. */
+  const toiletPaper = requirements({
+    usageDays: 2,
+    leadDays: 4,
+    extraDays: 6,
+    packSize: 10,
+  });
+
+  it('leaves the level kept at home alone: that is about using, not about buying', () => {
+    const plan = planStock(toiletPaper);
+
+    expect(plan.reorderPoint).toBe(2);
+    expect(plan.spareUnits).toBe(3);
+    expect(plan.targetStock).toBe(5);
+    expect(plan.fetchQuantity).toBe(3);
+  });
+
+  it('brings home the smallest number of packs that covers the spare', () => {
+    expect(planStock(toiletPaper).packsPerFetch).toBe(1);
+    expect(planStock({ ...toiletPaper, packSize: 4 }).packsPerFetch).toBe(1);
+    expect(planStock({ ...toiletPaper, packSize: 2 }).packsPerFetch).toBe(2);
+  });
+
+  it('lands the shelf above the level aimed at, because packs cannot be split', () => {
+    const plan = planStock(toiletPaper);
+
+    // Two rolls for the wait plus the pack of ten, not five plus ten: the
+    // spare is inside the pack, not on top of it.
+    expect(plan.shelfAfterFetch).toBe(12);
+    expect(plan.shelfAfterFetch).toBeGreaterThan(plan.targetStock);
+  });
+
+  it('brings one package home even when no spare was asked for', () => {
+    const plan = planStock({ ...toiletPaper, extraDays: 0 });
+
+    expect(plan.spareUnits).toBe(0);
+    expect(plan.packsPerFetch).toBe(1);
+    expect(plan.shelfAfterFetch).toBe(12);
+  });
+
+  it('changes nothing at all when the shop sells them one at a time', () => {
+    const plan = planStock(requirements({ extraDays: 60 }));
+
+    expect(plan.packSize).toBe(1);
+    expect(plan.packsPerFetch).toBe(2);
+    expect(plan.shelfAfterFetch).toBe(plan.targetStock);
+  });
+
+  it('refuses a pack of no units, which is not a thing a shop sells', () => {
+    expect(() => planStock(requirements({ packSize: 0 }))).toThrow(/packSize/u);
+  });
+});
+
 describe('how long a unit effectively lasts', () => {
   it('is how long the thing lasts when nothing spoils', () => {
     expect(effectiveUsageDays(requirements({ usageDays: 30, freshDays: FRESHNESS_NEVER }))).toBe(
@@ -84,7 +138,7 @@ describe('how long a unit effectively lasts', () => {
 describe('a thing that turns before it is finished', () => {
   it('is fetched sooner, because a unit disappears faster than it is eaten', () => {
     // A ten-day wait, a unit eaten over a fortnight — but sour after a week.
-    const keeps = { usageDays: 14, leadDays: 10, extraDays: 0, freshDays: FRESHNESS_NEVER };
+    const keeps = { usageDays: 14, leadDays: 10, extraDays: 0, freshDays: FRESHNESS_NEVER, packSize: 1 };
     const perishes = { ...keeps, freshDays: 7 };
 
     expect(planStock(keeps).reorderPoint).toBe(1);

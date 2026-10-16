@@ -128,6 +128,8 @@ function toStockItem(entry: unknown, index: number, createId: () => string): Sto
     extraDays: readNumber(entry.extraDays, where, 'extraDays', 0),
     // Files written before the freshness slider existed mean "never spoils".
     freshDays: readNumber(entry.freshDays ?? FRESHNESS_NEVER, where, 'freshDays', 0),
+    // Files written before packs were a thing mean "sold one at a time".
+    packSize: readNumber(entry.packSize ?? 1, where, 'packSize', 1),
   };
 }
 

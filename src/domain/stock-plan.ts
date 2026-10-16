@@ -9,6 +9,12 @@ export interface StockPlan {
   readonly targetStock: number;
   /** Units to bring home once the reorder point is reached. */
   readonly fetchQuantity: number;
+  /** Units in one package at the shop. One means sold one at a time. */
+  readonly packSize: number;
+  /** Packages to bring home, which is a whole number of them. */
+  readonly packsPerFetch: number;
+  /** What the shelf really holds straight after a fetch, packs and all. */
+  readonly shelfAfterFetch: number;
 }
 
 /**
@@ -45,23 +51,35 @@ export function spoilsBeforeEmpty(requirements: StockRequirements): boolean {
  * replacement is on its way — and the spare days are added on top of it rather
  * than blurred into it, so the household can see which half is which. Whole
  * units cannot be split, so each half is rounded up on its own.
+ *
+ * Packages are the last step, and they only ever change the fetching: the level
+ * kept at home is about how the thing is used, and a shop's pack size says
+ * nothing about that. A household that wants three spare units and can only buy
+ * tens comes home with ten — the shelf settles above the target instead of
+ * below it, which is the honest answer to "they only sell them in tens".
  */
 export function planStock(requirements: StockRequirements): StockPlan {
-  const { usageDays, leadDays, extraDays, freshDays } = requirements;
+  const { usageDays, leadDays, extraDays, freshDays, packSize } = requirements;
   requireAtLeast(usageDays, 1, 'usageDays');
   requireAtLeast(leadDays, 0, 'leadDays');
   requireAtLeast(extraDays, 0, 'extraDays');
   requireAtLeast(freshDays, 0, 'freshDays');
+  requireAtLeast(packSize, 1, 'packSize');
 
   const lifespan = effectiveUsageDays(requirements);
   const reorderPoint = Math.ceil(leadDays / lifespan);
   const spareUnits = Math.ceil(extraDays / lifespan);
+  // At least one package, since that is the smallest thing a shop will sell.
+  const packsPerFetch = Math.max(1, Math.ceil(spareUnits / packSize));
 
   return {
     reorderPoint,
     spareUnits,
     targetStock: reorderPoint + spareUnits,
     fetchQuantity: spareUnits,
+    packSize,
+    packsPerFetch,
+    shelfAfterFetch: reorderPoint + packsPerFetch * packSize,
   };
 }
 

@@ -7,10 +7,10 @@ import { TEXT } from './text';
  */
 export function EmptyEditor({
   onAdd,
-  onRestoreDefaults,
+  onResetToDefaults,
 }: {
   readonly onAdd: () => void;
-  readonly onRestoreDefaults: () => void;
+  readonly onResetToDefaults: () => void;
 }) {
   return (
     <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300 rounded-none sm:rounded-box">
@@ -33,7 +33,7 @@ export function EmptyEditor({
         <button
           type="button"
           class={`btn btn-sm rounded-none ${TEXT.small}`}
-          onClick={onRestoreDefaults}
+          onClick={onResetToDefaults}
         >
           ↩️ Bring back the starter things
         </button>

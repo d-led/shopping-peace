@@ -16,6 +16,8 @@ export const LIMITS = {
   leadDays: { min: 0, max: 60 },
   extraDays: { min: 0, max: 180 },
   freshDays: { min: 0, max: FRESHNESS_NEVER },
+  // A case of 48 is about as big as a household buys of anything.
+  packSize: { min: 1, max: 48 },
 } as const;
 
 export interface ItemEditorProps {
@@ -55,7 +57,11 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             title="Keep at least"
             value={keep.value}
             caption={keep.caption}
-            hint="The reserve: what you hold on top of what the wait eats up."
+            hint={
+              plan.packSize > 1
+                ? 'The reserve you hold on top of the wait. A pack is bigger than that, so a fetch lands you higher.'
+                : 'The reserve: what you hold on top of what the wait eats up.'
+            }
             testId="keep-at-least"
           />
           <KpiCard
@@ -126,6 +132,20 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             min={LIMITS.extraDays.min}
             max={LIMITS.extraDays.max}
             onChange={(extraDays) => onChange(item.id, { extraDays })}
+          />
+          <StepSlider
+            id="pack-size"
+            tone="success"
+            label="📦 Sold in packs of"
+            unit="unit"
+            value={item.packSize}
+            min={LIMITS.packSize.min}
+            max={LIMITS.packSize.max}
+            minLabel="one at a time"
+            // The level kept at home is about how the thing is used; this only
+            // decides what a fetch brings home, since packs cannot be split.
+            hint="How many units arrive in one package. Buying is counted in packs; keeping is counted in single units."
+            onChange={(packSize) => onChange(item.id, { packSize })}
           />
           <StepSlider
             id="fresh-days"

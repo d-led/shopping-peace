@@ -34,15 +34,33 @@ export function pictureButtonLabel(item: StockItem): string {
  */
 export function planHeadline(plan: StockPlan): string {
   if (plan.fetchQuantity === 0) {
-    return `Down to ${units(plan.reorderPoint)}? Nothing is kept spare, so fetch the next unit as this one runs out.`;
+    return `Down to ${units(plan.reorderPoint)}? Nothing is kept spare, so fetch ${packed(plan)} as this one runs out.`;
   }
-  return `Down to ${units(plan.reorderPoint)}? Bring home ${plan.fetchQuantity} more and you're back at ${plan.targetStock}.`;
+  return `Down to ${units(plan.reorderPoint)}? Bring home ${packed(plan)} and you're back at ${plan.shelfAfterFetch}.`;
 }
 
-/** How long a full top-up lasts — the number a household can picture. */
+/**
+ * How the fetching is asked for: in single units, or in whole packages when the
+ * shop does not sell them one at a time. A shop will not sell three quarters of
+ * a pack, and coming home with more of something that keeps is better than
+ * coming home with less than the household wanted.
+ */
+function packed(plan: StockPlan): string {
+  const { packSize, packsPerFetch, fetchQuantity } = plan;
+  if (packSize === 1) {
+    return fetchQuantity === 0 ? 'the next unit' : `${fetchQuantity} more`;
+  }
+  return packsPerFetch === 1 ? `a ${packSize}-pack` : `${packsPerFetch} packs of ${packSize}`;
+}
+
+/**
+ * How long the shelf lasts once it has been topped up — the number a household
+ * can picture, and the one that says how much cupboard space this needs. It
+ * counts the packages, so it can be higher than the level the cards aim at.
+ */
 export function planCover(item: StockItem, plan: StockPlan): string {
-  const cover = Math.round(plan.targetStock * effectiveUsageDays(item));
-  return `${units(plan.targetStock)} ≈ ${cover} ${cover === 1 ? 'day' : 'days'} of cover.`;
+  const cover = Math.round(plan.shelfAfterFetch * effectiveUsageDays(item));
+  return `${units(plan.shelfAfterFetch)} ≈ ${cover} ${cover === 1 ? 'day' : 'days'} of cover.`;
 }
 
 /**
@@ -87,7 +105,8 @@ export function fetchCard(plan: StockPlan): PlanCard {
 
 /** The subtitle under each thing in the picker. */
 export function itemSummary(item: StockItem): string {
-  return `1 unit lasts ${days(item.usageDays)} · ${days(item.leadDays)} to fetch`;
+  const sold = item.packSize > 1 ? ` · ${item.packSize} per pack` : '';
+  return `1 unit lasts ${days(item.usageDays)} · ${days(item.leadDays)} to fetch${sold}`;
 }
 
 /** "1 thing" / "3 things", for the export and import messages. */
@@ -121,11 +140,16 @@ export function importedNotice(count: number): string {
   return `Imported ${countThings(count)}.`;
 }
 
-/** Nothing to bring back is not a failure, so it gets its own sentence. */
-export function restoredNotice(count: number): string {
-  return count === 0
-    ? 'The starter things are all here already.'
-    : `Brought back ${countThings(count)}.`;
+/** Nothing to lose is worth saying: a reset on an empty shelf loses nothing. */
+export function resetNotice(discarded: number): string {
+  return discarded === 0
+    ? 'Back to the starter things.'
+    : `Back to the starter things — ${countThings(discarded)} of yours deleted.`;
+}
+
+/** What a reset throws away is everything, so it asks first. */
+export function resetQuestion(count: number): string {
+  return `Delete all ${countThings(count)} and start again from the starter ones?`;
 }
 
 function days(count: number): string {

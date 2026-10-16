@@ -20,7 +20,8 @@ import {
   importFailed,
   importQuestion,
   importedNotice,
-  restoredNotice,
+  resetNotice,
+  resetQuestion,
 } from './copy';
 import { downloadJson } from './download';
 import { TEXT } from './text';
@@ -85,8 +86,14 @@ export function App({ store }: { readonly store: ItemStore }) {
     }
   };
 
-  const restoreDefaults = () => {
-    say(restoredNotice(store.restoreDefaults()));
+  const resetDefaults = () => {
+    const count = store.getState().items.length;
+    // Nothing on the shelf is nothing to lose, so an empty one is not worth
+    // a question.
+    if (count > 0 && !window.confirm(resetQuestion(count))) {
+      return;
+    }
+    say(resetNotice(store.resetToDefaults()));
   };
 
   return (
@@ -99,7 +106,7 @@ export function App({ store }: { readonly store: ItemStore }) {
           screen, edges and all. */}
       <main class="max-w-2xl mx-auto pb-24 sm:p-3 sm:pb-24 md:p-6">
         {selected === null ? (
-          <EmptyEditor onAdd={addThing} onRestoreDefaults={restoreDefaults} />
+          <EmptyEditor onAdd={addThing} onResetToDefaults={resetDefaults} />
         ) : (
           <ItemEditor
             item={selected}
@@ -129,7 +136,7 @@ export function App({ store }: { readonly store: ItemStore }) {
           onExportAll={exportAll}
           onExportCurrent={exportCurrent}
           onImport={importPresets}
-          onRestoreDefaults={restoreDefaults}
+          onResetToDefaults={resetDefaults}
           onConfirm={() => setPickerOpen(false)}
         />
       )}

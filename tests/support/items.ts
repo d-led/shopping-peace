@@ -6,7 +6,8 @@ import {
 
 /**
  * The numbers for a thing, with everything a test does not care about filled
- * in: a unit a month, a three-day wait, a month spare, and nothing that spoils.
+ * in: a unit a month, a three-day wait, a month spare, nothing that spoils, and
+ * sold one at a time.
  */
 export function requirements(overrides: Partial<StockRequirements> = {}): StockRequirements {
   return {
@@ -14,6 +15,7 @@ export function requirements(overrides: Partial<StockRequirements> = {}): StockR
     leadDays: 3,
     extraDays: 30,
     freshDays: FRESHNESS_NEVER,
+    packSize: 1,
     ...overrides,
   };
 }

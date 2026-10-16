@@ -18,6 +18,7 @@ const detergent: StockItem = {
   leadDays: 3,
   extraDays: 30,
   freshDays: FRESHNESS_NEVER,
+  packSize: 1,
 };
 
 /** A fast-used thing with a long wait: fetch at 5, keep 8. */
@@ -29,6 +30,7 @@ const tabs: StockItem = {
   leadDays: 45,
   extraDays: 30,
   freshDays: FRESHNESS_NEVER,
+  packSize: 1,
 };
 
 /** Eaten over a fortnight, but sour a week after opening: the plan counts 7. */
@@ -40,6 +42,7 @@ const butter: StockItem = {
   leadDays: 2,
   extraDays: 7,
   freshDays: 7,
+  packSize: 1,
 };
 
 const mounted: HTMLElement[] = [];
@@ -679,8 +682,9 @@ describe('being told what just happened', () => {
   it('says it once, and takes it away when dismissed', async () => {
     const { container } = openApp([detergent]);
     await openThingPicker(container);
+    answerTheQuestionWith(true);
 
-    pickerButton(container, '↩️ Restore defaults').click();
+    pickerButton(container, '↩️ Reset to defaults').click();
     await vi.waitFor(() => {
       expect(container.querySelector('[role="status"]')).not.toBeNull();
     });
@@ -693,40 +697,49 @@ describe('being told what just happened', () => {
   });
 });
 
-describe('bringing the starter things back', () => {
-  it('brings back a starter thing that was thrown away', async () => {
-    const { container, storage } = openApp([tabs]);
+describe('starting again from the starter things', () => {
+  it('throws the shelf away after asking, and says what went with it', async () => {
+    const mine = { ...detergent, id: 'mine', name: 'Dish soap' };
+    const { container, storage } = openApp([mine, tabs]);
+    answerTheQuestionWith(true);
 
     await openThingPicker(container);
-    pickerButton(container, '↩️ Restore defaults').click();
+    pickerButton(container, '↩️ Reset to defaults').click();
 
     await vi.waitFor(() => {
-      expect(textOf(picker(container) ?? container)).toContain('🧴 Laundry detergent');
+      expect(saved(storage).map((item) => item.id)).toEqual(['detergent', 'tabs']);
     });
-    expect(saved(storage).map((item) => item.name)).toEqual([tabs.name, detergent.name]);
-    expect(textOf(container)).toContain('Brought back 1 thing.');
+    expect(textOf(picker(container) ?? container)).toContain('🧴 Laundry detergent');
+    expect(textOf(container)).toContain('Back to the starter things — 1 thing of yours deleted.');
   });
 
-  it('says so when they are all there', async () => {
-    const { container } = openApp([detergent, tabs]);
+  it('names how many things are about to go before it goes ahead', async () => {
+    const { container, storage } = openApp([{ ...detergent, id: 'mine', name: 'Dish soap' }, tabs]);
+    answerTheQuestionWith(false);
 
     await openThingPicker(container);
-    pickerButton(container, '↩️ Restore defaults').click();
+    pickerButton(container, '↩️ Reset to defaults').click();
 
     await vi.waitFor(() => {
-      expect(textOf(container)).toContain('The starter things are all here already.');
+      expect(window.confirm).toHaveBeenCalledWith(
+        'Delete all 2 things and start again from the starter ones?',
+      );
     });
+    expect(saved(storage).map((item) => item.id)).toEqual(['mine', 'tabs']);
   });
 
-  it('brings them back to a screen with nothing on it', async () => {
+  it('starts them on a screen with nothing on it, without asking', async () => {
     const { container, storage } = openApp([]);
+    const asked = vi.spyOn(window, 'confirm');
 
     button(container, '↩️ Bring back the starter things').click();
 
     await vi.waitFor(() => {
       expect(saved(storage)).toHaveLength(2);
     });
-    expect(textOf(container)).toContain('Brought back 2 things.');
+    // Nothing on the shelf is nothing to lose.
+    expect(asked).not.toHaveBeenCalled();
+    expect(textOf(container)).toContain('Back to the starter things.');
     expect(value(container, 'keep-at-least')).toBe('1');
   });
 });
@@ -800,6 +813,29 @@ describe('touching the numbers', () => {
     button(container, 'Decrease 🛡️').click();
     await vi.waitFor(() => {
       expect(field(container, 'extra-days').value).toBe('30');
+    });
+    expect(value(container, 'keep-at-least')).toBe('1');
+  });
+
+  it('asks for packs, and for the shelf a pack lands on, once a pack size is set', async () => {
+    const { container, storage } = openApp([detergent]);
+
+    enter(container, 'pack-size', '10');
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain("Bring home a 10-pack and you're back at 11.");
+    });
+    expect(textOf(container)).toContain('11 units ≈ 330 days of cover.');
+    expect(saved(storage)[0]?.packSize).toBe(10);
+  });
+
+  it('calls a thing sold singly the smallest a shop sells', async () => {
+    const { container } = openApp([{ ...detergent, packSize: 10 }]);
+
+    enter(container, 'pack-size', '1');
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('one at a time');
     });
     expect(value(container, 'keep-at-least')).toBe('1');
   });

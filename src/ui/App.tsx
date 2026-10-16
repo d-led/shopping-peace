@@ -2,7 +2,12 @@
 import { useState } from 'hono/jsx/dom';
 import type { ItemStore } from '../app/item-store';
 import { BUILD_SHA } from '../build';
-import { exportFilename, parsePresets, serializePresets } from '../data/presets-file';
+import {
+  exportFilename,
+  onePresetFilename,
+  parsePresets,
+  serializePresets,
+} from '../data/presets-file';
 import type { StockItem, StockRequirements } from '../domain/stock-item';
 import { EmptyEditor } from './EmptyEditor';
 import { ItemEditor } from './ItemEditor';
@@ -13,6 +18,7 @@ import {
   deleteQuestion,
   exportedNotice,
   importFailed,
+  importQuestion,
   importedNotice,
   restoredNotice,
 } from './copy';
@@ -34,9 +40,17 @@ export function App({ store }: { readonly store: ItemStore }) {
   const say = (text: string) => setNotice({ tone: 'success', text });
   const complain = (text: string) => setNotice({ tone: 'error', text });
 
-  const exportPresets = () => {
+  const exportAll = () => {
     downloadJson(exportFilename(new Date()), serializePresets(items));
     say(exportedNotice(items.length));
+  };
+
+  const exportCurrent = () => {
+    if (selected === null) {
+      return;
+    }
+    downloadJson(onePresetFilename(selected.name, new Date()), serializePresets([selected]));
+    say(exportedNotice(1));
   };
 
   const importPresets = async (event: Event) => {
@@ -48,6 +62,10 @@ export function App({ store }: { readonly store: ItemStore }) {
     }
     try {
       const imported = parsePresets(await file.text());
+      // Reading a file is harmless; replacing the shelf is not, so it asks.
+      if (!window.confirm(importQuestion(items.length, imported.length))) {
+        return;
+      }
       store.replaceAll(imported);
       say(importedNotice(imported.length));
     } catch (error) {
@@ -105,7 +123,8 @@ export function App({ store }: { readonly store: ItemStore }) {
           onRename={(id: string, name: string) => store.rename(id, name)}
           onAdd={addThing}
           onDelete={deleteThing}
-          onExport={exportPresets}
+          onExportAll={exportAll}
+          onExportCurrent={exportCurrent}
           onImport={importPresets}
           onRestoreDefaults={restoreDefaults}
           onConfirm={() => setPickerOpen(false)}

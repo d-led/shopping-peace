@@ -1,4 +1,5 @@
 import type { PresetRepository } from '../data/presets';
+import type { SelectionRepository } from '../data/selection';
 import { newId } from '../domain/ids';
 import { FRESHNESS_NEVER, type StockItem, type StockRequirements } from '../domain/stock-item';
 
@@ -28,10 +29,12 @@ const DEFAULTS_FOR_NEW_ITEM: StockRequirements = {
 /**
  * Holds every preset and the current selection. Every change is written
  * straight through to the repository, so the household never has to save
- * anything by hand.
+ * anything by hand — and the thing that was open is remembered too, so a reload
+ * is not a step backwards.
  */
 export class ItemStore {
-  readonly #repository: PresetRepository;
+  readonly #presets: PresetRepository;
+  readonly #selection: SelectionRepository;
   readonly #starterItems: () => readonly StockItem[];
   readonly #createId: () => string;
   readonly #listeners = new Set<ItemStoreListener>();
@@ -40,8 +43,13 @@ export class ItemStore {
   #selectedId: string | null = null;
   #state: ItemStoreState = { items: [], selected: null };
 
-  constructor(repository: PresetRepository, options: ItemStoreOptions) {
-    this.#repository = repository;
+  constructor(
+    presets: PresetRepository,
+    selection: SelectionRepository,
+    options: ItemStoreOptions,
+  ) {
+    this.#presets = presets;
+    this.#selection = selection;
     this.#starterItems = options.starterItems;
     this.#createId = options.createId ?? newId;
   }
@@ -59,8 +67,9 @@ export class ItemStore {
 
   /** Reads the presets for this browser, seeding a fresh start when needed. */
   load(): void {
-    const stored = this.#repository.load();
+    const stored = this.#presets.load();
     this.#items = stored ?? this.#starterItems();
+    this.#selectedId = this.#rememberedSelection();
     this.#openSomethingIfNothingIsOpen();
     this.#refresh();
     if (stored === null) {
@@ -74,8 +83,7 @@ export class ItemStore {
       return;
     }
     this.#selectedId = id;
-    this.#refresh();
-    this.#announce();
+    this.#commitSelection();
   }
 
   add(): StockItem {
@@ -152,8 +160,22 @@ export class ItemStore {
     this.#announce();
   }
 
+  /** The selection is state as well: a reload should land on the same thing. */
+  #commitSelection(): void {
+    this.#selection.save(this.#selectedId);
+    this.#refresh();
+    this.#announce();
+  }
+
   #persist(): void {
-    this.#repository.save(this.#items);
+    this.#presets.save(this.#items);
+    this.#selection.save(this.#selectedId);
+  }
+
+  /** What was open last time, as long as it is still on the shelf. */
+  #rememberedSelection(): string | null {
+    const remembered = this.#selection.load();
+    return this.#items.some((item) => item.id === remembered) ? remembered : null;
   }
 
   /** There is always something open, as long as there is something to open. */

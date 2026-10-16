@@ -60,6 +60,14 @@ export function importFailed(error: unknown): string {
   return error instanceof InvalidPresetFileError ? error.message : 'That file could not be read.';
 }
 
+/**
+ * Importing replaces the shelf, so it asks first and says what is at stake —
+ * including how many things are about to be replaced.
+ */
+export function importQuestion(here: number, incoming: number): string {
+  return `Replace the ${countThings(here)} here with the ${countThings(incoming)} in this file?`;
+}
+
 export function exportedNotice(count: number): string {
   return `Exported ${countThings(count)}.`;
 }

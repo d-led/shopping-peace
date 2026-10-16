@@ -14,7 +14,29 @@ export function serializePresets(items: readonly StockItem[]): string {
 }
 
 export function exportFilename(date: Date): string {
-  return `shopping-peace-presets-${date.toISOString().slice(0, 10)}.json`;
+  return `shopping-peace-presets-${day(date)}.json`;
+}
+
+/**
+ * A file holding one thing, named after it: a household exporting a single
+ * preset should be able to tell it apart from the whole shelf. The contents are
+ * a list either way, so import does not care which one it is given.
+ */
+export function onePresetFilename(name: string, date: Date): string {
+  return `shopping-peace-${slugOf(name)}-${day(date)}.json`;
+}
+
+function day(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** A filename-safe version of a name, or "preset" when nothing survives. */
+function slugOf(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, '-')
+    .replace(/^-+|-+$/gu, '');
+  return slug === '' ? 'preset' : slug.slice(0, 40);
 }
 
 /**

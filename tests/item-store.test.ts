@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ItemStore, type ItemStoreState } from '../src/app/item-store';
 import { LocalStoragePresetRepository, PRESETS_STORAGE_KEY } from '../src/data/presets';
 import { parsePresets, serializePresets } from '../src/data/presets-file';
+import { LocalStorageSelectionRepository } from '../src/data/selection';
 import { FRESHNESS_NEVER, type StockItem } from '../src/domain/stock-item';
 import { FakeStorage } from './support/fake-storage';
 import { thing } from './support/items';
@@ -20,6 +21,8 @@ interface App {
   readonly store: ItemStore;
   /** What a reload would find in the browser. */
   stored(): StockItem[];
+  /** The same browser, opened again: what a reload shows. */
+  reopened(): ItemStore;
 }
 
 function openApp(stored?: readonly StockItem[]): App {
@@ -27,17 +30,22 @@ function openApp(stored?: readonly StockItem[]): App {
   if (stored !== undefined) {
     storage.setItem(PRESETS_STORAGE_KEY, serializePresets(stored));
   }
-  const store = new ItemStore(new LocalStoragePresetRepository(storage), {
-    starterItems: () => [detergent, tabs],
-    createId: () => 'brand-new',
-  });
-  store.load();
+  const open = () => {
+    const store = new ItemStore(
+      new LocalStoragePresetRepository(storage),
+      new LocalStorageSelectionRepository(storage),
+      { starterItems: () => [detergent, tabs], createId: () => 'brand-new' },
+    );
+    store.load();
+    return store;
+  };
   return {
-    store,
+    store: open(),
     stored: () => {
       const raw = storage.getItem(PRESETS_STORAGE_KEY);
       return raw === null ? [] : parsePresets(raw);
     },
+    reopened: open,
   };
 }
 
@@ -54,6 +62,41 @@ describe('opening the app', () => {
     const { store } = openApp([tabs]);
     expect(store.getState().items).toEqual([tabs]);
     expect(store.getState().selected).toEqual(tabs);
+  });
+});
+
+describe('landing where the household left off', () => {
+  it('opens the thing that was open last time', () => {
+    const app = openApp([detergent, tabs]);
+
+    app.store.select('tabs');
+
+    expect(app.reopened().getState().selected?.id).toBe('tabs');
+  });
+
+  it('opens the first thing when the remembered one is gone', () => {
+    const app = openApp([detergent, tabs]);
+    app.store.select('tabs');
+
+    app.store.remove('tabs');
+
+    expect(app.reopened().getState().selected?.id).toBe('detergent');
+  });
+
+  it('remembers a thing that was only just added', () => {
+    const app = openApp([detergent]);
+
+    app.store.add();
+
+    expect(app.reopened().getState().selected?.id).toBe('brand-new');
+  });
+
+  it('has nothing to remember once the shelf is empty', () => {
+    const app = openApp([detergent]);
+
+    app.store.remove('detergent');
+
+    expect(app.reopened().getState().selected).toBeNull();
   });
 });
 

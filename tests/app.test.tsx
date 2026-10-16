@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ItemStore } from '../src/app/item-store';
 import { LocalStoragePresetRepository, PRESETS_STORAGE_KEY } from '../src/data/presets';
 import { parsePresets, serializePresets } from '../src/data/presets-file';
+import { LocalStorageSelectionRepository } from '../src/data/selection';
 import { FRESHNESS_NEVER, type StockItem } from '../src/domain/stock-item';
 import { App } from '../src/ui/App';
 import { FakeStorage } from './support/fake-storage';
@@ -43,10 +44,11 @@ const mounted: HTMLElement[] = [];
 function openApp(items: readonly StockItem[]) {
   const storage = new FakeStorage();
   storage.setItem(PRESETS_STORAGE_KEY, serializePresets(items));
-  const store = new ItemStore(new LocalStoragePresetRepository(storage), {
-    starterItems: () => [detergent, tabs],
-    createId: () => 'brand-new',
-  });
+  const store = new ItemStore(
+    new LocalStoragePresetRepository(storage),
+    new LocalStorageSelectionRepository(storage),
+    { starterItems: () => [detergent, tabs], createId: () => 'brand-new' },
+  );
   store.load();
 
   const container = document.createElement('div');
@@ -55,6 +57,11 @@ function openApp(items: readonly StockItem[]) {
   render(<App store={store} />, container);
 
   return { container, storage };
+}
+
+/** Answers the question the app asks before replacing the shelf. */
+function answerTheQuestionWith(agreed: boolean): void {
+  vi.spyOn(window, 'confirm').mockReturnValue(agreed);
 }
 
 afterEach(() => {
@@ -121,8 +128,14 @@ function enter(container: HTMLElement, id: string, typed: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function doubleClick(element: HTMLElement): void {
-  element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+/**
+ * Two quick taps on the same thing, which is what a phone sends — and what a
+ * row counts as "this one, and I am done". Not a `dblclick`: a phone rarely
+ * reports that gesture as one, since it is also how you zoom.
+ */
+function tapTwice(element: HTMLElement): void {
+  element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 }
 
 /** A button inside the sheet, never the same-named one on the screen behind it. */
@@ -185,6 +198,17 @@ function fileInput(container: HTMLElement): HTMLInputElement {
     throw new Error('There is no file input in the picker.');
   }
   return input;
+}
+
+/**
+ * jsdom has no downloads, so this keeps one from being attempted. What lands in
+ * the file — name and contents — is checked in the browser tests, which have a
+ * real download event to look at.
+ */
+function stopTheDownload(): void {
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:stubbed');
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 }
 
 function saved(storage: FakeStorage): StockItem[] {
@@ -308,12 +332,12 @@ describe('the full screen of things', () => {
     });
   });
 
-  it('takes a double press on the chosen thing as OK', async () => {
+  it('takes two taps on the thing that is already open as OK', async () => {
     const { container } = openApp([detergent, tabs]);
 
     await openThingPicker(container);
     // 🧴 Laundry detergent is the one already open.
-    doubleClick(pickerButton(container, '🧴 Laundry detergent'));
+    tapTwice(pickerButton(container, '🧴 Laundry detergent'));
 
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
@@ -321,11 +345,11 @@ describe('the full screen of things', () => {
     expect(value(container, 'target-stock')).toBe('2');
   });
 
-  it('picks whichever thing is double pressed, then leaves', async () => {
+  it('picks whichever thing was tapped twice, then leaves', async () => {
     const { container } = openApp([detergent, tabs]);
 
     await openThingPicker(container);
-    doubleClick(pickerButton(container, '🧽 Dishwasher tabs'));
+    tapTwice(pickerButton(container, '🧽 Dishwasher tabs'));
 
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
@@ -334,14 +358,30 @@ describe('the full screen of things', () => {
     expect(value(container, 'reorder-point')).toBe('5');
   });
 
+  it('leaves one tap alone: it only picks the thing', async () => {
+    const { container } = openApp([detergent, tabs]);
+
+    await openThingPicker(container);
+    pickerButton(container, '🧽 Dishwasher tabs').click();
+
+    await vi.waitFor(() => {
+      expect(value(container, 'target-stock')).toBe('8');
+    });
+    expect(picker(container)).not.toBeNull();
+  });
+
   it('keeps importing and exporting off the main screen', async () => {
     const { container } = openApp([detergent]);
 
-    expect(textOf(container)).not.toContain('Export');
+    expect(textOf(container)).not.toContain('📤');
 
     await openThingPicker(container);
-    expect(textOf(picker(container) ?? container)).toContain('Export');
-    expect(textOf(picker(container) ?? container)).toContain('Import');
+    const sheet = picker(container) ?? container;
+
+    // Both ways out of the app live in the sheet: everything, or just this one.
+    expect(pickerButton(container, 'Export all')).toBeDefined();
+    expect(pickerButton(container, 'Export this one')).toBeDefined();
+    expect(textOf(sheet)).toContain('Import');
   });
 
   it('renames the thing as you type, and keeps it', async () => {
@@ -479,6 +519,7 @@ describe('files in and out', () => {
   it('imports a file the household picked, and says what came in', async () => {
     const { container, storage } = openApp([detergent]);
     await openThingPicker(container);
+    answerTheQuestionWith(true);
 
     pickFile(
       container,
@@ -493,6 +534,65 @@ describe('files in and out', () => {
     expect(textOf(container)).toContain('Imported 1 thing.');
     // 20 days a unit, 2 days to fetch, 40 extra days: one tight, two spare.
     expect(value(container, 'target-stock')).toBe('3');
+  });
+
+  it('asks before a file replaces the shelf, and keeps it when told no', async () => {
+    const { container, storage } = openApp([detergent]);
+    await openThingPicker(container);
+    answerTheQuestionWith(false);
+
+    pickFile(
+      container,
+      JSON.stringify([
+        { id: 'soap', name: '🧼 Dish soap', usageDays: 20, leadDays: 2, extraDays: 40 },
+      ]),
+    );
+
+    await vi.waitFor(() => {
+      expect(window.confirm).toHaveBeenCalledWith(
+        'Replace the 1 thing here with the 1 thing in this file?',
+      );
+    });
+    expect(saved(storage)).toEqual([detergent]);
+    expect(textOf(container)).not.toContain('Imported');
+  });
+
+  it('says how many things are about to be replaced', async () => {
+    const { container } = openApp([detergent, tabs]);
+    await openThingPicker(container);
+    answerTheQuestionWith(false);
+
+    pickFile(container, '[]');
+
+    await vi.waitFor(() => {
+      expect(window.confirm).toHaveBeenCalledWith(
+        'Replace the 2 things here with the 0 things in this file?',
+      );
+    });
+  });
+
+  it('exports every thing, and says how many went', async () => {
+    const { container } = openApp([detergent, tabs]);
+    await openThingPicker(container);
+    stopTheDownload();
+
+    pickerButton(container, 'Export all').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('Exported 2 things.');
+    });
+  });
+
+  it('exports just the thing on screen', async () => {
+    const { container } = openApp([detergent, tabs]);
+    await openThingPicker(container);
+    stopTheDownload();
+
+    pickerButton(container, 'Export this one').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('Exported 1 thing.');
+    });
   });
 
   it('explains a file it cannot read, and keeps the shelf it had', async () => {

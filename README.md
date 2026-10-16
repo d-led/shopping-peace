@@ -141,9 +141,19 @@ Two of those stages are worth explaining:
 ## Where the presets live
 
 Presets are kept in the browser's `localStorage` and written on every change —
-there is no save button, and nothing is ever sent anywhere. The thing picker
-exports them as a dated JSON file and reads one back in, so a household can move
-them between devices or keep a copy.
+there is no save button, and nothing is ever sent anywhere. The picker also
+remembers **which thing was open**, so a reload lands where the household left
+off rather than at the top of the list; a thing that has since been deleted is
+simply forgotten.
+
+Exports come in two sizes and one format. **📤 All** writes every thing to
+`shopping-peace-presets-<date>.json`; **📤 This one** writes just the thing on
+screen to a file named after it, so two exports are told apart in a downloads
+folder. Both hold a *list* — of one, or of all — so import never has to know
+which it was given.
+
+**📥 Import** replaces the whole shelf, so it asks first, naming how many things
+are about to be replaced. Saying no leaves everything exactly as it was.
 
 **Restore defaults** brings back any starter thing that is no longer in the
 list, matched by name. It only ever adds: anything the household has added,

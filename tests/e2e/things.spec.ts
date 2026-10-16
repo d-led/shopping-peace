@@ -53,15 +53,45 @@ test.describe('the full screen of things', () => {
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
   });
 
-  test('takes a double press on a thing as OK', async ({ page }) => {
+  test('takes two taps on a thing as OK', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
+    const row = page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u });
 
-    await page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u }).dblclick();
+    await row.click();
+    await row.click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
     await expect(page.getByTestId('reorder-point')).toHaveText('5');
+  });
+
+  test('takes two taps on a touch screen, which is not a double click', async ({
+    page,
+    hasTouch,
+  }) => {
+    // The gesture a phone actually performs. A double *click* is a mouse one,
+    // and a phone does not report a double tap as `dblclick` at all.
+    test.skip(!hasTouch, 'this gesture needs a touch screen');
+    await openAppWith(page, [detergent, tabs]);
+    await openThingPicker(page);
+    const row = page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u });
+
+    await row.tap();
+    await row.tap();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
+  });
+
+  test('leaves a single tap short of leaving', async ({ page }) => {
+    await openAppWith(page, [detergent, tabs]);
+    await openThingPicker(page);
+
+    await page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
+
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.locator('#thing-name')).toHaveValue('🧽 Dishwasher tabs');
   });
 
   test('renames the thing you just switched to, before closing', async ({ page }) => {
@@ -102,6 +132,20 @@ test.describe('the full screen of things', () => {
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
+  });
+
+  test('comes back to the thing you were on, not to the first one', async ({ page }) => {
+    await openAppWith(page, [detergent, tabs]);
+    await openThingPicker(page);
+
+    await page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click();
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
+
+    await page.reload();
+
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
+    await expect(page.getByTestId('reorder-point')).toHaveText('5');
   });
 
   test('finds an emoji by what it is, and puts it in front of the name', async ({ page }) => {
@@ -150,7 +194,7 @@ test.describe('the full screen of things', () => {
     // The one destructive action is the small one, down below a separator.
     const [deleteBox, exportBox] = await Promise.all([
       deleteButton.boundingBox(),
-      picker.getByRole('button', { name: /Export/u }).boundingBox(),
+      picker.getByRole('button', { name: 'Export all' }).boundingBox(),
     ]);
     expect(deleteBox).not.toBeNull();
     expect(exportBox).not.toBeNull();
@@ -233,13 +277,13 @@ test.describe('numbers being changed by hand', () => {
 });
 
 test.describe('files in and out', () => {
-  test('exports the presets as a dated JSON file', async ({ page }) => {
-    await openAppWith(page, [detergent]);
+  test('exports every thing as a dated JSON file', async ({ page }) => {
+    await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('dialog').getByRole('button', { name: '📤 Export' }).click(),
+      page.getByRole('dialog').getByRole('button', { name: 'Export all' }).click(),
     ]);
 
     expect(download.suggestedFilename()).toMatch(
@@ -247,7 +291,28 @@ test.describe('files in and out', () => {
     );
     const exported = await download.path();
     expect(exported).not.toBeNull();
-    expect(JSON.parse(await readFile(exported!, 'utf8'))).toEqual([detergent]);
+    expect(JSON.parse(await readFile(exported!, 'utf8'))).toEqual([detergent, tabs]);
+  });
+
+  test('exports one thing, in a file named after it', async ({ page }) => {
+    await openAppWith(page, [detergent, tabs]);
+    await openThingPicker(page);
+    const picker = page.getByRole('dialog');
+
+    // The thing on screen, which is the one the sheet has highlighted.
+    await picker.getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      picker.getByRole('button', { name: 'Export this one' }).click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(
+      /^shopping-peace-dishwasher-tabs-\d{4}-\d{2}-\d{2}\.json$/u,
+    );
+    const exported = await download.path();
+    expect(exported).not.toBeNull();
+    // A list of one, so import cannot tell the difference.
+    expect(JSON.parse(await readFile(exported!, 'utf8'))).toEqual([tabs]);
   });
 
   test('imports presets from a file and says so', async ({ page }) => {
@@ -260,6 +325,7 @@ test.describe('files in and out', () => {
     );
 
     await openThingPicker(page);
+    page.once('dialog', (dialog) => dialog.accept());
     await page.locator('input[type="file"]').setInputFiles(file);
 
     await expect(page.getByRole('status')).toContainText('Imported 1 thing');
@@ -270,6 +336,26 @@ test.describe('files in and out', () => {
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
     await expect(page.getByTestId('target-stock')).toHaveText('3');
+  });
+
+  test('asks before a file replaces the shelf, and keeps it when told no', async ({ page }) => {
+    await openAppWith(page, [detergent]);
+    const file = await writeTempFile(
+      'replacement.json',
+      JSON.stringify([
+        { id: 'soap', name: '🧼 Dish soap', usageDays: 20, leadDays: 2, extraDays: 40 },
+      ]),
+    );
+
+    await openThingPicker(page);
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await page.locator('input[type="file"]').setInputFiles(file);
+
+    await expect(page.getByRole('dialog').getByRole('button', { name: /🧴 Laundry detergent/u }))
+      .toBeVisible();
+    await expect(page.getByRole('status')).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧴 Laundry detergent');
   });
 
   test('explains a file it cannot read, and keeps the presets it had', async ({ page }) => {

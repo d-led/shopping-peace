@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'hono/jsx/dom';
+import { useEffect, useRef, useState } from 'hono/jsx/dom';
 import { withEmoji } from '../data/emoji';
 import type { StockItem } from '../domain/stock-item';
 import { EmojiPicker } from './EmojiPicker';
 import { itemName, itemSummary } from './copy';
+import { tapWatcher } from './taps';
 import { TEXT } from './text';
 import { THING_NAME_FIELD_ID, focusThingNameSoon } from './thing-name';
 
@@ -13,7 +14,10 @@ export interface ThingPickerProps {
   readonly onRename: (id: string, name: string) => void;
   readonly onAdd: () => void;
   readonly onDelete: (item: StockItem) => void;
-  readonly onExport: () => void;
+  /** Writes every thing to one file. */
+  readonly onExportAll: () => void;
+  /** Writes just the thing on screen to one file, named after it. */
+  readonly onExportCurrent: () => void;
   readonly onImport: (event: Event) => void;
   /** Brings back any starter preset that is missing. Never removes anything. */
   readonly onRestoreDefaults: () => void;
@@ -34,7 +38,8 @@ export function ThingPicker({
   onRename,
   onAdd,
   onDelete,
-  onExport,
+  onExportAll,
+  onExportCurrent,
   onImport,
   onRestoreDefaults,
   onConfirm,
@@ -51,6 +56,9 @@ export function ThingPicker({
 
   const current = items.find((item) => item.id === currentId);
   const [pickingEmoji, setPickingEmoji] = useState(false);
+  // One watcher for the whole sheet, so it can tell a second tap on a thing
+  // from a first tap on the one below it.
+  const taps = useRef(tapWatcher());
 
   // Naming and emoji go together: after a picture is picked, the caret belongs
   // in the name, ready for what it is a picture of.
@@ -97,18 +105,21 @@ export function ThingPicker({
             <li key={item.id}>
               <button
                 type="button"
-                class={`btn w-full h-auto min-h-14 md:min-h-16 justify-start text-left normal-case px-3 py-2 md:px-4 md:py-3 rounded-none ${
+                class={`btn w-full h-auto min-h-14 md:min-h-16 justify-start text-left normal-case px-3 py-2 md:px-4 md:py-3 rounded-none touch-manipulation ${
                   item.id === currentId
                     ? 'btn-primary'
                     : 'bg-base-100 border-2 border-base-300 hover:border-primary'
                 }`}
                 aria-current={item.id === currentId ? 'true' : undefined}
-                onClick={() => onSelect(item.id)}
-                // A double press means "this one, and I am done": the usual
-                // way out of a picker on a touch screen.
-                onDblClick={() => {
+                onClick={(event) => {
                   onSelect(item.id);
-                  onConfirm();
+                  // Two taps in a row mean "this one, and I am done" — the
+                  // usual way out of a picker on a touch screen. Counted from
+                  // the taps themselves: a phone rarely sends a dblclick for
+                  // this gesture, since it is also how you zoom.
+                  if (taps.current.isSecondTap(item.id, event.timeStamp)) {
+                    onConfirm();
+                  }
                 }}
               >
                 <span class="block min-w-0 flex-1">
@@ -173,10 +184,23 @@ export function ThingPicker({
             <button
               type="button"
               class={`btn btn-lg flex-1 min-w-[7rem] rounded-none ${TEXT.body}`}
-              onClick={onExport}
+              aria-label="Export all"
+              title="Every thing, as one file"
+              onClick={onExportAll}
             >
-              📤 Export
+              📤 All
             </button>
+            {current !== undefined && (
+              <button
+                type="button"
+                class={`btn btn-lg flex-1 min-w-[7rem] rounded-none ${TEXT.body}`}
+                aria-label="Export this one"
+                title="Just the thing on screen"
+                onClick={onExportCurrent}
+              >
+                📤 This one
+              </button>
+            )}
             <label class={`btn btn-lg flex-1 min-w-[7rem] rounded-none ${TEXT.body}`}>
               📥 Import
               <input

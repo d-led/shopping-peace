@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './support/coverage';
 import { FRESHNESS_NEVER, type StockItem } from '../../src/domain/stock-item';
 import { openAppWith, openFreshApp, openThingPicker, paintedFontSizes } from './support/app';
@@ -53,13 +54,12 @@ test.describe('the full screen of things', () => {
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
   });
 
-  test('takes two taps on a thing as OK', async ({ page }) => {
+  test('takes two taps on a thing as OK', async ({ page, hasTouch }) => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
     const row = page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u });
 
-    await row.click();
-    await row.click();
+    await tapTwice(page, row, hasTouch);
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
@@ -77,8 +77,7 @@ test.describe('the full screen of things', () => {
     await openThingPicker(page);
     const row = page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u });
 
-    await row.tap();
-    await row.tap();
+    await tapTwice(page, row, true);
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('Dishwasher tabs');
@@ -376,4 +375,31 @@ async function writeTempFile(name: string, contents: string): Promise<string> {
   const path = join(tmpdir(), `shopping-peace-${name}`);
   await writeFile(path, contents);
   return path;
+}
+
+/**
+ * Two taps on the same thing, quickly.
+ *
+ * Deliberately not `locator.click()` twice: that checks the element is stable
+ * and enabled in between, which on a busy machine takes longer than the app's
+ * own window for "that was a double tap" — and the timing is the thing under
+ * test here. Same place, same element, a few milliseconds apart, which is what
+ * a thumb does.
+ */
+async function tapTwice(page: Page, row: Locator, touch: boolean): Promise<void> {
+  const box = await row.boundingBox();
+  if (box === null) {
+    throw new Error('The thing to tap has no box on screen.');
+  }
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  if (touch) {
+    await page.touchscreen.tap(x, y);
+    await page.touchscreen.tap(x, y);
+    return;
+  }
+
+  await page.mouse.click(x, y);
+  await page.mouse.click(x, y);
 }

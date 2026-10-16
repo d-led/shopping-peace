@@ -51,9 +51,21 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
           </button>
         </div>
 
+        {/* The trigger reads first, because it is the number a household acts
+            on; the floor it protects comes after it. The colour is the glance
+            signal: green says this is the level to shop at, amber marks the
+            line the shelf is not meant to cross. */}
         <div class="grid grid-cols-2 gap-3 md:gap-4">
           <KpiCard
             tone="success"
+            title="Fetch more at"
+            value={fetch.value}
+            caption={fetch.caption}
+            hint="Shop when the last spare is opened: the wait would otherwise eat what is left."
+            testId="fetch-more-at"
+          />
+          <KpiCard
+            tone="warning"
             title="Keep at least"
             value={keep.value}
             caption={keep.caption}
@@ -63,14 +75,6 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
                 : 'The reserve: what you hold on top of what the wait eats up.'
             }
             testId="keep-at-least"
-          />
-          <KpiCard
-            tone="warning"
-            title="Fetch more at"
-            value={fetch.value}
-            caption={fetch.caption}
-            hint="Shop when the last spare is opened: the wait would otherwise eat what is left."
-            testId="fetch-more-at"
           />
         </div>
 

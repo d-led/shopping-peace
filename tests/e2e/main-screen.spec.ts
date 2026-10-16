@@ -64,15 +64,15 @@ test.describe('the screen a household opens', () => {
     expect(keep!.y + keep!.height).toBeLessThanOrEqual(viewport!.height);
   });
 
-  test('reads in order: the thing, then how much to keep, then when to fetch', async ({ page }) => {
+  test('reads in order: the thing, then when to fetch, then how much to keep', async ({ page }) => {
     await openFreshApp(page);
 
     const thing = await page.locator('[aria-haspopup="dialog"]').boundingBox();
-    const keep = await page.getByTestId('keep-at-least').boundingBox();
     const fetchAt = await page.getByTestId('fetch-more-at').boundingBox();
+    const keep = await page.getByTestId('keep-at-least').boundingBox();
 
-    expect(thing!.y).toBeLessThan(keep!.y);
-    expect(keep!.x).toBeLessThan(fetchAt!.x);
+    expect(thing!.y).toBeLessThan(fetchAt!.y);
+    expect(fetchAt!.x).toBeLessThan(keep!.x);
   });
 
   test('uses no more than three text sizes', async ({ page }) => {

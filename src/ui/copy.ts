@@ -30,12 +30,18 @@ export function pictureButtonLabel(item: StockItem): string {
  * The instruction a busy person reads from across the kitchen. With no reserve
  * there is nothing on the shelf but the wait itself, so there is no quantity to
  * name: the household tops up as the shelf reaches that level.
+ *
+ * With a reserve, the level a fetch lands on is named for what it is: a shelf
+ * that still carries the whole emergency reserve, a pack's worth above the
+ * floor the household asked for. A bigger pack leaves a bigger surplus, and
+ * saying so out loud is what stops those extra units reading as stock that
+ * appeared from nowhere.
  */
 export function planHeadline(plan: StockPlan): string {
   if (plan.reserveUnits === 0) {
     return `Down to ${units(plan.reorderPoint)}? Nothing is kept spare, so fetch ${packed(plan)} as this one runs out.`;
   }
-  return `Down to ${units(plan.reorderPoint)}? Bring home ${packed(plan)} and you're back at ${plan.shelfAfterFetch}.`;
+  return `Down to ${units(plan.reorderPoint)}? Bring home ${packed(plan)} and you're at a level of ${plan.shelfAfterFetch}, safe for emergencies.`;
 }
 
 /**

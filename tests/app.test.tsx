@@ -228,19 +228,19 @@ function nextFrame(): Promise<void> {
 }
 
 describe('what the household sees first', () => {
-  it('reads in order: the thing, how much to keep, when to fetch', () => {
+  it('reads in order: the thing, when to fetch, how much to keep', () => {
     const { container } = openApp([detergent]);
 
     expect(
       appearsBefore(
         button(container, '🧴 Laundry detergent'),
-        container.querySelector('[data-testid="keep-at-least"]'),
+        container.querySelector('[data-testid="fetch-more-at"]'),
       ),
     ).toBe(true);
     expect(
       appearsBefore(
-        container.querySelector('[data-testid="keep-at-least"]'),
         container.querySelector('[data-testid="fetch-more-at"]'),
+        container.querySelector('[data-testid="keep-at-least"]'),
       ),
     ).toBe(true);
   });
@@ -255,7 +255,9 @@ describe('what the household sees first', () => {
     expect(textOf(container)).toContain('unit spare');
     expect(value(container, 'fetch-more-at')).toBe('2');
     expect(textOf(container)).toContain('1 spare + 1 for the wait');
-    expect(textOf(container)).toContain("Down to 2 units? Bring home 1 more and you're back at 3.");
+    expect(textOf(container)).toContain(
+      "Down to 2 units? Bring home 1 more and you're at a level of 3, safe for emergencies.",
+    );
   });
 
   it('keeps renaming and deleting off the main screen', () => {
@@ -771,7 +773,9 @@ describe('touching the numbers', () => {
     enter(container, 'lead-days', '45');
 
     await vi.waitFor(() => {
-      expect(textOf(container)).toContain("Down to 3 units? Bring home 1 more and you're back at 4.");
+      expect(textOf(container)).toContain(
+        "Down to 3 units? Bring home 1 more and you're at a level of 4, safe for emergencies.",
+      );
     });
     expect(saved(storage)[0]?.leadDays).toBe(45);
   });
@@ -843,7 +847,9 @@ describe('touching the numbers', () => {
     enter(container, 'pack-size', '10');
 
     await vi.waitFor(() => {
-      expect(textOf(container)).toContain("Bring home a 10-pack and you're back at 12.");
+      expect(textOf(container)).toContain(
+        "Bring home a 10-pack and you're at a level of 12, safe for emergencies.",
+      );
     });
     expect(textOf(container)).toContain('12 units ≈ 360 days of cover.');
     expect(saved(storage)[0]?.packSize).toBe(10);
@@ -875,7 +881,9 @@ describe('a thing that turns before it is finished', () => {
     const { container } = openApp([butter]);
 
     expect(value(container, 'keep-at-least')).toBe('1');
-    expect(textOf(container)).toContain("Down to 2 units? Bring home 1 more and you're back at 3.");
+    expect(textOf(container)).toContain(
+      "Down to 2 units? Bring home 1 more and you're at a level of 3, safe for emergencies.",
+    );
   });
 
   it('says out loud why the numbers are higher than the eating rate suggests', () => {

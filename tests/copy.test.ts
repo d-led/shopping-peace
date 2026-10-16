@@ -45,7 +45,7 @@ const butter = thing({
 describe('the instruction the household reads first', () => {
   it('reads as one sentence: when, how many, how many to come home with', () => {
     expect(planHeadline(planStock(detergent))).toBe(
-      "Down to 3 units? Bring home 2 more and you're back at 5.",
+      "Down to 3 units? Bring home 2 more and you're at a level of 5, safe for emergencies.",
     );
   });
 
@@ -101,9 +101,11 @@ describe('the household\'s own toilet paper, ten rolls at a time', () => {
   });
 
   it('fetches at the level the shelf is allowed to fall to, not at the last roll', () => {
-    // Seven rolls of reserve plus the two a wait eats: fetch at nine.
+    // Seven rolls of reserve plus the two a wait eats: fetch at nine, and the
+    // pack of ten lands the shelf at nineteen — the reserve it asked for, plus
+    // the seven spare the pack could not avoid adding.
     expect(planHeadline(planStock(paper))).toBe(
-      "Down to 9 units? Bring home a 10-pack and you're back at 19.",
+      "Down to 9 units? Bring home a 10-pack and you're at a level of 19, safe for emergencies.",
     );
   });
 

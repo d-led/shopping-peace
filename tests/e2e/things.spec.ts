@@ -190,12 +190,12 @@ test.describe('numbers being changed by hand', () => {
     // A 45-day wait eats two units instead of one, so the level to fetch at
     // grows with it: two units of wait, one of reserve, one fetched.
     await expect(
-      page.getByText("Down to 3 units? Bring home 1 more and you're back at 4."),
+      page.getByText("Down to 3 units? Bring home 1 more and you're at a level of 4, safe for emergencies."),
     ).toBeVisible();
     await page.reload();
     await expect(page.locator('#lead-days')).toHaveValue('45');
     await expect(
-      page.getByText("Down to 3 units? Bring home 1 more and you're back at 4."),
+      page.getByText("Down to 3 units? Bring home 1 more and you're at a level of 4, safe for emergencies."),
     ).toBeVisible();
   });
 

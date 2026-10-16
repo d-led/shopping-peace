@@ -11,12 +11,12 @@ kitchen:
 | what                                        | example               |
 | ------------------------------------------- | --------------------- |
 | **The thing**                               | 🧴 Laundry detergent   |
-| **Keep at least**                           | `1` unit spare        |
 | **Fetch more at**                           | `0` spare units left  |
-| Down to 1 unit? Bring home 1 more …         | … and you're back at 2 |
+| **Keep at least**                           | `1` unit spare        |
+| Down to 1 unit? Bring home 1 more …         | … and you're at a level of 2, safe for emergencies |
 
 Both cards count the **reserve**: the units held on top of what a wait eats up.
-Counting that rather than the whole shelf is what gives the second number
+Counting that rather than the whole shelf is what gives the fetch number
 something to say — *keep one spare, and shop again when the last one is opened* —
 where "keep two units, fetch at one" made the reader do the subtraction. With the
 reserve set to zero there is no counter to watch, so the cards fall back to the
@@ -118,7 +118,7 @@ four days, three rolls of reserve, ten to a pack.
 | -------------------- | --------------------- |
 | **Keep at least** `3` units spare | reserve $= \lceil 6 \text{ days} \div 2 \rceil = 3$ |
 | **Fetch more at** `0` spare units left | reorder point $= \lceil 4 \text{ days} \div 2 \rceil = 2$ |
-| *Down to 2 units? Bring home a 10-pack and you're back at 12.* | packs $= \lceil 3 \div 10 \rceil = 1$, shelf $= 2 + 10 = 12$ |
+| *Down to 2 units? Bring home a 10-pack and you're at a level of 12, safe for emergencies.* | packs $= \lceil 3 \div 10 \rceil = 1$, shelf $= 2 + 10 = 12$ |
 | `12 units ≈ 24 days of cover.` | $12 \times 2$ days |
 
 The shelf ends up *above* the level the cards aim at, and that is the honest

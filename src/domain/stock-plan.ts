@@ -19,6 +19,10 @@ export interface StockPlan {
   readonly packSize: number;
   /** Packages to bring home, which is a whole number of them. */
   readonly packsPerFetch: number;
+  /** Whole packages the reserve sits in once it is on the shelf. */
+  readonly reservePacks: number;
+  /** Reserve units that are outside a whole package: the ones on their own. */
+  readonly reserveLooseUnits: number;
   /** The level a fetch aims at: the order point plus what came. */
   readonly shelfAfterFetch: number;
 }
@@ -75,6 +79,10 @@ export function spoilsBeforeEmpty(requirements: StockRequirements): boolean {
  * about how the thing is used, and a shop's pack size says nothing about that.
  * A household that wants seven spare rolls and can only buy tens comes home
  * with ten, so the shelf settles above the reserve rather than exactly on it.
+ *
+ * The reserve is also counted the way a shelf holds it — whole packages, then
+ * the units outside one — because a household checks that stock by looking at
+ * it, not by subtracting what it has used.
  */
 export function planStock(requirements: StockRequirements): StockPlan {
   const { usageDays, leadDays, extraDays, freshDays, packSize } = requirements;
@@ -104,6 +112,10 @@ export function planStock(requirements: StockRequirements): StockPlan {
   // At least one package, since that is the smallest thing a shop will sell.
   const packsPerFetch = Math.max(1, Math.ceil(reserveUnits / packSize));
   const fetchQuantity = packsPerFetch * packSize;
+  // The reserve as it sits on the shelf: whole packs, then singles — how it is
+  // stored, as opposed to how a shop sells it.
+  const reservePacks = Math.floor(reserveUnits / packSize);
+  const reserveLooseUnits = reserveUnits - reservePacks * packSize;
 
   return {
     waitUnits,
@@ -112,6 +124,8 @@ export function planStock(requirements: StockRequirements): StockPlan {
     fetchQuantity,
     packSize,
     packsPerFetch,
+    reservePacks,
+    reserveLooseUnits,
     // The level a fetch aims at = order point + what was fetched. It is counted
     // from the level you shop at, which is the figure the headline quotes.
     shelfAfterFetch: waitUnits + reserveUnits + fetchQuantity,

@@ -49,6 +49,19 @@ describe('the plan, for every household you could think of', () => {
     );
   });
 
+  it('stores the reserve in whole packs plus the units outside one', () => {
+    fc.assert(
+      fc.property(wanted, (numbers) => {
+        const plan = planStock(numbers);
+
+        expect(plan.reservePacks * plan.packSize + plan.reserveLooseUnits).toBe(
+          plan.reserveUnits,
+        );
+        expect(plan.reserveLooseUnits).toBeLessThan(plan.packSize);
+      }),
+    );
+  });
+
   it('asks for whole units, never a fraction of a bottle', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {

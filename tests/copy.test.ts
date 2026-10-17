@@ -18,6 +18,7 @@ import {
   planCover,
   planHeadline,
   readingTime,
+  reserveHolding,
   resetNotice,
   resetQuestion,
   sharedShelfQuestion,
@@ -143,6 +144,36 @@ describe('the two cards on the dashboard', () => {
 
     expect(keepCard(plan)).toEqual({ value: 1, caption: 'unit — nothing spare' });
     expect(fetchCard(plan)).toEqual({ value: 1, caption: 'unit left' });
+  });
+});
+
+describe('the reserve card, which is stock and not shopping', () => {
+  it('says the reserve in units when a shop sells them one at a time', () => {
+    expect(reserveHolding(planStock(thing({ usageDays: 10, extraDays: 30 })))).toBe('3 units');
+  });
+
+  it('names the packs a cupboard holds, and the units outside them', () => {
+    const plan = planStock(thing({ usageDays: 1, extraDays: 23, packSize: 10 }));
+
+    expect(reserveHolding(plan)).toBe('2 packs of 10 + 3 units');
+  });
+
+  it('leaves the plus off when packs cover the reserve exactly', () => {
+    const plan = planStock(thing({ usageDays: 1, extraDays: 20, packSize: 10 }));
+
+    expect(reserveHolding(plan)).toBe('2 packs of 10');
+  });
+
+  it('says units on their own when the reserve is smaller than a pack', () => {
+    const plan = planStock(thing({ usageDays: 1, extraDays: 3, packSize: 10 }));
+
+    expect(reserveHolding(plan)).toBe('3 units on their own');
+  });
+
+  it('gets the singular right for one pack and one unit outside it', () => {
+    const plan = planStock(thing({ usageDays: 1, extraDays: 11, packSize: 10 }));
+
+    expect(reserveHolding(plan)).toBe('1 pack of 10 + 1 unit');
   });
 });
 

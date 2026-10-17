@@ -115,6 +115,32 @@ describe('fetching by the pack, which is how a shop sells things', () => {
   });
 });
 
+describe('the reserve as it sits on the shelf', () => {
+  it('counts whole packs first, then the units outside one', () => {
+    // Twenty-three units of reserve, sold ten at a time: two packs and three
+    // units that are on their own.
+    const plan = planStock(requirements({ usageDays: 1, extraDays: 23, packSize: 10 }));
+
+    expect(plan.reservePacks).toBe(2);
+    expect(plan.reserveLooseUnits).toBe(3);
+  });
+
+  it('leaves nothing outside the packs when they cover the reserve exactly', () => {
+    const plan = planStock(requirements({ usageDays: 1, extraDays: 20, packSize: 10 }));
+
+    expect(plan.reservePacks).toBe(2);
+    expect(plan.reserveLooseUnits).toBe(0);
+  });
+
+  it('counts every unit as a package when the shop sells one at a time', () => {
+    const plan = planStock(requirements({ usageDays: 10, extraDays: 30 }));
+
+    // No bulk: each unit is a pack of one, and nothing sits outside a pack.
+    expect(plan.reservePacks).toBe(3);
+    expect(plan.reserveLooseUnits).toBe(0);
+  });
+});
+
 describe('how long a unit effectively lasts', () => {
   it('is how long the thing lasts when nothing spoils', () => {
     expect(effectiveUsageDays(requirements({ usageDays: 30, freshDays: FRESHNESS_NEVER }))).toBe(

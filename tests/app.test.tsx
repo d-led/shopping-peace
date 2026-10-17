@@ -46,6 +46,18 @@ const butter: StockItem = {
   packSize: 1,
 };
 
+/** Sold ten at a time, twenty-three kept: two packs and three units apart. */
+const paperInBulk: StockItem = {
+  id: 'paper',
+  name: 'Toilet paper',
+  emoji: '🧻',
+  usageDays: 1,
+  leadDays: 2,
+  extraDays: 23,
+  freshDays: FRESHNESS_NEVER,
+  packSize: 10,
+};
+
 const mounted: HTMLElement[] = [];
 
 function openApp(items: readonly StockItem[]) {
@@ -336,6 +348,25 @@ describe('what the household sees first', () => {
     expect(textOf(container)).toContain(
       "Down to 2 units? Bring home 1 more and you're at a level of 3, safe for emergencies.",
     );
+  });
+
+  it('keeps the reserve apart from the shopping, in the packs it is held in', () => {
+    const { container } = openApp([paperInBulk]);
+
+    expect(
+      appearsBefore(
+        container.querySelector('[data-testid="keep-at-least"]'),
+        container.querySelector('[data-testid="in-reserve"]'),
+      ),
+    ).toBe(true);
+    expect(textOf(container)).toContain('2 packs of 10 + 3 units');
+    expect(textOf(container)).toContain('Must be there. If it gets used, buy it back.');
+  });
+
+  it('says nothing about a reserve that is not kept', () => {
+    const { container } = openApp([{ ...detergent, extraDays: 0 }]);
+
+    expect(container.querySelector('[data-testid="in-reserve"]')).toBeNull();
   });
 
   it('keeps renaming and deleting off the main screen', () => {

@@ -1,6 +1,7 @@
 import { FRESHNESS_NEVER, type StockItem, type StockRequirements } from '../domain/stock-item';
 import { planStock, spoilsBeforeEmpty } from '../domain/stock-plan';
 import { KpiCard } from './KpiCard';
+import { ReserveCard } from './ReserveCard';
 import { StepSlider } from './StepSlider';
 import { fetchCard, itemLabel, keepCard, planCover, planHeadline, spoilsWarning } from './copy';
 import { TEXT } from './text';
@@ -83,6 +84,9 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
             testId="keep-at-least"
           />
         </div>
+
+        {/* Stock, not shopping: what has to be there, and how it is held. */}
+        <ReserveCard plan={plan} />
 
         <p class={`text-center font-bold leading-snug ${TEXT.body}`}>{planHeadline(plan)}</p>
 

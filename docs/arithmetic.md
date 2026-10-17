@@ -64,6 +64,17 @@ $$
 \text{days of cover} = \text{shelfAfterFetch} \times L
 $$
 
+$$
+\text{reservePacks} = \left\lfloor \frac{\text{reserveUnits}}{\text{packSize}} \right\rfloor
+\qquad
+\text{reserveLooseUnits} = \text{reserveUnits} - \text{reservePacks} \times \text{packSize}
+$$
+
+The last two are the reserve as it sits on the shelf rather than as it is bought:
+whole packs, then the units outside one. With ten to a pack and 23 kept, a
+cupboard holds *2 packs of 10 + 3 units*; where a shop sells one at a time there
+is nothing to hold in packs, and the card simply says *3 units*.
+
 `reorderPoint`, `fetchQuantity` and `shelfAfterFetch` are all whole numbers of
 units, so the property tests can say so for any household's numbers.
 
@@ -73,6 +84,7 @@ units, so the property tests can say so for any household's numbers.
 | --------------- | ---------------- |
 | `waitUnits` | inside the **Fetch more at** caption — *"… for the wait"* |
 | `reserveUnits` | **Keep at least** — the reserve, when there is one |
+| `reservePacks`, `reserveLooseUnits` | **In reserve** — *"2 packs of 10 + 3 units"* |
 | `reorderPoint` | **Fetch more at** — the shelf level to shop at |
 | `packsPerFetch` | *"a 10-pack"*, or *"3 packs of 10"* |
 | `fetchQuantity` | *"Bring home …"* in the headline |
@@ -99,6 +111,19 @@ reserve is zero.
   pack is the smallest thing a shop will sell. It is not an economic order
   quantity: nothing here knows what a unit costs, and the question is when to
   shop, not how much money to tie up in a cupboard.
+
+## The reserve is stock, not shopping
+
+`reserveUnits` is a floor, not a quantity the plan spends. It sits inside the
+order point, so it is what is left when the order lands, and nothing counts it as
+stock that will be eaten. That is why it gets a card of its own, in plain
+colours, away from the two numbers a household acts on.
+
+Using the reserve is the abnormal case. When it happens, buying it back is a
+separate shop from the usual top-up, and *how much to buy* is a different
+question from *how much must be there* — which is why the card says what has to be
+on the shelf, in the packages a cupboard holds it in, and leaves the buying to
+the two cards above.
 
 ## When a thing goes off before it is finished
 

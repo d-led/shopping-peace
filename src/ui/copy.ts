@@ -114,6 +114,31 @@ export function fetchCard(plan: StockPlan): PlanCard {
   };
 }
 
+/**
+ * The reserve as it sits on the shelf, rather than as it is bought: whole
+ * packs, then the units outside one. `2 packs of 10 + 3 units` is a cupboard a
+ * household can look at and check; `23 units` is only a sum.
+ */
+export function reserveHolding(plan: StockPlan): string {
+  const { packSize, reservePacks, reserveLooseUnits } = plan;
+  if (packSize === 1) {
+    return units(plan.reserveUnits);
+  }
+  if (reservePacks === 0) {
+    return onTheirOwn(reserveLooseUnits);
+  }
+  const whole = packCount(reservePacks, packSize);
+  return reserveLooseUnits === 0 ? whole : `${whole} + ${units(reserveLooseUnits)}`;
+}
+
+/**
+ * What the reserve card says it means. The reserve is stock that has to be
+ * there, not stock the plan spends: the two cards above count what to fetch and
+ * what to keep, and this one says the kept part is a floor. Buying it back
+ * after it has been used is a shop of its own, not part of the usual top-up.
+ */
+export const RESERVE_NOTE = 'Must be there. If it gets used, buy it back.';
+
 /** The subtitle under each thing in the picker. */
 export function itemSummary(item: StockItem): string {
   const sold = item.packSize > 1 ? ` · ${item.packSize} per pack` : '';
@@ -221,4 +246,14 @@ function unitWord(count: number): string {
 
 function units(count: number): string {
   return `${count} ${unitWord(count)}`;
+}
+
+/** "1 pack of 10", "2 packs of 10": a shop's unit, as a shelf reads it. */
+function packCount(count: number, size: number): string {
+  return `${count} ${count === 1 ? 'pack' : 'packs'} of ${size}`;
+}
+
+/** Units that are not inside a whole package, out on the shelf. */
+function onTheirOwn(count: number): string {
+  return `${units(count)} on ${count === 1 ? 'its' : 'their'} own`;
 }

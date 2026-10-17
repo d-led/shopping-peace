@@ -11,13 +11,17 @@ Read from the top:
 1. the thing's name, a button that opens the sheet;
 2. **Fetch more at**, then **Keep at least** — the trigger first, because it is
    the number a household acts on, with the floor it protects beside it;
-3. the headline, in the words of the arithmetic: *"Down to 5 units? Bring home a
+3. **In reserve**, a plain card under the two: the reserve as a cupboard holds it
+   — whole packs plus the units outside them — and that it has to be there. It is
+   stock to check, not one of the numbers to act on, so it carries no tone and no
+   display-sized figure of its own;
+4. the headline, in the words of the arithmetic: *"Down to 5 units? Bring home a
    pack of ten and you're at a level of 15, safe for emergencies."*;
-4. one line that is the spoilage warning when a unit turns before it is used up,
+5. one line that is the spoilage warning when a unit turns before it is used up,
    and the days-of-cover figure otherwise;
-5. the five sliders — how long a unit lasts, how long a fetch takes, the reserve
+6. the five sliders — how long a unit lasts, how long a fetch takes, the reserve
    in days, the pack size, the shelf life;
-6. **🔗 Share this calculator**, and the commit this copy was built from.
+7. **🔗 Share this calculator**, and the commit this copy was built from.
 
 Everything that happens once in a while lives in the sheet: the list of things,
 the name, the picture, export and import, reset and delete. Renaming and deleting

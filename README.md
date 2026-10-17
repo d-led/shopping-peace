@@ -196,10 +196,10 @@ of which number a check compared against:
 | `types`      | quick | `tsc --noEmit`                                                       |
 | `lint`       | quick | `oxlint` with no findings                                            |
 | `workflows`  | quick | `actionlint` over `.github/workflows`, shellcheck included           |
-| `duplicates` | quick | `jscpd`: at most 1% duplicated lines in `src/` and `tests/`           |
+| `duplicates` | quick | `jscpd`: no clone at all in `src/` or `tests/`                       |
 | `unit`       | quick | Vitest with coverage, all green                                      |
 | `properties` | quick | the fast-check properties at 1000 runs each                          |
-| `metrics`    | quick | complexity ≤ 8 and CRAP ≤ 10, per function                           |
+| `metrics`    | quick | complexity ≤ 5 and CRAP ≤ 6, per function                            |
 | `e2e`        | slow  | Playwright: the phone screens, then the desktop, axe included         |
 | `coverage`   | slow  | at least 95% of `src/` lines, unit and browser runs *together*        |
 
@@ -214,6 +214,15 @@ and says which command installs it:
 go install github.com/rhysd/actionlint/cmd/actionlint@latest
 brew install shellcheck   # or your package manager's shellcheck
 ```
+
+Two complexity numbers, and which code each weighs is the whole of the
+difference. `src/` — the code that ships, and the code CRAP scores — holds to
+**5**, in the linter rule and in the metrics bar alike, so the stage that runs
+in seconds catches what the stage that weighs coverage would. `tests/` and
+`scripts/` hold to **8**, the ceiling that used to apply everywhere: what they
+branch on is a framework's shape — an argument table, a `page.evaluate`
+callback — rather than product logic, and CRAP's model of risk is not about
+them.
 
 Every stage writes a log to `reports/logs/`, and the reports themselves land in
 `reports/` (`coverage.txt`, `crap.txt`, `jscpd/`, `mutation/index.html`). The

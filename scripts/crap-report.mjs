@@ -21,8 +21,10 @@ const DEFAULTS = {
   sources: 'coverage/coverage-final.json,coverage-e2e',
   lint: 'reports/oxlint-complexity.json',
   report: 'reports/crap.txt',
-  maxCrap: 10,
-  maxComplexity: 8,
+  // Kept in step with the bars at the top of quality-gate.sh, which passes them
+  // in explicitly: these are what the script means when it is run on its own.
+  maxCrap: 6,
+  maxComplexity: 5,
 };
 
 function options(argv) {

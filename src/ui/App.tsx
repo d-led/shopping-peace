@@ -1,5 +1,5 @@
 /** @jsxImportSource hono/jsx/dom */
-import { useState } from 'hono/jsx/dom';
+import { useEffect, useState } from 'hono/jsx/dom';
 import type { ItemStore } from '../app/item-store';
 import { BUILD_SHA } from '../build';
 import {
@@ -8,6 +8,13 @@ import {
   parsePresets,
   serializePresets,
 } from '../data/presets-file';
+import {
+  decodeShelf,
+  encodeShelf,
+  linkWithShelf,
+  shelfInHash,
+  withoutHash,
+} from '../data/share-link';
 import type { StockItem, StockRequirements } from '../domain/stock-item';
 import { EmptyEditor } from './EmptyEditor';
 import { ItemEditor } from './ItemEditor';
@@ -20,13 +27,55 @@ import {
   importFailed,
   importQuestion,
   importedNotice,
+  linkCopiedNotice,
+  linkNotSharedNotice,
+  openedSharedShelfNotice,
   resetNotice,
   resetQuestion,
+  sharedShelfQuestion,
 } from './copy';
 import { downloadJson } from './download';
+import { offerLink, type ShareOutcome } from './share';
 import { TEXT } from './text';
 import { focusThingNameSoon } from './thing-name';
 import { useStoreState } from './use-store-state';
+
+/**
+ * What a household hears about a link, by how offering it went. Two of the four
+ * ways say nothing at all: the phone's own sheet is confirmation enough, and a
+ * sheet closed again is a change of mind rather than something to report.
+ */
+const NOTICE_FOR_SHARE: Readonly<Record<ShareOutcome, Notice | null>> = {
+  shared: null,
+  copied: { tone: 'success', text: linkCopiedNotice() },
+  declined: null,
+  failed: { tone: 'error', text: linkNotSharedNotice() },
+};
+
+/** The thing that is open, by id: what an export, or a link, says was open. */
+function openThingId(selected: StockItem | null): string | null {
+  return selected === null ? null : selected.id;
+}
+
+/**
+ * The file the household picked, if the dialog came back with one at all. The
+ * input is emptied either way, so the very same file can be picked twice.
+ */
+function fileFrom(target: EventTarget | null): File | null {
+  const input = target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  input.value = '';
+  return file;
+}
+
+/**
+ * Whether something that cannot be undone goes ahead: asked about when there is
+ * something to lose, and not asked when there is nothing, because a question
+ * about losing nothing is not worth putting.
+ */
+function mayGoAhead(losing: number, question: string): boolean {
+  return losing === 0 || window.confirm(question);
+}
 
 /**
  * The screen: one thing at a time, the two numbers that matter, and the sheet
@@ -42,7 +91,9 @@ export function App({ store }: { readonly store: ItemStore }) {
   const complain = (text: string) => setNotice({ tone: 'error', text });
 
   const exportAll = () => {
-    downloadJson(exportFilename(new Date()), serializePresets(items));
+    const now = new Date();
+    // The thing that was open travels with the shelf, so it opens there again.
+    downloadJson(exportFilename(now), serializePresets(items, now, openThingId(selected)));
     say(exportedNotice(items.length));
   };
 
@@ -50,18 +101,20 @@ export function App({ store }: { readonly store: ItemStore }) {
     if (selected === null) {
       return;
     }
-    downloadJson(onePresetFilename(selected.name, new Date()), serializePresets([selected]));
+    const now = new Date();
+    downloadJson(
+      onePresetFilename(selected.name, now),
+      serializePresets([selected], now, selected.id),
+    );
     say(exportedNotice(1));
   };
 
   const importPresets = async (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    input.value = ''; // so the very same file can be picked twice in a row
-    if (file === null) {
-      return;
-    }
     try {
+      const file = fileFrom(event.target);
+      if (file === null) {
+        return;
+      }
       const imported = parsePresets(await file.text());
       // Reading a file is harmless; replacing the shelf is not, so it asks.
       if (!window.confirm(importQuestion(items.length, imported.length))) {
@@ -88,13 +141,58 @@ export function App({ store }: { readonly store: ItemStore }) {
 
   const resetDefaults = () => {
     const count = store.getState().items.length;
-    // Nothing on the shelf is nothing to lose, so an empty one is not worth
-    // a question.
-    if (count > 0 && !window.confirm(resetQuestion(count))) {
+    if (!mayGoAhead(count, resetQuestion(count))) {
       return;
     }
     say(resetNotice(store.resetToDefaults()));
   };
+
+  /**
+   * Offers the whole shelf as a link, which is the export file written small
+   * enough to travel in an address. A phone gets its own share sheet, because
+   * that is where messengers and mail live; anywhere else the link goes to the
+   * clipboard, and that is said out loud — copying leaves nothing to look at.
+   */
+  const shareShelf = async () => {
+    const link = linkWithShelf(window.location.href, encodeShelf(items, openThingId(selected)));
+    const aboutTheLink = NOTICE_FOR_SHARE[await offerLink(link, 'Shopping Peace')];
+    if (aboutTheLink !== null) {
+      setNotice(aboutTheLink);
+    }
+  };
+
+  /**
+   * Takes on a shelf that arrived in the address, because somebody shared a
+   * link. It replaces what is here, so it asks first — unless there is nothing
+   * to lose, which is a question not worth asking.
+   */
+  const openSharedShelf = (payload: string) => {
+    try {
+      const shared = decodeShelf(payload);
+      const here = store.getState().items.length;
+      if (!mayGoAhead(here, sharedShelfQuestion(here, shared.things.length))) {
+        return;
+      }
+      store.replaceAll(shared.things);
+      if (shared.selected !== null) {
+        store.select(shared.selected);
+      }
+      say(openedSharedShelfNotice(shared.things.length));
+    } catch (error) {
+      complain(importFailed(error));
+    }
+  };
+
+  // A shelf in the address is read once, on the way in. Reading it clears the
+  // hash, so a reload shows the shelf instead of asking the same question over.
+  useEffect(() => {
+    const payload = shelfInHash(window.location.hash);
+    if (payload === null) {
+      return;
+    }
+    window.history.replaceState(null, '', withoutHash(window.location.href));
+    openSharedShelf(payload);
+  }, []);
 
   return (
     <div class="min-h-screen">
@@ -114,6 +212,7 @@ export function App({ store }: { readonly store: ItemStore }) {
               store.adjust(id, patch)
             }
             onOpenThingPicker={() => setPickerOpen(true)}
+            onShare={shareShelf}
           />
         )}
 

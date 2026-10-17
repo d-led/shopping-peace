@@ -8,16 +8,19 @@ import {
   fetchCard,
   importFailed,
   importedNotice,
+  importQuestion,
   itemLabel,
   itemName,
   itemSummary,
   keepCard,
+  openedSharedShelfNotice,
   pictureButtonLabel,
   planCover,
   planHeadline,
   readingTime,
   resetNotice,
   resetQuestion,
+  sharedShelfQuestion,
   spoilsWarning,
 } from '../src/ui/copy';
 import { thing } from './support/items';
@@ -193,6 +196,22 @@ describe('naming a thing', () => {
   it('offers a face to stand for a thing that has no picture yet', () => {
     expect(pictureButtonLabel({ ...detergent, emoji: '' })).toBe('🙂 Picture');
     expect(pictureButtonLabel(detergent)).toBe('🧴 Picture');
+  });
+});
+
+describe('a shelf arriving in a link', () => {
+  it('asks what an import asks, about a link rather than a file', () => {
+    expect(importQuestion(2, 6)).toBe(
+      'Replace the 2 things here with the 6 things in this file?',
+    );
+    expect(sharedShelfQuestion(2, 6)).toBe(
+      'Replace the 2 things here with the 6 things in this link?',
+    );
+  });
+
+  it('says what the link brought, in whole things', () => {
+    expect(openedSharedShelfNotice(1)).toBe('Opened the shelf in the link: 1 thing.');
+    expect(openedSharedShelfNotice(3)).toBe('Opened the shelf in the link: 3 things.');
   });
 });
 

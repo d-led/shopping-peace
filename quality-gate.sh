@@ -28,12 +28,16 @@ LOGS="$REPORTS/logs"
 # instrument the same source differently, so this counts lines, which neither
 # can disagree about.
 MIN_LINES="${MIN_LINES:-95}"
-# Cyclomatic complexity, per function, as the linter counts it.
-MAX_COMPLEXITY="${MAX_COMPLEXITY:-8}"
+# Cyclomatic complexity, per function, as the linter counts it. The same number
+# is the complexity rule's threshold in .oxlintrc.json, so the fast lint stage
+# catches a function that grew while the slower metrics stage weighs it.
+MAX_COMPLEXITY="${MAX_COMPLEXITY:-5}"
 # Change risk: complexity² × (1 − coverage)³ + complexity, per function.
-MAX_CRAP="${MAX_CRAP:-10}"
-# Share of duplicated lines in src/ and tests/, from jscpd.
-MAX_DUPLICATION="${MAX_DUPLICATION:-1}"
+MAX_CRAP="${MAX_CRAP:-6}"
+# Share of duplicated lines in src/ and tests/, from jscpd. Zero means no clone
+# at all, where a clone is already the conservative eight lines and sixty tokens
+# of .jscpd.json — anything that long that appears twice is worth a name.
+MAX_DUPLICATION="${MAX_DUPLICATION:-0}"
 # Property tests get their own, longer run: they are how the edges get found.
 FC_RUNS="${FC_RUNS:-1000}"
 

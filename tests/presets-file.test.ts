@@ -4,6 +4,7 @@ import {
   PRESET_FILE_VERSION,
   exportFilename,
   onePresetFilename,
+  parsePresetFile,
   parsePresets,
   serializePresets,
 } from '../src/data/presets-file';
@@ -109,6 +110,34 @@ describe('presets that arrive incomplete', () => {
     expect(() =>
       parsePresets('[{"name": "Soap", "usageDays": 30, "leadDays": 3, "extraDays": 0, "packSize": 0}]'),
     ).toThrow(/Preset #1 needs packSize to be at least 1/u);
+  });
+});
+
+describe('the thing a shelf was left open on', () => {
+  const written = new Date('2026-10-17T09:00:00Z');
+
+  it('travels with the shelf, so a file opens where the household left it', () => {
+    const file = serializePresets([detergent], written, 'detergent');
+
+    expect(parsePresetFile(file).selected).toBe('detergent');
+  });
+
+  it('is left out of the file, rather than written down as nothing', () => {
+    expect(JSON.parse(serializePresets([detergent], written))).not.toHaveProperty('selected');
+  });
+
+  it('reads as nothing at all when the shelf no longer holds that thing', () => {
+    const file = serializePresets([detergent], written, 'a-thing-that-went-away');
+
+    expect(parsePresetFile(file).selected).toBeNull();
+  });
+
+  it('is simply absent from a file written before it existed', () => {
+    expect(parsePresetFile(`[${withoutFreshness}]`).selected).toBeNull();
+  });
+
+  it('is forgiven rather than refused when it is not even an id', () => {
+    expect(parsePresetFile('{"version": 1, "selected": 7, "things": []}').selected).toBeNull();
   });
 });
 

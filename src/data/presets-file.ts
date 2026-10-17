@@ -26,20 +26,49 @@ export interface PresetFile {
   readonly version: number;
   /** When it was written, so a household with three copies can tell them apart. */
   readonly exported: string;
+  /**
+   * The thing that was open when this was written, by id, so a shelf that
+   * travels — as a file, or as a link — opens where the sender left it. Left
+   * out rather than written as null, and read back as nothing when the shelf
+   * no longer holds it.
+   */
+  readonly selected?: string;
   readonly things: readonly StockItem[];
 }
 
-export function serializePresets(
+/**
+ * What an export holds, once it has been read: the things, and the one that was
+ * open. A file on disk and a share link carry the same export, so they are read
+ * by the same code and refused for the same reasons.
+ */
+export interface PresetShelf {
+  readonly things: StockItem[];
+  /** The open thing, or null when the export names none the shelf still has. */
+  readonly selected: string | null;
+}
+
+/** The export as an object: what gets written out, indented or compact. */
+export function presetFile(
   items: readonly StockItem[],
-  exportedAt: Date = new Date(),
-): string {
-  const file: PresetFile = {
+  exportedAt: Date,
+  selected: string | null = null,
+): PresetFile {
+  return {
     format: PRESET_FILE_FORMAT,
     version: PRESET_FILE_VERSION,
     exported: exportedAt.toISOString(),
+    ...(selected === null ? {} : { selected }),
     things: items,
   };
-  return JSON.stringify(file, null, 2);
+}
+
+/** The export as a file: indented, because a household may open it and read it. */
+export function serializePresets(
+  items: readonly StockItem[],
+  exportedAt: Date = new Date(),
+  selected: string | null = null,
+): string {
+  return JSON.stringify(presetFile(items, exportedAt, selected), null, 2);
 }
 
 export function exportFilename(date: Date): string {
@@ -73,8 +102,31 @@ function slugOf(name: string): string {
  * maths, forgiving about a missing name, emoji or id. Files written before the
  * format was versioned — a bare list of things — are still read.
  */
+export function parsePresetFile(text: string, createId: () => string = newId): PresetShelf {
+  const parsed = parseJson(text);
+  const things = thingsIn(parsed).map((entry, index) => toStockItem(entry, index, createId));
+  return { things, selected: selectedIn(parsed, things) };
+}
+
+/** Just the things, for the callers with nothing to do with which one was open. */
 export function parsePresets(text: string, createId: () => string = newId): StockItem[] {
-  return thingsIn(parseJson(text)).map((entry, index) => toStockItem(entry, index, createId));
+  return parsePresetFile(text, createId).things;
+}
+
+/**
+ * The open thing, when the export names one that is really on the shelf. A
+ * missing, stale or unreadable id reads the same as none at all: the shelf
+ * still opens, on whatever the app would have opened anyway.
+ */
+function selectedIn(parsed: unknown, things: readonly StockItem[]): string | null {
+  if (!isRecord(parsed)) {
+    return null;
+  }
+  const wanted = parsed.selected;
+  if (typeof wanted !== 'string') {
+    return null;
+  }
+  return things.some((item) => item.id === wanted) ? wanted : null;
 }
 
 function parseJson(text: string): unknown {

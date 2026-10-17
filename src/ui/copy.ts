@@ -135,12 +135,22 @@ export function importFailed(error: unknown): string {
   return error instanceof InvalidPresetFileError ? error.message : 'That file could not be read.';
 }
 
+/** Asking to replace the shelf, naming where the replacement is coming from. */
+export function replaceQuestion(here: number, incoming: number, source: string): string {
+  return `Replace the ${countThings(here)} here with the ${countThings(incoming)} in ${source}?`;
+}
+
 /**
  * Importing replaces the shelf, so it asks first and says what is at stake —
  * including how many things are about to be replaced.
  */
 export function importQuestion(here: number, incoming: number): string {
-  return `Replace the ${countThings(here)} here with the ${countThings(incoming)} in this file?`;
+  return replaceQuestion(here, incoming, 'this file');
+}
+
+/** The same question for a shelf that arrived in a link, which is not a file. */
+export function sharedShelfQuestion(here: number, incoming: number): string {
+  return replaceQuestion(here, incoming, 'this link');
 }
 
 export function exportedNotice(count: number): string {
@@ -149,6 +159,24 @@ export function exportedNotice(count: number): string {
 
 export function importedNotice(count: number): string {
   return `Imported ${countThings(count)}.`;
+}
+
+/** The shelf in a link has replaced what was here, which is worth saying. */
+export function openedSharedShelfNotice(count: number): string {
+  return `Opened the shelf in the link: ${countThings(count)}.`;
+}
+
+/**
+ * A link goes to the clipboard on anything that is not a phone. The household
+ * still has to be told, because copying leaves nothing on the screen to see.
+ */
+export function linkCopiedNotice(): string {
+  return 'Link copied — paste it wherever it is going.';
+}
+
+/** No share sheet, and no clipboard either: that is worth complaining about. */
+export function linkNotSharedNotice(): string {
+  return 'The link could not be shared.';
 }
 
 /** Nothing to lose is worth saying: a reset on an empty shelf loses nothing. */

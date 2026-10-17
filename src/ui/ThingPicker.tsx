@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'hono/jsx/dom';
 import type { StockItem } from '../domain/stock-item';
 import { EmojiPicker } from './EmojiPicker';
-import { Icon } from './Icon';
+import { SheetActions } from './SheetActions';
 import { itemLabel, itemSummary, pictureButtonLabel } from './copy';
 import { tapWatcher } from './taps';
 import { TEXT } from './text';
@@ -30,8 +30,8 @@ export interface ThingPickerProps {
 /**
  * The whole screen, filled with nothing but things to choose from — plus the
  * three jobs that only happen once in a while: naming, deleting, and getting
- * the presets in and out of a file. A household hand gets a list a foot tall
- * instead of a dropdown the width of a thumbnail.
+ * the presets in and out again, as a file or as a link. A household hand gets
+ * a list a foot tall instead of a dropdown the width of a thumbnail.
  */
 export function ThingPicker({
   items,
@@ -200,7 +200,7 @@ export function ThingPicker({
                   type="button"
                   class={`btn btn-lg w-full h-auto rounded-none mt-2 ${TEXT.body}`}
                   aria-label={`${pictureButtonLabel(current)} — change it`}
-                  aria-expanded={pickingEmoji ? 'true' : 'false'}
+                  aria-expanded={String(pickingEmoji)}
                   title="Find a picture by what it is"
                   onClick={() => setPickingEmoji(!pickingEmoji)}
                 >
@@ -211,64 +211,14 @@ export function ThingPicker({
             </div>
           )}
 
-          <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
-            <button
-              type="button"
-              class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.body}`}
-              aria-label="Export all"
-              title="Every thing, as one file"
-              onClick={onExportAll}
-            >
-              <Icon symbol="📤" />
-              Export all
-            </button>
-            {current !== undefined && (
-              <button
-                type="button"
-                class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.body}`}
-                aria-label="Export this one"
-                title="Just the thing on screen"
-                onClick={onExportCurrent}
-              >
-                <Icon symbol="📤" />
-                Export this one
-              </button>
-            )}
-            <label
-              class={`btn btn-lg col-span-2 gap-1 px-2 rounded-none md:col-span-1 md:gap-2 md:px-4 ${TEXT.body}`}
-            >
-              <Icon symbol="📥" />
-              Import
-              <input
-                type="file"
-                accept="application/json,.json"
-                class="hidden"
-                onChange={onImport}
-              />
-            </label>
-          </div>
-
-          <div class="flex flex-col gap-2 md:gap-3 border-t border-base-300 pt-2 md:pt-3">
-            <div class="flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                class={`btn btn-sm rounded-none ${TEXT.small}`}
-                onClick={onResetToDefaults}
-                title="Throw everything away and start from the starter things"
-              >
-                ↩️ Reset to defaults
-              </button>
-              {current !== undefined && (
-                <button
-                  type="button"
-                  class={`btn btn-error btn-outline btn-sm rounded-none ${TEXT.small}`}
-                  onClick={() => onDelete(current)}
-                >
-                  🗑️ Delete
-                </button>
-              )}
-            </div>
-          </div>
+          <SheetActions
+            current={current}
+            onExportAll={onExportAll}
+            onExportCurrent={onExportCurrent}
+            onImport={onImport}
+            onResetToDefaults={onResetToDefaults}
+            onDelete={onDelete}
+          />
         </div>
       </footer>
     </div>

@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ItemStore } from '../src/app/item-store';
 import { LocalStoragePresetRepository, PRESETS_STORAGE_KEY } from '../src/data/presets';
 import { parsePresets, serializePresets } from '../src/data/presets-file';
-import { LocalStorageSelectionRepository } from '../src/data/selection';
+import { decodeShelf, encodeShelf, shelfInHash } from '../src/data/share-link';
+import { LocalStorageSelectionRepository, SELECTED_STORAGE_KEY } from '../src/data/selection';
 import { FRESHNESS_NEVER, type StockItem } from '../src/domain/stock-item';
 import { App } from '../src/ui/App';
 import { FakeStorage } from './support/fake-storage';
@@ -70,8 +71,74 @@ function answerTheQuestionWith(agreed: boolean): void {
   vi.spyOn(window, 'confirm').mockReturnValue(agreed);
 }
 
+/** Follows a link to the app with a shelf in its hash, the way a message does. */
+function arriveAt(hash: string): void {
+  window.history.replaceState(null, '', `/${hash}`);
+}
+
+/**
+ * A device with a clipboard and nowhere to share from, which is what a desktop
+ * is. What it is handed is kept: copying leaves nothing on the screen to look
+ * at, and the link is the whole point of pressing the button.
+ */
+function stubClipboard(): { readonly written: string[] } {
+  const written: string[] = [];
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      writeText: (text: string) => {
+        written.push(text);
+        return Promise.resolve();
+      },
+    },
+  });
+  return { written };
+}
+
+/** A device with a share sheet, which is what a phone is. */
+function stubShareSheet(
+  fate: 'accepted' | 'abandoned' | 'broken' = 'accepted',
+): { readonly offered: string[] } {
+  const offered: string[] = [];
+  Object.defineProperty(navigator, 'share', {
+    configurable: true,
+    value: (data: { readonly url?: string }) => {
+      offered.push(data.url ?? '');
+      return promiseFor(fate);
+    },
+  });
+  return { offered };
+}
+
+/** What the household did with the sheet: nothing, or something went wrong. */
+function promiseFor(fate: 'accepted' | 'abandoned' | 'broken'): Promise<void> {
+  if (fate === 'abandoned') {
+    return Promise.reject(new DOMException('closed again', 'AbortError'));
+  }
+  return fate === 'broken'
+    ? Promise.reject(new Error('the share sheet fell over'))
+    : Promise.resolve();
+}
+
+/** A device whose clipboard refuses, which is what a denied permission looks like. */
+function stubRefusingClipboard(): void {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => Promise.reject(new Error('not allowed')) },
+  });
+}
+
+/** The shelf a link really carries, read back the way the app would read it. */
+function shelfInLink(link: string): ReturnType<typeof decodeShelf> {
+  return decodeShelf(shelfInHash(new URL(link).hash) ?? '');
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
+  // An address, and a device, both outlive a test unless they are put back.
+  window.history.replaceState(null, '', '/');
+  Reflect.deleteProperty(navigator, 'share');
+  Reflect.deleteProperty(navigator, 'clipboard');
   for (const container of mounted.splice(0)) {
     container.remove();
   }
@@ -934,5 +1001,133 @@ describe('a thing that turns before it is finished', () => {
     const { container } = openApp([{ ...butter, freshDays: 0 }]);
 
     expect(textOf(container)).toContain('spoils at once');
+  });
+});
+
+describe('handing the shelf over as a link', () => {
+  it('copies a link that opens this shelf, where there is nowhere to send it', async () => {
+    const { container } = openApp([detergent, tabs]);
+    const clipboard = stubClipboard();
+
+    button(container, 'Share').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('Link copied');
+    });
+    expect(clipboard.written).toHaveLength(1);
+    const shelf = shelfInLink(clipboard.written[0] ?? '');
+    expect(shelf.things.map((item) => item.name)).toEqual([
+      'Laundry detergent',
+      'Dishwasher tabs',
+    ]);
+    expect(shelf.selected).toBe(detergent.id);
+    expect(textOf(container)).toContain('Link copied');
+  });
+
+  it('hands the link to the phone instead, and leaves the clipboard alone', async () => {
+    const { container } = openApp([detergent]);
+    const sheet = stubShareSheet();
+    const clipboard = stubClipboard();
+
+    button(container, 'Share').click();
+
+    await vi.waitFor(() => {
+      expect(sheet.offered).toHaveLength(1);
+    });
+    expect(shelfInLink(sheet.offered[0] ?? '').things).toEqual([detergent]);
+    expect(clipboard.written).toEqual([]);
+    // The phone's own sheet is the confirmation; a second one would be noise.
+    expect(textOf(container)).not.toContain('Link copied');
+  });
+
+  it('says nothing when the share sheet is closed without choosing', async () => {
+    const { container } = openApp([detergent]);
+    const sheet = stubShareSheet('abandoned');
+    const clipboard = stubClipboard();
+
+    button(container, 'Share').click();
+
+    await vi.waitFor(() => {
+      expect(sheet.offered).toHaveLength(1);
+    });
+    await nextFrame();
+    // Changing your mind is not a failure, and not a reason to copy instead.
+    expect(clipboard.written).toEqual([]);
+    expect(container.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('complains when the share sheet itself falls over', async () => {
+    const { container } = openApp([detergent]);
+    stubShareSheet('broken');
+
+    button(container, 'Share').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('The link could not be shared.');
+    });
+  });
+
+  it('complains when there is neither a share sheet nor a clipboard', async () => {
+    const { container } = openApp([detergent]);
+
+    button(container, 'Share').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('The link could not be shared.');
+    });
+  });
+
+  it('complains when the clipboard refuses the link', async () => {
+    const { container } = openApp([detergent]);
+    stubRefusingClipboard();
+
+    button(container, 'Share').click();
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('The link could not be shared.');
+    });
+  });
+
+  it('takes on the shelf a link carries, opening the thing it says was open', async () => {
+    answerTheQuestionWith(true);
+    const shared = { ...tabs, id: 'bar-soap', name: 'Bar soap' };
+    arriveAt(`#p=${encodeShelf([shared], shared.id)}`);
+
+    const { container, storage } = openApp([detergent]);
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('Bar soap');
+    });
+    expect(textOf(container)).toContain('Opened the shelf in the link: 1 thing.');
+    // Read once: the address is left clean, so a reload shows the shelf.
+    expect(window.location.hash).toBe('');
+    // And it is this browser's shelf from now on, rather than something on loan.
+    expect(saved(storage)).toEqual([shared]);
+    expect(storage.getItem(SELECTED_STORAGE_KEY)).toBe('bar-soap');
+  });
+
+  it('keeps the shelf it has when the link is turned down', async () => {
+    answerTheQuestionWith(false);
+    arriveAt(`#p=${encodeShelf([{ ...tabs, name: 'Bar soap' }], null)}`);
+
+    const { container } = openApp([detergent]);
+
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe('');
+    });
+    expect(textOf(container)).toContain('Laundry detergent');
+    expect(textOf(container)).not.toContain('Bar soap');
+  });
+
+  it('asks nothing when the shelf that arrives is all there is to lose', async () => {
+    const asked = vi.spyOn(window, 'confirm');
+    arriveAt(`#p=${encodeShelf([{ ...tabs, name: 'Bar soap' }], null)}`);
+
+    const { container } = openApp([]);
+
+    await vi.waitFor(() => {
+      expect(textOf(container)).toContain('Bar soap');
+    });
+    expect(asked).not.toHaveBeenCalled();
   });
 });

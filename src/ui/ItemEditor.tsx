@@ -24,9 +24,11 @@ export interface ItemEditorProps {
   readonly item: StockItem;
   readonly onChange: (id: string, requirements: Partial<StockRequirements>) => void;
   readonly onOpenThingPicker: () => void;
+  /** Offers the whole shelf as a link: a phone's share sheet, or the clipboard. */
+  readonly onShare: () => void;
 }
 
-export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProps) {
+export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemEditorProps) {
   const plan = planStock(item);
   const keep = keepCard(plan);
   const fetch = fetchCard(plan);
@@ -42,11 +44,15 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
             type="button"
             class={`btn w-full h-auto min-h-16 justify-between gap-2 rounded-none px-4 py-3 normal-case shadow-sm ${TEXT.body}`}
             aria-haspopup="dialog"
+            title="Pick a thing, or get the shelf in and out"
             onClick={onOpenThingPicker}
           >
             <span class="block min-w-0 text-left font-bold break-words">{itemLabel(item)}</span>
-            <span aria-hidden="true" class="shrink-0 opacity-60">
-              ▾
+            {/* A gear rather than a dropdown arrow, because what it opens is
+                not only the thing to pick: naming, deleting and the shelf
+                travelling in and out again all live behind it. */}
+            <span aria-hidden="true" class="shrink-0 opacity-70">
+              ⚙️
             </span>
           </button>
         </div>
@@ -175,6 +181,17 @@ export function ItemEditor({ item, onChange, onOpenThingPicker }: ItemEditorProp
         <p class={`text-center text-base-content/70 ${TEXT.small}`}>
           Saved as you go · delete and rename live under the thing's name
         </p>
+
+        {/* At the foot of the screen rather than in the sheet: what it hands
+            over is the whole shelf, so it needs no editing to make sense, and
+            "this shelf" says so next to a thing's own numbers. */}
+        <button
+          type="button"
+          class={`btn btn-lg w-full h-auto min-h-14 rounded-none ${TEXT.body}`}
+          onClick={onShare}
+        >
+          🔗 Share this shelf
+        </button>
       </div>
     </section>
   );

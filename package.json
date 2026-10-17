@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Just-in-time stock calculator for household items: when to fetch more, how much to fetch, how much to keep.",
-  "license": "MIT",
+  "license": "MPL-2.0",
   "engines": {
     "node": ">=22"
   },

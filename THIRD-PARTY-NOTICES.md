@@ -1,7 +1,8 @@
 # Third-party notices
 
-Shopping Peace is MIT licensed (see [LICENSE](LICENSE)). Two things need saying
-about what it does and does not ship.
+Shopping Peace is licensed under the Mozilla Public License 2.0 (see
+[LICENSE](LICENSE)). Two things need saying about what it does and does not
+ship.
 
 ## The GitHub mark
 

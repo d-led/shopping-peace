@@ -447,4 +447,6 @@ file and to `dist/`.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MPL-2.0 — see [LICENSE](LICENSE). Mozilla's file-level copyleft: files from this
+project stay under the MPL when they are reused or changed, and files added
+beside them can be licensed however you like.

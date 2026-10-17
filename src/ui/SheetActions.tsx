@@ -11,7 +11,7 @@ export interface SheetActionsProps {
   readonly onExportCurrent: () => void;
   /** Reads a file the household picked. */
   readonly onImport: (event: Event) => void;
-  /** Brings back any starter preset that is missing. Never removes anything. */
+  /** Throws the shelf away and starts again from the starter things. */
   readonly onResetToDefaults: () => void;
   /** Throws the thing on screen away, once the household has said so. */
   readonly onDelete: (item: StockItem) => void;

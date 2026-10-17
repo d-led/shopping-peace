@@ -19,7 +19,7 @@ export interface StockPlan {
   readonly packSize: number;
   /** Packages to bring home, which is a whole number of them. */
   readonly packsPerFetch: number;
-  /** What the shelf holds once the order lands: order point + what came. */
+  /** The level a fetch aims at: the order point plus what came. */
   readonly shelfAfterFetch: number;
 }
 
@@ -58,7 +58,7 @@ export function spoilsBeforeEmpty(requirements: StockRequirements): boolean {
  *   wait      = days of waiting ÷ days one unit lasts
  *   reserve   = days of reserve ÷ days one unit lasts
  *   fetch at  = wait + reserve
- *   shelf a fetch lands on = order point + packages * pack size
+ *   a fetch aims at = order point + packages * pack size
  *
  * A unit lasting longer means *fewer* units cover the same stretch of days:
  * fourteen days of reserve is seven rolls at a roll a fortnight, but two rolls
@@ -112,8 +112,8 @@ export function planStock(requirements: StockRequirements): StockPlan {
     fetchQuantity,
     packSize,
     packsPerFetch,
-    // Max target = order point + what was fetched, which is what the shelf
-    // holds once the order has landed.
+    // The level a fetch aims at = order point + what was fetched. It is counted
+    // from the level you shop at, which is the figure the headline quotes.
     shelfAfterFetch: waitUnits + reserveUnits + fetchQuantity,
   };
 }

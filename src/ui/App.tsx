@@ -237,7 +237,8 @@ export function App({ store }: { readonly store: ItemStore }) {
           items={items}
           currentId={selected.id}
           // Switching stays in the sheet: the household often wants to rename
-          // the thing they just picked, and the ✕ is right there when they are done.
+          // the thing they just picked, and ✓ OK is right there when they are
+          // done.
           onSelect={(id: string) => store.select(id)}
           onRename={(id: string, name: string) => store.rename(id, name)}
           onEmoji={(emoji: string) => store.setEmoji(selected.id, emoji)}

@@ -21,7 +21,7 @@ export interface ThingPickerProps {
   /** Writes just the thing on screen to one file, named after it. */
   readonly onExportCurrent: () => void;
   readonly onImport: (event: Event) => void;
-  /** Brings back any starter preset that is missing. Never removes anything. */
+  /** Throws the shelf away and starts again from the starter things. */
   readonly onResetToDefaults: () => void;
   /** Leaves the sheet. Everything is already saved, so this is just "done". */
   readonly onConfirm: () => void;
@@ -30,8 +30,9 @@ export interface ThingPickerProps {
 /**
  * The whole screen, filled with nothing but things to choose from — plus the
  * three jobs that only happen once in a while: naming, deleting, and getting
- * the presets in and out again, as a file or as a link. A household hand gets
- * a list a foot tall instead of a dropdown the width of a thumbnail.
+ * the presets in and out again as a file. The link version lives at the foot of
+ * the main screen, since what it hands over needs no editing. A household hand
+ * gets a list a foot tall instead of a dropdown the width of a thumbnail.
  */
 export function ThingPicker({
   items,

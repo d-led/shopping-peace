@@ -8,11 +8,11 @@ delivery, a weekend where nothing is open. Shopping Peace turns those two facts
 into the three numbers that actually matter, big enough to read from across the
 kitchen:
 
-| what | example |
-| ---- | ------- |
-| **The thing** | 🧴 Laundry detergent |
-| **Fetch more at** | `2` units — *"1 spare + 1 for the wait"* |
-| **Keep at least** | `1` unit spare |
+| what                                 | example                                            |
+| ------------------------------------ | -------------------------------------------------- |
+| **The thing**                        | 🧴 Laundry detergent                               |
+| **Fetch more at**                    | `2` units — _"1 spare + 1 for the wait"_           |
+| **Keep at least**                    | `1` unit spare                                     |
 | Down to 2 units? Bring home 1 more … | … and you're at a level of 3, safe for emergencies |
 
 The **Keep at least** card counts the reserve: the units kept on top of what a
@@ -41,15 +41,15 @@ command is listed in [development](docs/development.md).
 
 ## Documentation
 
-| file                                             | what is in it                                                     |
-| ------------------------------------------------ | ----------------------------------------------------------------- |
-| [The arithmetic](docs/arithmetic.md)             | the formulas, spoilage, pack sizes, worked examples                |
-| [The screen](docs/screen.md)                     | layout, touch rules, text sizes, accessibility                     |
-| [Naming things](docs/naming.md)                  | names, the picture button, the emoji set                           |
-| [Presets, files and links](docs/presets.md)      | what is stored where, export and import, share links               |
-| [Development](docs/development.md)               | commands, the test suite, the shape of the source                  |
-| [The quality gate](docs/quality-gate.md)         | the nine checks, their bars, and what each one is for              |
-| [Deploying](docs/deploying.md)                   | Pages, the CI gate, and which commit is on screen                  |
+| file                                        | what is in it                                         |
+| ------------------------------------------- | ----------------------------------------------------- |
+| [The arithmetic](docs/arithmetic.md)        | the formulas, spoilage, pack sizes, worked examples   |
+| [The screen](docs/screen.md)                | layout, touch rules, text sizes, accessibility        |
+| [Naming things](docs/naming.md)             | names, the picture button, the emoji set              |
+| [Presets, files and links](docs/presets.md) | what is stored where, export and import, share links  |
+| [Development](docs/development.md)          | commands, the test suite, the shape of the source     |
+| [The quality gate](docs/quality-gate.md)    | the nine checks, their bars, and what each one is for |
+| [Deploying](docs/deploying.md)              | Pages, the CI gate, and which commit is on screen     |
 
 ## Attributions
 

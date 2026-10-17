@@ -19,12 +19,10 @@ The **Keep at least** card counts the reserve: the units kept on top of what a
 wait eats up. The **Fetch more at** card counts the shelf level to shop at, and
 its caption adds up where that number comes from — the reserve, plus the wait.
 With the reserve set to zero there is no counter to watch, so both cards fall back
-to the tight level and say that nothing is kept spare.
+to the tight level and say there is no reserve.
 
 Below the two, a plain card says the reserve in the terms a cupboard holds it —
-*2 packs of 10 + 3 units*. The reserve is stock that must be there, not stock the
-plan spends: using it is the abnormal case, and buying it back is a shop of its
-own.
+*2 packs of 10 + 3 units*.
 
 Everything is measured in **days**, except where a unit is counted. The whole of
 the arithmetic, with worked examples, is in [the arithmetic](docs/arithmetic.md).

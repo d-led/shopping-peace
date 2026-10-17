@@ -85,10 +85,12 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
           />
         </div>
 
+        <p class={`text-center font-bold leading-snug ${TEXT.body}`} data-testid="headline">
+          {planHeadline(plan)}
+        </p>
+
         {/* Stock, not shopping: what has to be there, and how it is held. */}
         <ReserveCard plan={plan} />
-
-        <p class={`text-center font-bold leading-snug ${TEXT.body}`}>{planHeadline(plan)}</p>
 
         {/* One slot, one line tall either way: a thing that turns says so where
             the cover figure would otherwise sit, so a warning adds no height of

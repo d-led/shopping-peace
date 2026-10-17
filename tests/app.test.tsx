@@ -359,8 +359,14 @@ describe('what the household sees first', () => {
         container.querySelector('[data-testid="in-reserve"]'),
       ),
     ).toBe(true);
+    // The sentence that says what to do comes before the shelf it leaves behind.
+    expect(
+      appearsBefore(
+        container.querySelector('[data-testid="headline"]'),
+        container.querySelector('[data-testid="in-reserve"]'),
+      ),
+    ).toBe(true);
     expect(textOf(container)).toContain('2 packs of 10 + 3 units');
-    expect(textOf(container)).toContain('Must be there. If it gets used, buy it back.');
   });
 
   it('says nothing about a reserve that is not kept', () => {
@@ -913,13 +919,13 @@ describe('touching the numbers', () => {
 
     await vi.waitFor(() => {
       // Nothing spare to keep, so the tight level is the whole plan.
-      expect(textOf(container)).toContain('unit — nothing spare');
+      expect(textOf(container)).toContain('unit — no reserve');
     });
     expect(value(container, 'keep-at-least')).toBe('1');
     expect(textOf(container)).toContain('unit left');
     expect(value(container, 'fetch-more-at')).toBe('1');
     expect(textOf(container)).toContain(
-      'Down to 1 unit? Nothing is kept spare, so fetch the next unit as this one runs out.',
+      'Down to 1 unit? No reserve, so fetch the next unit as this one runs out.',
     );
     expect(saved(storage)[0]?.extraDays).toBe(0);
   });

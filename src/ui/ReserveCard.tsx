@@ -1,5 +1,5 @@
 import type { StockPlan } from '../domain/stock-plan';
-import { RESERVE_NOTE, reserveHolding } from './copy';
+import { reserveHolding } from './copy';
 import { TEXT } from './text';
 
 export interface ReserveCardProps {
@@ -32,7 +32,6 @@ export function ReserveCard({ plan }: ReserveCardProps) {
       <span class={`block font-bold mt-1 break-words ${TEXT.body}`}>
         {reserveHolding(plan)}
       </span>
-      <span class={`block mt-1 text-base-content/70 ${TEXT.small}`}>{RESERVE_NOTE}</span>
     </div>
   );
 }

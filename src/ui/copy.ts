@@ -39,7 +39,7 @@ export function pictureButtonLabel(item: StockItem): string {
  */
 export function planHeadline(plan: StockPlan): string {
   if (plan.reserveUnits === 0) {
-    return `Down to ${units(plan.reorderPoint)}? Nothing is kept spare, so fetch ${packed(plan)} as this one runs out.`;
+    return `Down to ${units(plan.reorderPoint)}? No reserve, so fetch ${packed(plan)} as this one runs out.`;
   }
   return `Down to ${units(plan.reorderPoint)}? Bring home ${packed(plan)} and you're at a level of ${plan.shelfAfterFetch}, safe for emergencies.`;
 }
@@ -93,7 +93,7 @@ export interface PlanCard {
  */
 export function keepCard(plan: StockPlan): PlanCard {
   if (plan.reserveUnits === 0) {
-    return { value: plan.reorderPoint, caption: `${unitWord(plan.reorderPoint)} — nothing spare` };
+    return { value: plan.reorderPoint, caption: `${unitWord(plan.reorderPoint)} — no reserve` };
   }
   return { value: plan.reserveUnits, caption: `${unitWord(plan.reserveUnits)} spare` };
 }
@@ -130,14 +130,6 @@ export function reserveHolding(plan: StockPlan): string {
   const whole = packCount(reservePacks, packSize);
   return reserveLooseUnits === 0 ? whole : `${whole} + ${units(reserveLooseUnits)}`;
 }
-
-/**
- * What the reserve card says it means. The reserve is stock that has to be
- * there, not stock the plan spends: the two cards above count what to fetch and
- * what to keep, and this one says the kept part is a floor. Buying it back
- * after it has been used is a shop of its own, not part of the usual top-up.
- */
-export const RESERVE_NOTE = 'Must be there. If it gets used, buy it back.';
 
 /** The subtitle under each thing in the picker. */
 export function itemSummary(item: StockItem): string {

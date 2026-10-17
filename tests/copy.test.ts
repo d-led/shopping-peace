@@ -68,7 +68,7 @@ describe('the instruction the household reads first', () => {
     const noReserve = thing({ usageDays: 30, leadDays: 3, extraDays: 0 });
 
     expect(planHeadline(planStock(noReserve))).toBe(
-      'Down to 1 unit? Nothing is kept spare, so fetch the next unit as this one runs out.',
+      'Down to 1 unit? No reserve, so fetch the next unit as this one runs out.',
     );
   });
 
@@ -76,7 +76,7 @@ describe('the instruction the household reads first', () => {
     const noReserve = thing({ usageDays: 2, leadDays: 4, extraDays: 0, packSize: 10 });
 
     expect(planHeadline(planStock(noReserve))).toBe(
-      'Down to 2 units? Nothing is kept spare, so fetch a 10-pack as this one runs out.',
+      'Down to 2 units? No reserve, so fetch a 10-pack as this one runs out.',
     );
   });
 
@@ -142,7 +142,7 @@ describe('the two cards on the dashboard', () => {
   it('falls back to the shelf level, and says so, when nothing is kept spare', () => {
     const plan = planStock(thing({ usageDays: 30, leadDays: 3, extraDays: 0 }));
 
-    expect(keepCard(plan)).toEqual({ value: 1, caption: 'unit — nothing spare' });
+    expect(keepCard(plan)).toEqual({ value: 1, caption: 'unit — no reserve' });
     expect(fetchCard(plan)).toEqual({ value: 1, caption: 'unit left' });
   });
 });

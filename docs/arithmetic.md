@@ -92,7 +92,7 @@ units, so the property tests can say so for any household's numbers.
 | `packSize` | **Sold in packs of** — `1` is sold one at a time |
 
 With no reserve the two cards both fall back to the level the shelf must not drop
-below, and say that nothing is kept spare: there is no counter to watch when the
+below, and say there is no reserve: there is no counter to watch when the
 reserve is zero.
 
 ## Three decisions
@@ -121,9 +121,9 @@ colours, away from the two numbers a household acts on.
 
 Using the reserve is the abnormal case. When it happens, buying it back is a
 separate shop from the usual top-up, and *how much to buy* is a different
-question from *how much must be there* — which is why the card says what has to be
-on the shelf, in the packages a cupboard holds it in, and leaves the buying to
-the two cards above.
+question from *how much must be there* — which is why the reserve gets a card of
+its own, in the packages a cupboard holds it in, away from the two numbers a
+household acts on.
 
 ## When a thing goes off before it is finished
 

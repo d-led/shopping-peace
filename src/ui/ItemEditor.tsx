@@ -190,7 +190,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
           class={`btn btn-lg w-full h-auto min-h-14 rounded-none ${TEXT.body}`}
           onClick={onShare}
         >
-          🔗 Share this shelf
+          🔗 Share this calculator
         </button>
       </div>
     </section>

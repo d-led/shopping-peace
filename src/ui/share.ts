@@ -9,8 +9,10 @@ export type ShareOutcome = 'shared' | 'copied' | 'declined' | 'failed';
  * share sheet, which is where messengers, mail and notes all live; anything
  * else gets the clipboard, because a desktop has no one place to send things.
  *
- * Closing the sheet without choosing is a change of mind rather than a
- * failure: it says nothing, and nothing is wrong.
+ * A sheet that fails is a reason to copy instead of giving up — the household
+ * asked for the link to be passed on, and the clipboard passes it on. Closing
+ * the sheet without choosing is neither: it is a change of mind, and it says
+ * nothing.
  */
 export function offerLink(url: string, title: string): Promise<ShareOutcome> {
   return typeof navigator.share === 'function'
@@ -23,7 +25,7 @@ async function shareWithSheet(url: string, title: string): Promise<ShareOutcome>
     await navigator.share({ title, url });
     return 'shared';
   } catch (error) {
-    return isDismissal(error) ? 'declined' : 'failed';
+    return isDismissal(error) ? 'declined' : copyToClipboard(url);
   }
 }
 

@@ -183,15 +183,26 @@ export function App({ store }: { readonly store: ItemStore }) {
     }
   };
 
-  // A shelf in the address is read once, on the way in. Reading it clears the
-  // hash, so a reload shows the shelf instead of asking the same question over.
+  /**
+   * A shelf in the address, read on the way in — and again whenever one arrives
+   * later. Pasting a link into a tab that already has the app open changes the
+   * fragment alone; the browser does not reload, the page is never built again,
+   * and a read that only happened at startup would sit there and do nothing.
+   */
   useEffect(() => {
-    const payload = shelfInHash(window.location.hash);
-    if (payload === null) {
-      return;
-    }
-    window.history.replaceState(null, '', withoutHash(window.location.href));
-    openSharedShelf(payload);
+    const readTheAddress = () => {
+      const payload = shelfInHash(window.location.hash);
+      if (payload === null) {
+        return;
+      }
+      // Cleared as it is read, so a reload shows the shelf rather than asking
+      // the same question a second time.
+      window.history.replaceState(null, '', withoutHash(window.location.href));
+      openSharedShelf(payload);
+    };
+    readTheAddress();
+    window.addEventListener('hashchange', readTheAddress);
+    return () => window.removeEventListener('hashchange', readTheAddress);
   }, []);
 
   return (

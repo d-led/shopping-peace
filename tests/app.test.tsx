@@ -1067,6 +1067,21 @@ describe('handing the shelf over as a link', () => {
     });
   });
 
+  it('copies the link when the share sheet falls over', async () => {
+    const { container } = openApp([detergent]);
+    const sheet = stubShareSheet('broken');
+    const clipboard = stubClipboard();
+
+    button(container, 'Share').click();
+
+    await vi.waitFor(() => {
+      expect(clipboard.written).toHaveLength(1);
+    });
+    // The sheet was tried, and the link was passed on anyway.
+    expect(sheet.offered).toHaveLength(1);
+    expect(textOf(container)).toContain('Link copied');
+  });
+
   it('complains when there is neither a share sheet nor a clipboard', async () => {
     const { container } = openApp([detergent]);
 

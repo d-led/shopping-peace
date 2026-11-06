@@ -184,17 +184,22 @@ export function ThingPicker({
               />
               <div
                 ref={pictureBlock}
-                // The picture is settled the moment the household taps
-                // something else: the search folds away whether or not one was
-                // picked, so nothing has to be confirmed. Focus moving out is
-                // a tab or a tap on a field; a click on something that cannot
-                // hold focus — a row, the background — is the other half.
+                // The picture is settled the moment the household moves on: the
+                // search folds away whether or not one was picked, so nothing
+                // has to be confirmed. Focus arriving somewhere else is a tab
+                // or a tap on a field; a click on something that cannot hold
+                // focus — a row, the background — is the other half.
+                //
+                // Focus arriving nowhere is neither: that is a tap in flight.
+                // A touch screen blurs the search field first and delivers the
+                // click on the icon afterwards, so folding away here would take
+                // the icon out from under the thumb.
                 onFocusOut={(event: FocusEvent) => {
                   const next = event.relatedTarget as Node | null;
-                  const stillInside = pictureBlock.current?.contains(next) ?? false;
-                  if (!stillInside) {
-                    setPickingEmoji(false);
+                  if (next === null || (pictureBlock.current?.contains(next) ?? false)) {
+                    return;
                   }
+                  setPickingEmoji(false);
                 }}
               >
                 <button

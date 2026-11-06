@@ -52,19 +52,33 @@ test.describe('picking a thing with a thumb', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.locator('#thing-name')).toHaveValue('Dishwasher tabs');
   });
+
+  test('takes the picture a thumb picks out of the search', async ({ page, hasTouch }) => {
+    await openAppWith(page, [detergent]);
+    await openThingPicker(page);
+    const picker = page.getByRole('dialog');
+
+    // The way a hand does it: search for the word, then tap the picture.
+    await picker.getByRole('button', { name: /Picture/u }).click();
+    await page.locator('#emoji-search').fill('soap');
+    await tapAt(page, picker.getByRole('button', { name: 'soap', exact: true }), hasTouch);
+
+    await expect(picker.getByRole('button', { name: /Picture/u })).toContainText('🧼');
+    // Picking one settles it: the search folds away and the name has the caret.
+    await expect(picker.getByTestId('emoji-choice')).toHaveCount(0);
+    await expect(page.locator('#thing-name')).toBeFocused();
+  });
 });
 
 /**
- * Two taps on the same thing, quickly.
+ * One tap in the middle of something, with the thumb the device has.
  *
- * Deliberately not `locator.click()` twice: that checks the element is stable
- * and enabled in between, which on a busy machine takes longer than the app's
- * own window for "that was a double tap" — and the timing is the thing under
- * test here. Same place, same element, a few milliseconds apart, which is what
- * a thumb does.
+ * Deliberately not `locator.click()`: that checks the element is stable and
+ * enabled first, which is not what a thumb does, and on a touch screen it is
+ * the touch itself — not a mouse event — that the app has to survive.
  */
-async function tapTwice(page: Page, row: Locator, touch: boolean): Promise<void> {
-  const box = await row.boundingBox();
+async function tapAt(page: Page, target: Locator, touch: boolean): Promise<void> {
+  const box = await target.boundingBox();
   if (box === null) {
     throw new Error('The thing to tap has no box on screen.');
   }
@@ -73,10 +87,20 @@ async function tapTwice(page: Page, row: Locator, touch: boolean): Promise<void>
 
   if (touch) {
     await page.touchscreen.tap(x, y);
-    await page.touchscreen.tap(x, y);
     return;
   }
 
   await page.mouse.click(x, y);
-  await page.mouse.click(x, y);
+}
+
+/**
+ * Two taps on the same thing, quickly.
+ *
+ * Back to back, which is what a thumb does: on a busy machine a second
+ * `locator.click()` takes longer than the app's own window for "that was a
+ * double tap", and the timing is the thing under test here.
+ */
+async function tapTwice(page: Page, row: Locator, touch: boolean): Promise<void> {
+  await tapAt(page, row, touch);
+  await tapAt(page, row, touch);
 }

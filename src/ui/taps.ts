@@ -11,8 +11,13 @@ export interface TapWatcher {
   isSecondTap(rowId: string, at: number): boolean;
 }
 
-/** How close together two taps have to be. Slow enough for a real thumb. */
-export const TOGETHER_MS = 450;
+/**
+ * How close together two taps have to be. Slow enough for a real thumb — and
+ * for the phone it is on, where a busy moment between the two taps of a pair is
+ * ordinary: the cost of being generous is only that a second tap meant for a
+ * second look closes the sheet, which the household can open again.
+ */
+export const TOGETHER_MS = 600;
 
 export function tapWatcher(within: number = TOGETHER_MS): TapWatcher {
   let lastRow: string | null = null;

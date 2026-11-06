@@ -7,11 +7,40 @@ import {
   shelfInHash,
   withoutHash,
 } from '../src/data/share-link';
+import { FRESHNESS_NEVER } from '../src/domain/stock-item';
 import { thing } from './support/items';
 
 const detergent = thing({ id: 'detergent', name: '🧴 Laundry detergent', emoji: '🧴' });
 const tabs = thing({ id: 'tabs', name: 'Dishwasher tabs', emoji: '🧽' });
 const written = new Date('2026-10-17T09:00:00Z');
+
+/**
+ * A link as an older copy of the app wrote one: version 1, no rate at all,
+ * because a thing used twice a day had no way to say so.
+ */
+function linkFromBeforeTheRate(): string {
+  const file = {
+    format: 'shopping-peace',
+    version: 1,
+    exported: written.toISOString(),
+    things: [
+      {
+        id: 'tabs',
+        name: 'Dishwasher tabs',
+        emoji: '🧽',
+        usageDays: 10,
+        leadDays: 45,
+        extraDays: 30,
+        freshDays: FRESHNESS_NEVER,
+        packSize: 1,
+      },
+    ],
+  };
+  const bytes = new TextEncoder().encode(JSON.stringify(file));
+  const binary = String.fromCharCode(...bytes);
+
+  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+}
 
 describe('a shelf travelling in an address', () => {
   it('comes back out whole, down to the last thing', () => {
@@ -23,6 +52,21 @@ describe('a shelf travelling in an address', () => {
 
     expect(back.things[0]?.name).toBe('🧴 Laundry detergent');
     expect(back.things[0]?.emoji).toBe('🧴');
+  });
+
+  it('carries how fast a thing goes, so two a day arrives as two a day', () => {
+    const twiceADay = thing({ id: 'tabs', usageUnits: 2, usageDays: 1 });
+
+    expect(decodeShelf(encodeShelf([detergent, twiceADay], null)).things).toEqual([
+      detergent,
+      twiceADay,
+    ]);
+  });
+
+  it('reads a link from before there was a rate as one unit at a time', () => {
+    const [tabsAsSent] = decodeShelf(linkFromBeforeTheRate()).things;
+
+    expect(tabsAsSent).toMatchObject({ usageUnits: 1, usageDays: 10, leadDays: 45 });
   });
 
   it('carries the thing that was open, so the link opens where it was left', () => {

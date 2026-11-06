@@ -85,6 +85,13 @@ shelf — every thing, and the one that is open — into the address as
 for a household reading a file, in URL-safe base64. One shape, one version, one
 set of checks: a link and a file are read and refused by the same code.
 
+That sameness is the whole point, and it is what keeps a link honest as the
+format grows: a rate, a pack size or a shelf life added to the file is in the
+link the same day, and a link written by an older copy reads as the shelf it
+always was. What a link never carries is a *framing* — whether the sender was
+reading a rate as "one unit lasts 30 days" or as "two a day". The rate is the
+fact; the wording is the reader's.
+
 - On a phone the link goes to the device's own share sheet, which is where
   messengers, mail and notes live. Anywhere else it goes to the clipboard, and
   that is said out loud, because copying leaves nothing on the screen to see. A

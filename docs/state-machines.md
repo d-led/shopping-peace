@@ -178,7 +178,12 @@ cleared) → `asking` → `applied` or `declined`.
 The address is read on the way in and again on every `hashchange`, because
 pasting a link into a tab that already has the app open changes the fragment
 alone and never reloads the page. The payload goes through the same
-`parsePresetFile` as a file — one shape, one set of refusals.
+`parsePresetFile` as a file — one shape, one set of refusals — so **how fast a
+thing goes travels with it**: a shelf of two-a-day things arrives as two a day,
+and a link written before the rate existed arrives as one unit at a time. What a
+link does **not** carry is which framing the sender was reading it in: that is a
+way of saying the rate, not part of it, so the receiver sees the framing their own
+copy would choose (M9).
 
 | # | Invariant | Where it is held |
 | --- | --- | --- |
@@ -225,6 +230,11 @@ framing its own rate fits. The framing is never stored anywhere else: the rate i
 the state, and the framing is only how it is being read out. A framing that
 cannot hold the current rate ("one unit lasts" for a thing used twice a day)
 shows the nearest number it can, which is what a touch there would store.
+
+The tag is the id, so a shelf that comes back under the **same ids** — the export
+you made, posted back to you — keeps the framing you had chosen for those things
+even if the rates in it changed. The numbers on screen are the numbers in the
+file; the framing catches up on the first touch.
 
 ---
 

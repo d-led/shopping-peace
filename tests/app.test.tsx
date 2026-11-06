@@ -1240,6 +1240,21 @@ describe('handing the shelf over as a link', () => {
     expect(storage.getItem(SELECTED_STORAGE_KEY)).toBe('bar-soap');
   });
 
+  it('says a thing the link brought in the way its own rate is said', async () => {
+    answerTheQuestionWith(true);
+    const shared = { ...tabs, id: 'bar-soap', name: 'Bar soap', usageUnits: 2, usageDays: 1 };
+    arriveAt(`#p=${encodeShelf([shared], shared.id)}`);
+
+    const { container } = openApp([detergent]);
+
+    await vi.waitFor(() => {
+      expect(field(container, 'usage-a-day').value).toBe('2');
+    });
+    // Two a day: ninety for the forty-five day wait, sixty spare for the month.
+    expect(value(container, 'fetch-more-at')).toBe('150');
+    expect(value(container, 'keep-at-least')).toBe('60');
+  });
+
   it('keeps the shelf it has when the link is turned down', async () => {
     answerTheQuestionWith(false);
     arriveAt(`#p=${encodeShelf([{ ...tabs, name: 'Bar soap' }], null)}`);

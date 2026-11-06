@@ -162,7 +162,13 @@ export function ThingPicker({
         )}
       </div>
 
-      <footer class="shrink-0 bg-base-200 border-t border-base-300 p-2 md:p-6">
+      {/* The foot of the sheet holds the name, the picture search and the file
+          buttons, which is more than a phone has left once the keyboard is up
+          for the search field. It keeps a share of the screen and scrolls
+          inside itself: the page behind never moves, so without this the lower
+          pictures sit below the bottom edge with nothing able to bring them
+          into reach. */}
+      <footer class="shrink-0 max-h-[70vh] overflow-y-auto overscroll-contain bg-base-200 border-t border-base-300 p-2 md:p-6">
         <div class="max-w-3xl mx-auto flex flex-col gap-2 md:gap-3">
           {current !== undefined && (
             <div>

@@ -68,6 +68,29 @@ test.describe('picking a thing with a thumb', () => {
     await expect(picker.getByTestId('emoji-choice')).toHaveCount(0);
     await expect(page.locator('#thing-name')).toBeFocused();
   });
+
+  test('reaches the last picture on a screen a keyboard has eaten into', async ({
+    page,
+    hasTouch,
+  }) => {
+    // The height a phone has left once the keyboard is up for the search field.
+    // The page behind the sheet never moves, so the foot of the sheet has to
+    // scroll by itself or the lower pictures are simply out of reach.
+    await page.setViewportSize({ width: 375, height: 360 });
+    await openAppWith(page, [detergent]);
+    await openThingPicker(page);
+    const picker = page.getByRole('dialog');
+
+    await picker.getByRole('button', { name: /Picture/u }).click();
+    const lastOnOffer = picker.getByTestId('emoji-choice').last();
+    await lastOnOffer.scrollIntoViewIfNeeded();
+    const symbol = (await lastOnOffer.textContent()) ?? '';
+    expect(symbol).not.toBe('');
+
+    await tapAt(page, lastOnOffer, hasTouch);
+
+    await expect(picker.getByRole('button', { name: /Picture/u })).toContainText(symbol);
+  });
 });
 
 /**

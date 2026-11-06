@@ -1,8 +1,8 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { InvalidPresetFileError, parsePresets, serializePresets } from '../src/data/presets-file';
-import { FRESHNESS_NEVER, type StockItem } from '../src/domain/stock-item';
-import './support/property';
+import type { StockItem } from '../src/domain/stock-item';
+import { NUMBERS } from './support/property';
 
 /** A preset as the app writes it: named, pictured, and with a shop's pack size. */
 const preset: fc.Arbitrary<StockItem> = fc.record({
@@ -11,11 +11,7 @@ const preset: fc.Arbitrary<StockItem> = fc.record({
   // the round trip only has to hold for names somebody actually typed.
   name: fc.string({ minLength: 1, maxLength: 24 }).filter((name) => name.trim() !== ''),
   emoji: fc.constantFrom('', '🧽', '🧴', '🧈'),
-  usageDays: fc.integer({ min: 1, max: 365 }),
-  leadDays: fc.integer({ min: 0, max: 60 }),
-  extraDays: fc.integer({ min: 0, max: 365 }),
-  freshDays: fc.integer({ min: 0, max: FRESHNESS_NEVER }),
-  packSize: fc.integer({ min: 1, max: 48 }),
+  ...NUMBERS,
 });
 
 /**

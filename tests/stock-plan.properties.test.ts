@@ -2,16 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { FRESHNESS_NEVER } from '../src/domain/stock-item';
 import { effectiveUsageDays, planStock } from '../src/domain/stock-plan';
-import './support/property';
-
-/** Any household's numbers: a unit lasting a day or a year, a wait up to 60 days. */
-const wanted = fc.record({
-  usageDays: fc.integer({ min: 1, max: 365 }),
-  leadDays: fc.integer({ min: 0, max: 60 }),
-  extraDays: fc.integer({ min: 0, max: 365 }),
-  freshDays: fc.integer({ min: 0, max: FRESHNESS_NEVER }),
-  packSize: fc.integer({ min: 1, max: 48 }),
-});
+import { requirements as wanted } from './support/property';
 
 describe('the plan, for every household you could think of', () => {
   it('always keeps enough to outlast the wait', () => {

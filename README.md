@@ -50,6 +50,7 @@ command is listed in [development](docs/development.md).
 | [The screen](docs/screen.md)                | layout, touch rules, text sizes, accessibility        |
 | [Naming things](docs/naming.md)             | names, the picture button, the emoji set              |
 | [Presets, files and links](docs/presets.md) | what is stored where, export and import, share links  |
+| [State machines](docs/state-machines.md)    | every state the app can be in, and the ones it should not |
 | [Development](docs/development.md)          | commands, the test suite, the shape of the source     |
 | [The quality gate](docs/quality-gate.md)    | the nine checks, their bars, and what each one is for |
 | [Deploying](docs/deploying.md)              | Pages, the CI gate, and which commit is on screen     |

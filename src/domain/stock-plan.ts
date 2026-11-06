@@ -25,6 +25,20 @@ export interface StockPlan {
   readonly reserveLooseUnits: number;
   /** The level a fetch aims at: the order point plus what came. */
   readonly shelfAfterFetch: number;
+  /**
+   * The longest a household may go between looks at the shelf, in days.
+   *
+   * Between two looks the shelf can slip past the order point by one look's
+   * worth of use, and the reserve is what absorbs that slip: the wait is still
+   * covered as long as the slip is no bigger than the reserve. So the reserve in
+   * days *is* the review period — the point cannot be missed by a household that
+   * looks that often, and it can be by one that looks less.
+   *
+   * Zero means the reserve buys no whole day: there is none at all, or it is
+   * thinner than a day's use. No shorter interval can be asked for than a day, so
+   * that is what the screen says.
+   */
+  readonly reviewDays: number;
 }
 
 /**
@@ -181,6 +195,9 @@ export function planStock(requirements: StockRequirements): StockPlan {
     // The level a fetch aims at = order point + what was fetched. It is counted
     // from the level you shop at, which is the figure the headline quotes.
     shelfAfterFetch: waitUnits + reserveUnits + fetchQuantity,
+    // The reserve as the time it buys: whole units divided by the rate, rounded
+    // down so the promise is a length of time the reserve really covers.
+    reviewDays: Math.floor((reserveUnits * rate.days) / rate.units),
   };
 }
 

@@ -11,8 +11,10 @@ Read from the top:
 1. the thing's name, a button that opens the sheet;
 2. **Fetch more at**, then **Keep at least** — the trigger first, because it is
    the number a household acts on, with the floor it protects beside it;
-3. the headline, in the words of the arithmetic: *"Down to 5 units? Bring home a
-   pack of ten and you're at a level of 15, safe for emergencies."*;
+3. the headline, in the words of the arithmetic: *"🗄️ Down to 5 units? 🛒 Fetch a
+   10-pack and you're at a level of 15 ✓, safe for emergencies. 👀 Check the
+   shelf every 6 days."* — one paragraph, because it is one instruction, and
+   because a household reading from across the kitchen gets it in one look;
 4. **In reserve**, a plain card under the headline: the reserve as a cupboard holds
    it — whole packs plus the units outside them. It is stock to check, not one of
    the numbers to act on, so it carries no tone and no display-sized figure of its

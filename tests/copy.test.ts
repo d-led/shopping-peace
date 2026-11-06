@@ -49,9 +49,9 @@ const butter = thing({
 });
 
 describe('the instruction the household reads first', () => {
-  it('reads as one sentence: when, how many, how many to come home with', () => {
+  it('reads as one sentence: when, how many, how many to come home with, and how often to look', () => {
     expect(planHeadline(planStock(detergent))).toBe(
-      "Down to 3 units? Bring home 2 more and you're at a level of 5, safe for emergencies.",
+      "🗄️ Down to 3 units? 🛒 Fetch 2 more and you're at a level of 5 ✓, safe for emergencies. 👀 Check the shelf every 60 days.",
     );
   });
 
@@ -70,7 +70,7 @@ describe('the instruction the household reads first', () => {
     const noReserve = thing({ usageDays: 30, leadDays: 3, extraDays: 0 });
 
     expect(planHeadline(planStock(noReserve))).toBe(
-      'Down to 1 unit? No reserve, so fetch the next unit as this one runs out.',
+      '🗄️ Down to 1 unit? No reserve, so 🛒 fetch the next unit as this one runs out. 👀 Check the shelf every day.',
     );
   });
 
@@ -78,7 +78,7 @@ describe('the instruction the household reads first', () => {
     const noReserve = thing({ usageDays: 2, leadDays: 4, extraDays: 0, packSize: 10 });
 
     expect(planHeadline(planStock(noReserve))).toBe(
-      'Down to 2 units? No reserve, so fetch a 10-pack as this one runs out.',
+      '🗄️ Down to 2 units? No reserve, so 🛒 fetch a 10-pack as this one runs out. 👀 Check the shelf every day.',
     );
   });
 
@@ -111,7 +111,7 @@ describe('the household\'s own toilet paper, ten rolls at a time', () => {
     // pack of ten lands the shelf at nineteen — the reserve it asked for, plus
     // the seven spare the pack could not avoid adding.
     expect(planHeadline(planStock(paper))).toBe(
-      "Down to 9 units? Bring home a 10-pack and you're at a level of 19, safe for emergencies.",
+      "🗄️ Down to 9 units? 🛒 Fetch a 10-pack and you're at a level of 19 ✓, safe for emergencies. 👀 Check the shelf every 14 days.",
     );
   });
 
@@ -123,7 +123,7 @@ describe('the household\'s own toilet paper, ten rolls at a time', () => {
   it('counts several packs when one will not cover the reserve', () => {
     const many = thing({ ...paper, packSize: 4 });
 
-    expect(planHeadline(planStock(many))).toContain('Bring home 2 packs of 4');
+    expect(planHeadline(planStock(many))).toContain('Fetch 2 packs of 4');
   });
 });
 
@@ -189,6 +189,26 @@ describe('explaining a thing that turns before it is finished', () => {
   it('says a thing that will not keep at all is gone at once', () => {
     expect(spoilsWarning(thing({ usageDays: 3, freshDays: 0 }))).toBe(
       'It turns at once, so a unit is really gone in 1 day, not the 3 days it takes to use up.',
+    );
+  });
+});
+
+describe('how often the shelf has to be looked at', () => {
+  it('closes the instruction with the reserve read as the time it buys', () => {
+    expect(planHeadline(planStock(thing({ usageDays: 1, extraDays: 7 })))).toContain(
+      '👀 Check the shelf every 7 days.',
+    );
+  });
+
+  it('says a day rather than one day', () => {
+    expect(planHeadline(planStock(thing({ usageDays: 1, extraDays: 1 })))).toContain(
+      '👀 Check the shelf every day.',
+    );
+  });
+
+  it('asks for a look every day when there is nothing spare to absorb a missed one', () => {
+    expect(planHeadline(planStock(thing({ extraDays: 0 })))).toContain(
+      '👀 Check the shelf every day.',
     );
   });
 });

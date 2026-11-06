@@ -350,7 +350,7 @@ describe('what the household sees first', () => {
     expect(value(container, 'fetch-more-at')).toBe('2');
     expect(textOf(container)).toContain('1 spare + 1 for the wait');
     expect(textOf(container)).toContain(
-      "Down to 2 units? Bring home 1 more and you're at a level of 3, safe for emergencies.",
+      "🗄️ Down to 2 units? 🛒 Fetch 1 more and you're at a level of 3 ✓, safe for emergencies. 👀 Check the shelf every 30 days.",
     );
   });
 
@@ -910,7 +910,7 @@ describe('touching the numbers', () => {
 
     await vi.waitFor(() => {
       expect(textOf(container)).toContain(
-        "Down to 3 units? Bring home 1 more and you're at a level of 4, safe for emergencies.",
+        "🗄️ Down to 3 units? 🛒 Fetch 1 more and you're at a level of 4 ✓, safe for emergencies. 👀 Check the shelf every 30 days.",
       );
     });
     expect(saved(storage)[0]?.leadDays).toBe(45);
@@ -928,6 +928,19 @@ describe('touching the numbers', () => {
     });
     expect(textOf(container)).toContain('7 units ≈ 70 days of cover.');
     expect(saved(storage)[0]?.usageDays).toBe(10);
+  });
+
+  it('says how often the shelf has to be looked at, and that the reserve is what buys it', async () => {
+    const { container } = openApp([detergent]);
+
+    // A bottle a month with a month spare: a look a month cannot miss the point.
+    expect(value(container, 'headline')).toContain('👀 Check the shelf every 30 days.');
+
+    enter(container, 'extra-days', '0');
+
+    await vi.waitFor(() => {
+      expect(value(container, 'headline')).toContain('👀 Check the shelf every day.');
+    });
   });
 
   it('recalculates when the number is dragged on the track', async () => {
@@ -1007,7 +1020,7 @@ describe('touching the numbers', () => {
     expect(textOf(container)).toContain('unit left');
     expect(value(container, 'fetch-more-at')).toBe('1');
     expect(textOf(container)).toContain(
-      'Down to 1 unit? No reserve, so fetch the next unit as this one runs out.',
+      '🗄️ Down to 1 unit? No reserve, so 🛒 fetch the next unit as this one runs out. 👀 Check the shelf every day.',
     );
     expect(saved(storage)[0]?.extraDays).toBe(0);
   });
@@ -1036,7 +1049,7 @@ describe('touching the numbers', () => {
 
     await vi.waitFor(() => {
       expect(textOf(container)).toContain(
-        "Bring home a 10-pack and you're at a level of 12, safe for emergencies.",
+        "🛒 Fetch a 10-pack and you're at a level of 12 ✓, safe for emergencies.",
       );
     });
     expect(textOf(container)).toContain('12 units ≈ 360 days of cover.');
@@ -1070,7 +1083,7 @@ describe('a thing that turns before it is finished', () => {
 
     expect(value(container, 'keep-at-least')).toBe('1');
     expect(textOf(container)).toContain(
-      "Down to 2 units? Bring home 1 more and you're at a level of 3, safe for emergencies.",
+      "🗄️ Down to 2 units? 🛒 Fetch 1 more and you're at a level of 3 ✓, safe for emergencies. 👀 Check the shelf every 7 days.",
     );
   });
 

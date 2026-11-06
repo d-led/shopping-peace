@@ -102,13 +102,49 @@ units, so the property tests can say so for any household's numbers.
 | `reservePacks`, `reserveLooseUnits` | **In reserve** — *"2 packs of 10 + 3 units"* |
 | `reorderPoint` | **Fetch more at** — the shelf level to shop at |
 | `packsPerFetch` | *"a 10-pack"*, or *"3 packs of 10"* |
-| `fetchQuantity` | *"Bring home …"* in the headline |
-| `shelfAfterFetch` | *"you're at a level of N"*, and **N units ≈ M days of cover** |
+| `fetchQuantity` | *"🛒 Fetch …"* in the headline |
+| `shelfAfterFetch` | *"✓ you're at a level of N"*, and **N units ≈ M days of cover** |
+| `reviewDays` | *"👀 Check the shelf every N days"*, the last clause of the headline |
 | `packSize` | **Sold in packs of** — `1` is sold one at a time |
 
 With no reserve the two cards both fall back to the level the shelf must not drop
 below, and say there is no reserve: there is no counter to watch when the
 reserve is zero.
+
+## How often the shelf has to be looked at
+
+The order point is only worth what it is checked against. A household does not
+watch a shelf continuously, so between two looks the level can slip *past* the
+point — and nothing is ordered until somebody looks. The reserve is what absorbs
+that slip, and how much slip it absorbs is a length of time:
+
+$$
+r \cdot C \;\le\; \text{reserveUnits}
+\qquad\Longrightarrow\qquad
+C \;\le\; \frac{\text{reserveUnits}}{r} \;\approx\; \text{extraDays}
+$$
+
+where $r$ is the rate the shelf really goes down at and $C$ is the time between
+looks. The worst case is the look that sees the shelf smallest without having
+ordered: an order point plus a look's worth of use minus one interval of
+consumption has to cover the wait, and the reserve is exactly what is left over
+by the time the order lands.
+
+So **the reserve in days is the review period**: a week of reserve means a look a
+week, and no reserve means none at all — a look every day, which is the whole
+reason a reserve is worth keeping. The figure on screen is
+$\left\lfloor \text{reserveUnits} \cdot \frac{d}{u} \right\rfloor$ days, rounded
+down so the promise is a length of time the reserve really covers; a roll every
+two days with a week spare is four rolls, which is eight days of slack rather
+than seven.
+
+It holds through spoilage and through a thing used several times a day, because
+the reserve is already counted at the rate the shelf really goes down at.
+
+What it promises, and what it does not: **a look on time**. Skip a look and the
+slip is twice the reserve, so the household is into the reserve itself — which is
+what a reserve is for, once. It is not a statistical figure: nothing here has a
+standard deviation, and the rate is whatever the household said it was.
 
 ## Three decisions
 
@@ -184,7 +220,7 @@ rolls — and the shop sells tens.
 | -------------------- | --------------------- |
 | **Keep at least** `3` units spare | reserve $= \lceil 6 \div 2 \rceil = 3$ |
 | **Fetch more at** `5` — *"3 spare + 2 for the wait"* | wait $= \lceil 4 \div 2 \rceil = 2$; reorder point $= 3 + 2$ |
-| *Down to 5 units? Bring home a 10-pack and you're at a level of 15, safe for emergencies.* | packs $= \max(1, \lceil 3 \div 10 \rceil) = 1$; level $= 5 + 10$ |
+| *🗄️ Down to 5 units? 🛒 Fetch a 10-pack and you're at a level of 15 ✓, safe for emergencies. 👀 Check the shelf every 6 days.* | packs $= \max(1, \lceil 3 \div 10 \rceil) = 1$; level $= 5 + 10$; looks $= \lfloor 3 \times 2 \rfloor$ |
 | `15 units ≈ 30 days of cover.` | $15 \times 2$ days |
 
 A shop will not sell three spare rolls, so the household comes home with ten —

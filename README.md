@@ -13,7 +13,7 @@ kitchen:
 | **The thing**                        | 🧴 Laundry detergent                               |
 | **Fetch more at**                    | `2` units — _"1 spare + 1 for the wait"_           |
 | **Keep at least**                    | `1` unit spare                                     |
-| Down to 2 units? Bring home 1 more … | … and you're at a level of 3, safe for emergencies |
+| Down to 2 units? Fetch 1 more …    | … and you're at a level of 3, safe for emergencies |
 
 The **Keep at least** card counts the reserve: the units kept on top of what a
 wait eats up. The **Fetch more at** card counts the shelf level to shop at, and

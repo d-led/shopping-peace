@@ -247,6 +247,40 @@ describe('a thing used several times a day', () => {
   });
 });
 
+describe('how often the shelf has to be looked at', () => {
+  it('is the reserve in days, because the reserve is what a missed look costs', () => {
+    // A tab a day with a week spare: between two looks a week apart the shelf
+    // can slip past the point by seven tabs at most, and seven are what is
+    // there. Look less often and the slip is bigger than the reserve.
+    const weekSpare = requirements({ usageUnits: 1, usageDays: 1, extraDays: 7 });
+
+    expect(planStock(weekSpare).reviewDays).toBe(7);
+  });
+
+  it('reads the reserve in days whatever the rate, rounding up what the units give', () => {
+    // Two a day with a week spare is fourteen units, which is still a week of
+    // looking; a roll every two days with the same week spare is four rolls,
+    // which is eight days of slack rather than seven.
+    const twiceADay = requirements({ usageUnits: 2, usageDays: 1, extraDays: 7 });
+    const everyOtherDay = requirements({ usageUnits: 1, usageDays: 2, extraDays: 7 });
+
+    expect(planStock(twiceADay).reviewDays).toBe(7);
+    expect(planStock(everyOtherDay).reviewDays).toBe(8);
+  });
+
+  it('follows the spoilage, because the reserve is counted at the rate things really go', () => {
+    // Eaten over a fortnight, sour after a week: the week of reserve is one
+    // unit, and a unit is a week.
+    const turns = requirements({ usageDays: 14, freshDays: 7, extraDays: 7 });
+
+    expect(planStock(turns).reviewDays).toBe(7);
+  });
+
+  it('is no slack at all when nothing is kept spare', () => {
+    expect(planStock(requirements({ extraDays: 0 })).reviewDays).toBe(0);
+  });
+});
+
 describe('numbers that cannot work', () => {
   it('refuses a unit that lasts no time at all', () => {
     expect(() => planStock(requirements({ usageDays: 0 }))).toThrow(/usageDays/u);

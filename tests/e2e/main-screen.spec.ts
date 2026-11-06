@@ -116,7 +116,7 @@ test.describe('the screen a household opens', () => {
   test('reads a pack size out loud, and still fits the screen', async ({ page }) => {
     await openAppWith(page, [{ ...detergent, packSize: 10 }]);
 
-    await expect(page.getByText('Bring home a 10-pack')).toBeVisible();
+    await expect(page.getByText('Fetch a 10-pack')).toBeVisible();
     await expect(page.locator('#pack-size')).toHaveValue('10');
 
     const overflowBy = await page.evaluate(

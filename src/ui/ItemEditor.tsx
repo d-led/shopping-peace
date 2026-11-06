@@ -5,6 +5,7 @@ import { ReserveCard } from './ReserveCard';
 import { StepSlider } from './StepSlider';
 import { UsageControl } from './UsageControl';
 import { fetchCard, itemLabel, keepCard, planCover, planHeadline, spoilsWarning } from './copy';
+import { Headline } from './Headline';
 import { LIMITS } from './limits';
 import { TEXT } from './text';
 
@@ -72,9 +73,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
           />
         </div>
 
-        <p class={`text-center font-bold leading-snug ${TEXT.body}`} data-testid="headline">
-          {planHeadline(plan)}
-        </p>
+        <Headline text={planHeadline(plan)} />
 
         {/* Stock, not shopping: what has to be there, and how it is held. */}
         <ReserveCard plan={plan} />

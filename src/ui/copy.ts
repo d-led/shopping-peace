@@ -27,21 +27,43 @@ export function pictureButtonLabel(item: StockItem): string {
 }
 
 /**
- * The instruction a busy person reads from across the kitchen. With no reserve
- * there is nothing on the shelf but the wait itself, so there is no quantity to
- * name: the household tops up as the shelf reaches that level.
+ * The instruction a busy person reads from across the kitchen, in one paragraph
+ * so it costs one block of height: the level to shop at, what to fetch, the level
+ * that lands, and how often the shelf has to be looked at — which is what the
+ * reserve is for.
  *
- * With a reserve, the level a fetch lands on is named for what it is: a shelf
- * that still carries the whole emergency reserve, a pack's worth above the
- * floor the household asked for. A bigger pack leaves a bigger surplus, and
- * saying so out loud is what stops those extra units reading as stock that
- * appeared from nowhere.
+ * The marks are the household's own landmarks, one per fact: the shelf, the cart,
+ * the tick for a level that holds, and eyes for a look at the shelf. The tick sits
+ * straight after the number it is about, where it reads as "this one holds".
+ *
+ * With no reserve there is nothing on the shelf but the wait itself, so there is
+ * no quantity to name: the household tops up as the shelf reaches that level, and
+ * looks every day because nothing is there to absorb a missed look.
+ *
+ * With a reserve, the level a fetch lands on is named for what it is: a shelf that
+ * still carries the whole emergency reserve, a pack's worth above the floor the
+ * household asked for. A bigger pack leaves a bigger surplus, and saying so out
+ * loud is what stops those extra units reading as stock that appeared from
+ * nowhere.
  */
 export function planHeadline(plan: StockPlan): string {
+  const look = `👀 ${lookEvery(plan.reviewDays)}`;
   if (plan.reserveUnits === 0) {
-    return `Down to ${units(plan.reorderPoint)}? No reserve, so fetch ${packed(plan)} as this one runs out.`;
+    return `🗄️ Down to ${units(plan.reorderPoint)}? No reserve, so 🛒 fetch ${packed(plan)} as this one runs out. ${look}`;
   }
-  return `Down to ${units(plan.reorderPoint)}? Bring home ${packed(plan)} and you're at a level of ${plan.shelfAfterFetch}, safe for emergencies.`;
+  return `🗄️ Down to ${units(plan.reorderPoint)}? 🛒 Fetch ${packed(plan)} and you're at a level of ${plan.shelfAfterFetch} ✓, safe for emergencies. ${look}`;
+}
+
+/**
+ * How often the shelf has to be looked at, in the one currency a household has
+ * for it: a length of time.
+ *
+ * A whole day is the shortest interval the sentence can ask for, so a reserve
+ * thinner than a day's use — or none at all — falls back to "every day" rather
+ * than to "never": the cure for a thin reserve is a bigger reserve.
+ */
+function lookEvery(reviewDays: number): string {
+  return reviewDays <= 1 ? 'Check the shelf every day.' : `Check the shelf every ${reviewDays} days.`;
 }
 
 /**

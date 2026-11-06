@@ -11,6 +11,7 @@ import {
  */
 export function requirements(overrides: Partial<StockRequirements> = {}): StockRequirements {
   return {
+    usageUnits: 1,
     usageDays: 30,
     leadDays: 3,
     extraDays: 30,

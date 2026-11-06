@@ -91,6 +91,39 @@ describe('files written before the format was versioned', () => {  it('still rea
   });
 });
 
+describe('a file that says how fast a thing is used', () => {
+  it('takes a file from before the field to mean one unit at a time', () => {
+    expect(parsePresets(`[${withoutFreshness}]`)[0]?.usageUnits).toBe(1);
+  });
+
+  it('keeps three a day as three a day, through the file and back', () => {
+    const threeADay = thing({ usageUnits: 3, usageDays: 1 });
+
+    expect(parsePresets(serializePresets([threeADay]))[0]).toMatchObject({
+      usageUnits: 3,
+      usageDays: 1,
+    });
+  });
+
+  it('refuses a part of a day, which no shelf can hold', () => {
+    expect(() => parsePresets('[{"usageDays": 1.5, "leadDays": 3, "extraDays": 0}]')).toThrow(
+      /usageDays to be a whole number/u,
+    );
+  });
+
+  it('refuses a part of a pack, which no shop sells', () => {
+    expect(() =>
+      parsePresets('[{"usageDays": 1, "leadDays": 3, "extraDays": 0, "packSize": 2.5}]'),
+    ).toThrow(/packSize to be a whole number/u);
+  });
+
+  it('refuses a rate of no units at all', () => {
+    expect(() =>
+      parsePresets('[{"usageUnits": 0, "usageDays": 1, "leadDays": 3, "extraDays": 0}]'),
+    ).toThrow(/usageUnits to be at least 1/u);
+  });
+});
+
 describe('a file that names two things with one id', () => {
   it('keeps both, giving the second an id of its own', () => {
     const { things } = parsePresetFile(underOneId('Butter'));
@@ -175,7 +208,7 @@ describe('files that are not preset files', () => {
 
   it('refuses a file from a newer copy of the app, and says which', () => {
     expect(() => parsePresets('{"version": 99, "things": []}')).toThrow(
-      /newer Shopping Peace \(version 99; this copy reads 1\)/u,
+      /newer Shopping Peace \(version 99; this copy reads 2\)/u,
     );
   });
 

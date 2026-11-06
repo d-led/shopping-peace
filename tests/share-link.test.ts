@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { InvalidPresetFileError } from '../src/data/presets-file';
+import { InvalidPresetFileError, PRESET_FILE_VERSION } from '../src/data/presets-file';
 import {
   decodeShelf,
   encodeShelf,
@@ -32,7 +32,7 @@ describe('a shelf travelling in an address', () => {
   it('carries the export file itself, only written small, so one reader serves both', () => {
     expect(jsonIn(encodeShelf([detergent], 'detergent', written))).toEqual({
       format: 'shopping-peace',
-      version: 1,
+      version: PRESET_FILE_VERSION,
       exported: written.toISOString(),
       selected: 'detergent',
       things: [detergent],

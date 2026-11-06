@@ -20,6 +20,7 @@ fc.configureGlobal({ numRuns: Number(process.env.FC_RUNS ?? 100) });
  * numbers can spread them into its own.
  */
 export const NUMBERS = {
+  usageUnits: fc.integer({ min: 1, max: 24 }),
   usageDays: fc.integer({ min: 1, max: 365 }),
   leadDays: fc.integer({ min: 0, max: 60 }),
   extraDays: fc.integer({ min: 0, max: 365 }),

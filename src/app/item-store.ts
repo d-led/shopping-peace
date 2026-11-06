@@ -21,6 +21,7 @@ export interface ItemStoreOptions {
 
 const NAME_FOR_NEW_ITEM = 'New thing';
 const DEFAULTS_FOR_NEW_ITEM: StockRequirements = {
+  usageUnits: 1,
   usageDays: 30,
   leadDays: 3,
   extraDays: 30,

@@ -36,20 +36,81 @@ export interface StockPlan {
  * fortnight but turns after a week is gone in a week, whether it was eaten or
  * thrown away. Planning on the shorter of the two is what keeps the plan from
  * quietly counting on eating something that is no longer there.
+ *
+ * This is the rate as the words on the screen want it — days per unit. The
+ * arithmetic itself never divides by it; see `Rate`.
  */
 export function effectiveUsageDays(requirements: StockRequirements): number {
-  const { usageDays, freshDays } = requirements;
-  if (freshDays >= FRESHNESS_NEVER) {
-    return usageDays;
-  }
-  // Nothing is gone in less than a day: something that will not keep at all is
-  // a day's worth of use, not a division by zero.
-  return Math.max(1, Math.min(usageDays, freshDays));
+  const rate = effectiveRate(requirements);
+  return rate.days / rate.units;
 }
 
-/** True when a unit would turn before the household gets through it. */
+/**
+ * True when a unit would turn before the household gets through it: the shelf
+ * life is shorter than the time one unit takes to use up.
+ *
+ * Decided by cross-multiplying rather than by dividing, so a third of a day is
+ * never asked for as a number.
+ */
 export function spoilsBeforeEmpty(requirements: StockRequirements): boolean {
-  return requirements.freshDays < FRESHNESS_NEVER && requirements.freshDays < requirements.usageDays;
+  const { usageUnits, usageDays, freshDays } = requirements;
+  return freshDays < FRESHNESS_NEVER && freshDays * usageUnits < usageDays;
+}
+
+/**
+ * A rate of use: `units` units every `days` days, both whole.
+ *
+ * Kept as a pair rather than as one number because the one number it could be —
+ * the life of a unit — is not a number a machine holds for the interesting
+ * cases: a third of a day is 0.333…, and rounding a quotient by it puts a whole
+ * extra unit on the shelf (forty-five days at three a day is exactly 135, and
+ * 136 is one too many). Multiplied out by whole units over whole days, every
+ * comparison and every rounding-up is exact.
+ */
+interface Rate {
+  readonly units: number;
+  readonly days: number;
+}
+
+/** A unit a day: the rate anything slower than a day is really asking for. */
+const ONE_A_DAY: Rate = { units: 1, days: 1 };
+
+/** The faster of two rates, decided by cross-multiplying: 2/3 beats 3/5. */
+function faster(a: Rate, b: Rate): Rate {
+  return a.units * b.days >= b.units * a.days ? a : b;
+}
+
+/** The slower of two rates, decided the same way. */
+function slower(a: Rate, b: Rate): Rate {
+  return a.units * b.days <= b.units * a.days ? a : b;
+}
+
+/** Whole units that cover a stretch of days at this rate, rounded up. */
+function unitsCovering(days: number, rate: Rate): number {
+  return Math.ceil((days * rate.units) / rate.days);
+}
+
+/**
+ * The rate the shelf really goes down at: the household's own rate, made faster
+ * by spoilage and by nothing else.
+ *
+ * Nothing is counted as gone in less than a day — a thing that will not keep at
+ * all is a day's worth of use, not a division by zero — unless the household
+ * gets through a unit faster than that anyway, which is what a thing used twice
+ * a day is. That floor is why a thing that spoils at once is planned at the rate
+ * it is used rather than at an infinity of units.
+ */
+function effectiveRate(requirements: StockRequirements): Rate {
+  const usage: Rate = { units: requirements.usageUnits, days: requirements.usageDays };
+  if (requirements.freshDays >= FRESHNESS_NEVER) {
+    return usage;
+  }
+  const floor = faster(usage, ONE_A_DAY);
+  if (requirements.freshDays === 0) {
+    return floor;
+  }
+  const spoilage: Rate = { units: 1, days: requirements.freshDays };
+  return slower(faster(usage, spoilage), floor);
 }
 
 /**
@@ -66,9 +127,8 @@ export function spoilsBeforeEmpty(requirements: StockRequirements): boolean {
  *
  * A unit lasting longer means *fewer* units cover the same stretch of days:
  * fourteen days of reserve is seven rolls at a roll a fortnight, but two rolls
- * at a roll every ten days. That is days divided by days-per-unit, which is the
- * same number as multiplying by the usage rate — see `unitsFor` for why this
- * code divides.
+ * at a roll every ten days. That is days multiplied by units-a-day, which is
+ * why the rate is kept as whole units over whole days: see `Rate`.
  *
  * The reserve sits inside the fetch level rather than under it, so a household
  * that shops when the shelf is down to wait + reserve still has its whole
@@ -85,27 +145,16 @@ export function spoilsBeforeEmpty(requirements: StockRequirements): boolean {
  * it, not by subtracting what it has used.
  */
 export function planStock(requirements: StockRequirements): StockPlan {
-  const { usageDays, leadDays, extraDays, freshDays, packSize } = requirements;
+  const { usageUnits, usageDays, leadDays, extraDays, freshDays, packSize } = requirements;
+  requireAtLeast(usageUnits, 1, 'usageUnits');
   requireAtLeast(usageDays, 1, 'usageDays');
   requireAtLeast(leadDays, 0, 'leadDays');
   requireAtLeast(extraDays, 0, 'extraDays');
   requireAtLeast(freshDays, 0, 'freshDays');
   requireAtLeast(packSize, 1, 'packSize');
 
-  const daysPerUnit = effectiveUsageDays(requirements);
-
-  /**
-   * How many whole units cover a stretch of days.
-   *
-   * Days divided by days-per-unit *is* units — four days of waiting at a unit
-   * every two days is two units. Multiplying by `1 / daysPerUnit` computes the
-   * same thing, except that it rounds twice: on the 160,400 pairs of days and
-   * unit lengths up to 400, the reciprocal form disagrees with the division six
-   * times, and a round-up puts a whole extra unit on the shelf each time (273
-   * days at 91 days a unit is exactly three units, and 3.0000000000000004 is
-   * four).
-   */
-  const unitsFor = (days: number): number => Math.ceil(days / daysPerUnit);
+  const rate = effectiveRate(requirements);
+  const unitsFor = (days: number): number => unitsCovering(days, rate);
 
   const waitUnits = unitsFor(leadDays);
   const reserveUnits = unitsFor(extraDays);

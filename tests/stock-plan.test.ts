@@ -165,7 +165,7 @@ describe('how long a unit effectively lasts', () => {
 describe('a thing that turns before it is finished', () => {
   it('is fetched sooner, because a unit disappears faster than it is eaten', () => {
     // A ten-day wait, a unit eaten over a fortnight — but sour after a week.
-    const keeps = { usageDays: 14, leadDays: 10, extraDays: 0, freshDays: FRESHNESS_NEVER, packSize: 1 };
+    const keeps = { usageUnits: 1, usageDays: 14, leadDays: 10, extraDays: 0, freshDays: FRESHNESS_NEVER, packSize: 1 };
     const perishes = { ...keeps, freshDays: 7 };
 
     expect(planStock(keeps).reorderPoint).toBe(1);
@@ -195,9 +195,65 @@ describe('a thing that turns before it is finished', () => {
   });
 });
 
+describe('a thing used several times a day', () => {
+  it('counts the wait in the units a day of it eats, not in days', () => {
+    // Two a day, a three-day wait, a week of reserve: six for the wait and
+    // fourteen spare — where one a day would need three and seven.
+    const plan = planStock(
+      requirements({ usageUnits: 2, usageDays: 1, leadDays: 3, extraDays: 7 }),
+    );
+
+    expect(plan.waitUnits).toBe(6);
+    expect(plan.reserveUnits).toBe(14);
+    expect(plan.reorderPoint).toBe(20);
+  });
+
+  it('reads a unit that lasts half a day as half a day', () => {
+    expect(effectiveUsageDays(requirements({ usageUnits: 2, usageDays: 1 }))).toBe(0.5);
+  });
+
+  it('does not let a third of a day become a unit of its own', () => {
+    // Three a day, a forty-five day wait: a hundred and thirty-five units, to
+    // the last one. Dividing forty-five by a third of a day rounds up to a
+    // hundred and thirty-six, and that extra unit is a real mistake.
+    const plan = planStock(
+      requirements({ usageUnits: 3, usageDays: 1, leadDays: 45, extraDays: 0 }),
+    );
+
+    expect(plan.waitUnits).toBe(135);
+  });
+
+  it('counts a rate of two units over three days as exactly that', () => {
+    const plan = planStock(
+      requirements({ usageUnits: 2, usageDays: 3, leadDays: 3, extraDays: 0 }),
+    );
+
+    expect(plan.waitUnits).toBe(2);
+  });
+
+  it('has nothing to warn about when a unit is gone before it can turn', () => {
+    // Twice a day and sour after three days: a unit is gone in half a day.
+    expect(spoilsBeforeEmpty(requirements({ usageUnits: 2, usageDays: 1, freshDays: 3 }))).toBe(
+      false,
+    );
+  });
+
+  it('counts a thing that spoils at once at the rate it is used', () => {
+    const plan = planStock(
+      requirements({ usageUnits: 2, usageDays: 1, leadDays: 3, extraDays: 0, freshDays: 0 }),
+    );
+
+    expect(plan.waitUnits).toBe(6);
+  });
+});
+
 describe('numbers that cannot work', () => {
   it('refuses a unit that lasts no time at all', () => {
     expect(() => planStock(requirements({ usageDays: 0 }))).toThrow(/usageDays/u);
+  });
+
+  it('refuses a rate of no units', () => {
+    expect(() => planStock(requirements({ usageUnits: 0 }))).toThrow(/usageUnits/u);
   });
 
   it('refuses a negative waiting time', () => {

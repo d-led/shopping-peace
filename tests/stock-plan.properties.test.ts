@@ -146,21 +146,33 @@ describe('the plan, for every household you could think of', () => {
     );
   });
 
-  it('treats a shelf life as long as the usage it never outlives', () => {
+  it('treats a shelf life longer than the use as no shelf life at all', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
-        expect(effectiveUsageDays(numbers)).toBeLessThanOrEqual(numbers.usageDays);
+        const oneUnitLasts = numbers.usageDays / numbers.usageUnits;
+
+        expect(effectiveUsageDays(numbers)).toBeLessThanOrEqual(oneUnitLasts);
         if (numbers.freshDays >= FRESHNESS_NEVER) {
-          expect(effectiveUsageDays(numbers)).toBe(numbers.usageDays);
+          expect(effectiveUsageDays(numbers)).toBe(oneUnitLasts);
         }
       }),
     );
   });
 
-  it('never works out a lifespan of zero days, whatever it is given', () => {
+  it('never works out a lifespan of no time at all, whatever it is given', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
-        expect(effectiveUsageDays(numbers)).toBeGreaterThanOrEqual(1);
+        expect(effectiveUsageDays(numbers)).toBeGreaterThan(0);
+      }),
+    );
+  });
+
+  it('counts a unit as gone in a day at least, unless it is used up quicker', () => {
+    fc.assert(
+      fc.property(wanted, (numbers) => {
+        const oneUnitLasts = numbers.usageDays / numbers.usageUnits;
+
+        expect(effectiveUsageDays(numbers)).toBeGreaterThanOrEqual(Math.min(1, oneUnitLasts));
       }),
     );
   });

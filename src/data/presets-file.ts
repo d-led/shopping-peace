@@ -17,8 +17,13 @@ export const PRESET_FILE_FORMAT = 'shopping-peace';
  * The version of the format, raised when the shape changes in a way that older
  * copies of the app could not read. A file from a newer version is refused
  * with an explanation rather than half-read.
+ *
+ * Version 2 added `usageUnits`, so a household can say a thing is used two or
+ * three times a day instead of only slower than once a day. A version 1 file
+ * has no such field and means one unit at a time, which is the same shelf it
+ * always was.
  */
-export const PRESET_FILE_VERSION = 1;
+export const PRESET_FILE_VERSION = 2;
 
 /** An export: the things, and enough about the file to place it. */
 export interface PresetFile {
@@ -185,13 +190,15 @@ function toStockItem(
     id: uniqueId(readId(entry.id, createId), taken),
     name: named.name,
     emoji: named.emoji,
-    usageDays: readNumber(entry.usageDays, where, 'usageDays', 1),
-    leadDays: readNumber(entry.leadDays, where, 'leadDays', 0),
-    extraDays: readNumber(entry.extraDays, where, 'extraDays', 0),
+    // A file written before a household could say "two a day" means one at a time.
+    usageUnits: readWhole(entry.usageUnits ?? 1, where, 'usageUnits', 1),
+    usageDays: readWhole(entry.usageDays, where, 'usageDays', 1),
+    leadDays: readWhole(entry.leadDays, where, 'leadDays', 0),
+    extraDays: readWhole(entry.extraDays, where, 'extraDays', 0),
     // Files written before the freshness slider existed mean "never spoils".
-    freshDays: readNumber(entry.freshDays ?? FRESHNESS_NEVER, where, 'freshDays', 0),
+    freshDays: readWhole(entry.freshDays ?? FRESHNESS_NEVER, where, 'freshDays', 0),
     // Files written before packs were a thing mean "sold one at a time".
-    packSize: readNumber(entry.packSize ?? 1, where, 'packSize', 1),
+    packSize: readWhole(entry.packSize ?? 1, where, 'packSize', 1),
   };
 }
 
@@ -252,6 +259,22 @@ function readNumber(value: unknown, where: string, field: string, minimum: numbe
     throw new InvalidPresetFileError(`${where} needs ${field} to be at least ${minimum}.`);
   }
   return value;
+}
+
+/**
+ * A whole number of days, units or packs. A day is a day and a pack is a pack:
+ * half of either is not something a shelf or a shop can hold, and a part of a
+ * day would only ever be a rounded way of saying what a household can say in
+ * units instead.
+ */
+function readWhole(value: unknown, where: string, field: string, minimum: number): number {
+  const number = readNumber(value, where, field, minimum);
+  if (!Number.isInteger(number)) {
+    throw new InvalidPresetFileError(
+      `${where} needs ${field} to be a whole number, got ${number}.`,
+    );
+  }
+  return number;
 }
 
 function position(index: number): string {

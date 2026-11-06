@@ -55,17 +55,17 @@ export function starterPresets(createId: () => string = newId): StockItem[] {
   return [
     // A tablet a day, a box of thirty, a week of reserve: the shop run is a
     // delivery rather than a trip.
-    { id: createId(), name: 'Dishwasher tabs', emoji: '🧽', usageDays: 1, leadDays: 3, extraDays: 7, freshDays: never, packSize: 30 },
+    { id: createId(), name: 'Dishwasher tabs', emoji: '🧽', usageUnits: one, usageDays: 1, leadDays: 3, extraDays: 7, freshDays: never, packSize: 30 },
     // Forty washes to a box, bought one box at a time.
-    { id: createId(), name: 'Dishwasher detergent', emoji: '🫧', usageDays: 40, leadDays: 3, extraDays: 14, freshDays: never, packSize: one },
+    { id: createId(), name: 'Dishwasher detergent', emoji: '🫧', usageUnits: one, usageDays: 40, leadDays: 3, extraDays: 14, freshDays: never, packSize: one },
     // A thirty-wash bottle, a wash most days of the week.
-    { id: createId(), name: 'Laundry detergent', emoji: '🧴', usageDays: 30, leadDays: 3, extraDays: 30, freshDays: never, packSize: one },
+    { id: createId(), name: 'Laundry detergent', emoji: '🧴', usageUnits: one, usageDays: 30, leadDays: 3, extraDays: 30, freshDays: never, packSize: one },
     // The household's own: a roll every two days, four days to fetch, a
     // fortnight of reserve, and jumbo packs of ten the only size sold.
-    { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageDays: 2, leadDays: 4, extraDays: 7, freshDays: never, packSize: 10 },
-    { id: createId(), name: 'Cat litter', emoji: '🐾', usageDays: 21, leadDays: 5, extraDays: 21, freshDays: never, packSize: one },
+    { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageUnits: one, usageDays: 2, leadDays: 4, extraDays: 7, freshDays: never, packSize: 10 },
+    { id: createId(), name: 'Cat litter', emoji: '🐾', usageUnits: one, usageDays: 21, leadDays: 5, extraDays: 21, freshDays: never, packSize: one },
     // The perishable one, so the freshness slider can be seen doing something:
     // eaten over a fortnight, but sour a week after opening.
-    { id: createId(), name: 'Butter', emoji: '🧈', usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7, packSize: one },
+    { id: createId(), name: 'Butter', emoji: '🧈', usageUnits: one, usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7, packSize: one },
   ];
 }

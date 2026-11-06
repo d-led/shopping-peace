@@ -3,7 +3,20 @@
  * days, so nothing on the page has to be converted by hand.
  */
 export interface StockRequirements {
-  /** How many days a single unit lasts at the usual rate of use. */
+  /**
+   * How many units the usage time below is about. One — the usual — makes
+   * `usageDays` the life of a single unit; two over one day is a thing the
+   * household gets through twice a day, which a unit-a-month number cannot say.
+   *
+   * Kept beside the days rather than as a fraction of one because the fraction
+   * is what goes wrong: a third of a day is not a number a machine can hold, and
+   * dividing by it puts a whole extra unit on the shelf.
+   */
+  readonly usageUnits: number;
+  /**
+   * How many days `usageUnits` units last. With `usageUnits` of one, how long a
+   * single unit lasts.
+   */
   readonly usageDays: number;
   /** How many days it takes to get a replacement home (shop run, delivery). */
   readonly leadDays: number;

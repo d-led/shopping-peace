@@ -236,7 +236,7 @@ test.describe('files in and out', () => {
     // A file that says what it is and when it was written, holding the things.
     expect(file).toMatchObject({
       format: 'shopping-peace',
-      version: 1,
+      version: 2,
       exported: expect.any(String),
     });
     expect(file.things).toEqual([detergent, tabs]);

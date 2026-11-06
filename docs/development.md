@@ -81,8 +81,8 @@ scripts/
   build-emoji-catalogue.mjs  the emoji set, from emojilib's data (MIT)
 src/
   domain/          the arithmetic and its vocabulary — no DOM, no storage
-    stock-item.ts    usageDays, leadDays, extraDays, freshDays, packSize
-    stock-plan.ts    planStock() -> the plan, and the effective lifespan
+    stock-item.ts    usageUnits, usageDays, leadDays, extraDays, freshDays, packSize
+    stock-plan.ts    planStock() -> the plan, the rate, and the effective lifespan
     ids.ts           ids for things added, imported or shared without one
   data/            the file format, where presets are kept, share links, emoji
   app/             ItemStore: the selected thing and every change, persisted

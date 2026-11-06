@@ -942,6 +942,58 @@ describe('touching the numbers', () => {
     expect(saved(storage)[0]?.extraDays).toBe(90);
   });
 
+  it('says a thing used twice a day a day at a time', () => {
+    const twiceADay = { ...detergent, usageUnits: 2, usageDays: 1, extraDays: 7 };
+    const { container } = openApp([twiceADay]);
+
+    // The framing that fits the habit comes up by itself, and the numbers are
+    // counted in the units two a day eats: six for a three-day wait, fourteen
+    // spare.
+    expect(field(container, 'usage-a-day').value).toBe('2');
+    expect(value(container, 'keep-at-least')).toBe('14');
+    expect(value(container, 'fetch-more-at')).toBe('20');
+  });
+
+  it('says a thing either way round, and keeps whichever way it was said', async () => {
+    const { container, storage } = openApp([detergent]);
+
+    // A bottle that lasts a month, said in units instead: the household picks
+    // the other framing and says two a day.
+    button(container, 'a day').click();
+    await vi.waitFor(() => {
+      expect(container.querySelector('#usage-a-day')).not.toBeNull();
+    });
+    enter(container, 'usage-a-day', '2');
+
+    await vi.waitFor(() => {
+      // Two a day for thirty reserve days is sixty units, not thirty.
+      expect(value(container, 'keep-at-least')).toBe('60');
+    });
+    expect(saved(storage)[0]).toMatchObject({ usageUnits: 2, usageDays: 1 });
+
+    // And back: the slow framing cannot say half a day, so it offers the nearest
+    // thing it can say — one a day — which is what a touch on it would store.
+    button(container, 'days each').click();
+    await vi.waitFor(() => {
+      expect(container.querySelector('#usage-days')).not.toBeNull();
+    });
+    expect(field(container, 'usage-days').value).toBe('1');
+  });
+
+  it('asks again for the next thing, rather than carrying the last answer over', async () => {
+    const { container } = openApp([detergent, tabs]);
+
+    button(container, 'a day').click();
+    await openThingPicker(container);
+    pickerButton(container, 'Dishwasher tabs').click();
+
+    // The tabs are a slow thing, so they are said the slow way.
+    await vi.waitFor(() => {
+      expect(container.querySelector('#usage-days')).not.toBeNull();
+    });
+    expect(field(container, 'usage-days').value).toBe('10');
+  });
+
   it('lets the reserve be nothing at all, for a household living on the lead time', async () => {
     const { container, storage } = openApp([detergent]);
 

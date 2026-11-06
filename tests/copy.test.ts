@@ -209,6 +209,18 @@ describe('summarising a thing in the picker', () => {
       '1 unit lasts 30 days · 3 days to fetch · 10 per pack',
     );
   });
+
+  it('says a thing used twice a day as two a day, not as half a day', () => {
+    expect(itemSummary({ ...detergent, usageUnits: 2, usageDays: 1 })).toBe(
+      '2 a day · 3 days to fetch',
+    );
+  });
+
+  it('keeps to whole days for a thing slower than one a day', () => {
+    expect(itemSummary({ ...detergent, usageUnits: 2, usageDays: 5 })).toBe(
+      '1 unit lasts 2.5 days · 3 days to fetch',
+    );
+  });
 });
 
 describe('naming a thing', () => {

@@ -160,11 +160,15 @@ tap.
 | F4 | The question names the shelf that is really here | **not quite** — D7 |
 
 Everything the file can say is checked at this one boundary: `format`, `version`
-(a newer one is refused, an older bare list is read), `usageDays ≥ 1`, the other
-days `≥ 0`, `packSize ≥ 1`, a blank name becoming `Unnamed thing`, and an id no
-earlier thing on the same shelf claimed — a repeat gets a suffix rather than
-sharing, so nothing on the shelf can end up impossible to tell from another
-(D3). What it does *not* check is that a day count is whole (D9).
+(a newer one is refused, an older bare list is read), `usageUnits ≥ 1`,
+`usageDays ≥ 1`, the other days `≥ 0`, `packSize ≥ 1`, **every number a whole
+number**, a blank name becoming `Unnamed thing`, and an id no earlier thing on
+the same shelf claimed — a repeat gets a suffix rather than sharing, so nothing on
+the shelf can end up impossible to tell from another (D3).
+
+`usageUnits` and `usageDays` are the rate — units over days — and a file written
+before the field existed means one unit at a time, so a version 1 shelf reads as
+the same shelf it always was (D9).
 
 ## M6 — A shelf coming in from a link (`App`'s hash effect → `decodeShelf`)
 
@@ -209,10 +213,18 @@ a row start two offers and the last outcome wins the notice, which is harmless.
 
 ## M9 — The numbers (inputs → the plan)
 
-Not a state machine, but the place where one enters the domain: `StepSlider`
-clamps what a hand can do (`min`, `max`, and a track widened for a value from a
-file), and `parsePresetFile` validates what a file can do. Neither insists on
-whole numbers — D9.
+Not a state machine, but the place where one enters the domain: `UsageControl`
+and `StepSlider` clamp what a hand can do (`min`, `max`, and a track widened for a
+value from a file), and `parsePresetFile` validates what a file can do, whole
+numbers only — D9.
+
+`UsageControl` has a small machine of its own: which of the two framings the
+household is saying the rate in — "days each" or "a day" — kept as a choice
+*tagged with the thing it was made for*, so another thing falls back to the
+framing its own rate fits. The framing is never stored anywhere else: the rate is
+the state, and the framing is only how it is being read out. A framing that
+cannot hold the current rate ("one unit lasts" for a thing used twice a day)
+shows the nearest number it can, which is what a touch there would store.
 
 ---
 
@@ -231,7 +243,7 @@ how the state was reached and seen, not a guess at it.
 | D6 | `pickerOpen` is true while the shelf is empty (delete the last thing from the sheet) | None today: the sheet is guarded out, and `+` from the empty screen is the same state used correctly | `App`: `pickerOpen && selected !== null`; `addThing` sets `pickerOpen` true | confirmed, left alone — the guard is the right shape |
 | D7 | The import question counts the shelf as it was at render time, not as it is when the file has been read | A wrong number in a question about losing data | `importPresets` closes over `items` across `await file.text()`; `resetDefaults` deliberately reads `store.getState()` instead | confirmed, not fixed — cosmetic |
 | D8 | `resetToDefaults` works out what it threw away by comparing names to the starters, so a thing the household added and named like a starter is not counted, and a renamed starter is | A wrong number in a confirmation message | `new Set(starters.map(item => item.name))` | confirmed, not fixed — cosmetic |
-| D9 | A file may say `leadDays: 0.5` or `packSize: 2.5`; nothing refuses a part of a day or part of a pack | Nonsense in the plan ("packs of 2.5") from a hand-edited file | `readNumber` checks finite and `≥ minimum`, not integrality | confirmed, not fixed |
+| D9 | A file may say `leadDays: 0.5` or `packSize: 2.5`; nothing refuses a part of a day or part of a pack | Nonsense in the plan ("packs of 2.5") from a hand-edited file | `readNumber` checks finite and `≥ minimum`, not integrality | **fixed** — `feat(domain): count the rate in units over days` (every number in a file is a whole number now) |
 | D10 | The stored selection keeps naming a deleted thing until the next commit | None: it heals on every load | `#openSomethingIfNothingIsOpen` changes the id in memory only, and `load` does not persist when the browser already held presets | confirmed, left alone |
 
 ## What was fixed, and how it is now held

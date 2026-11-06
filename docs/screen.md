@@ -19,8 +19,9 @@ Read from the top:
    own;
 5. one line that is the spoilage warning when a unit turns before it is used up,
    and the days-of-cover figure otherwise;
-6. the five sliders — how long a unit lasts, how long a fetch takes, the reserve
-   in days, the pack size, the shelf life;
+6. the five sliders — how fast the thing is used (said either as how long a unit
+   lasts or as how many a day, with a two-word toggle between the two), how long
+   a fetch takes, the reserve in days, the pack size, the shelf life;
 7. **🔗 Share this calculator**, and the commit this copy was built from.
 
 Everything that happens once in a while lives in the sheet: the list of things,

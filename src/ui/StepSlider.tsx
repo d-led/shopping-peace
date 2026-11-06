@@ -8,6 +8,11 @@ const TONE_RANGE = {
   success: 'range-success',
 } as const;
 
+/** The word beside the number: the unit itself, or the one it takes a plural of. */
+function unitAfter(value: number, unit: string, plural: string = `${unit}s`): string {
+  return value === 1 ? unit : plural;
+}
+
 export type SliderTone = keyof typeof TONE_RANGE;
 
 export interface StepSliderProps {
@@ -15,6 +20,8 @@ export interface StepSliderProps {
   readonly label: string;
   /** Singular unit, e.g. "day"; the plural is formed by adding an s. */
   readonly unit: string;
+  /** The unit as it reads with more than one, when adding an s would be wrong. */
+  readonly unitPlural?: string;
   readonly value: number;
   readonly min: number;
   readonly max: number;
@@ -37,6 +44,7 @@ export function StepSlider({
   id,
   label,
   unit,
+  unitPlural,
   value,
   min,
   max,
@@ -88,7 +96,7 @@ export function StepSlider({
             }}
           />
           <span class={`font-bold text-base-content/70 ${TEXT.small}`}>
-            {ending ?? (value === 1 ? unit : `${unit}s`)}
+            {ending ?? unitAfter(value, unit, unitPlural)}
           </span>
         </span>
       </div>

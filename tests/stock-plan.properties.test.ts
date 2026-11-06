@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { FRESHNESS_NEVER } from '../src/domain/stock-item';
-import { effectiveUsageDays, planStock } from '../src/domain/stock-plan';
+import { effectiveRate, effectiveUsageDays, planStock } from '../src/domain/stock-plan';
 import { requirements as wanted } from './support/property';
 
 describe('the plan, for every household you could think of', () => {
@@ -9,9 +9,11 @@ describe('the plan, for every household you could think of', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
         const plan = planStock(numbers);
-        expect(plan.waitUnits * effectiveUsageDays(numbers)).toBeGreaterThanOrEqual(
-          numbers.leadDays,
-        );
+        const rate = effectiveRate(numbers);
+
+        // Cross-multiplied, so this is whole-number arithmetic: the units held
+        // for the wait, in the rate's own units, cover the days it takes.
+        expect(plan.waitUnits * rate.days).toBeGreaterThanOrEqual(numbers.leadDays * rate.units);
       }),
     );
   });
@@ -20,10 +22,11 @@ describe('the plan, for every household you could think of', () => {
     fc.assert(
       fc.property(wanted, (numbers) => {
         const plan = planStock(numbers);
+        const rate = effectiveRate(numbers);
         if (plan.waitUnits === 0) {
           return;
         }
-        expect((plan.waitUnits - 1) * effectiveUsageDays(numbers)).toBeLessThan(numbers.leadDays);
+        expect((plan.waitUnits - 1) * rate.days).toBeLessThan(numbers.leadDays * rate.units);
       }),
     );
   });

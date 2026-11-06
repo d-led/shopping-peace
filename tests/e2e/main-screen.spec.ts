@@ -33,6 +33,21 @@ test.describe('the screen a household opens', () => {
     expect(overflowBy, 'the page is wider than the screen').toBeLessThanOrEqual(0);
   });
 
+  test('says how fast a thing goes either way round, and counts what is said', async ({ page }) => {
+    await openAppWith(page, [detergent]);
+
+    // A bottle that lasts a month, re-said as two a day: sixty units spare over
+    // the same thirty reserve days, and the fast framing comes back after a
+    // reload because the rate — not the framing — is what is kept.
+    await page.getByRole('button', { name: 'a day' }).click();
+    await page.locator('#usage-a-day').fill('2');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('60');
+
+    await page.reload();
+    await expect(page.locator('#usage-a-day')).toHaveValue('2');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('60');
+  });
+
   test('never scrolls sideways on the narrowest phone, or in the picker', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 568 });
     await openFreshApp(page);

@@ -1,25 +1,12 @@
-import { FRESHNESS_NEVER, type StockItem, type StockRequirements } from '../domain/stock-item';
+import type { StockItem, StockRequirements } from '../domain/stock-item';
 import { planStock, spoilsBeforeEmpty } from '../domain/stock-plan';
 import { KpiCard } from './KpiCard';
 import { ReserveCard } from './ReserveCard';
 import { StepSlider } from './StepSlider';
+import { UsageControl } from './UsageControl';
 import { fetchCard, itemLabel, keepCard, planCover, planHeadline, spoilsWarning } from './copy';
+import { LIMITS } from './limits';
 import { TEXT } from './text';
-
-/**
- * Slider limits: wide enough for a year's worth of a slow item, tight enough to
- * stay usable with a thumb. Every one starts where the plan starts making
- * sense — no reserve is a choice a household is allowed to make, and the
- * arithmetic has always handled it.
- */
-export const LIMITS = {
-  usageDays: { min: 1, max: 365 },
-  leadDays: { min: 0, max: 60 },
-  extraDays: { min: 0, max: 180 },
-  freshDays: { min: 0, max: FRESHNESS_NEVER },
-  // A case of 48 is about as big as a household buys of anything.
-  packSize: { min: 1, max: 48 },
-} as const;
 
 export interface ItemEditorProps {
   readonly item: StockItem;
@@ -119,15 +106,9 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
         </p>
 
         <div class="flex flex-col gap-6">
-          <StepSlider
-            id="usage-days"
-            tone="primary"
-            label="🗓️ One unit lasts"
-            unit="day"
-            value={item.usageDays}
-            min={LIMITS.usageDays.min}
-            max={LIMITS.usageDays.max}
-            onChange={(usageDays) => onChange(item.id, { usageDays })}
+          <UsageControl
+            item={item}
+            onChange={(patch) => onChange(item.id, patch)}
           />
           <StepSlider
             id="lead-days"

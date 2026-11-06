@@ -9,42 +9,57 @@ All of it happens in one place, `planStock()` in
 [`src/domain/stock-plan.ts`](../src/domain/stock-plan.ts). Nothing in the domain
 layer reads a file, a browser or a clock.
 
-## One unit, as time
+## How fast a thing goes, as two whole numbers
 
-`usageDays` is *how long one unit lasts*: a bottle that takes thirty days to get
-through has `usageDays = 30`. The daily rate is the reciprocal of that — one unit
-over thirty days — so the number the app asks for is already the rate you would
-type, and nothing has to be converted by hand.
+The app asks how fast a thing is used, and a household answers in one of two
+ways: *a bottle lasts thirty days* (`usageUnits = 1`, `usageDays = 30`) or *two
+tablets a day* (`usageUnits = 2`, `usageDays = 1`). Both are the same quantity —
+`usageUnits` units every `usageDays` days — and neither number is ever a part of
+a day. One a day is the edge the two answers share; nothing a household can say
+falls between them.
+
+The rate is kept as that pair rather than as the life of one unit, because the
+life is not a number a machine holds for the interesting cases. A third of a day
+is `0.333…`, and a quotient rounded up by it gains a whole unit: forty-five days
+at three a day is exactly 135 units, and dividing by a third of a day gives 136.
+Multiplied out by whole units over whole days, every comparison and every
+round-up is exact.
 
 A thing that goes off before it is finished is gone when it goes off, not when it
-is eaten. The plan therefore counts the shorter of use and shelf life:
+is eaten, so the plan uses whichever is the **faster**: the household's own rate,
+or one unit per day of shelf life — and never anything slower than one unit a
+day.
 
 $$
-L = \max\left(1,\ \min(\text{usageDays},\ \text{freshDays})\right)
+R = \max\left(\min\left(\frac{\text{usageUnits}}{\text{usageDays}},\ \frac{1}{1}\right),\ \frac{1}{\text{freshDays}}\right)
+\quad\text{and}\quad R = \frac{\text{usageUnits}}{\text{usageDays}}\ \text{when nothing spoils}
 $$
 
 The floor of a day is there so that something which will not keep at all is a
-day's worth of use rather than a division by zero. The freshness slider's top
-end, 365 days, means **never spoils** rather than a shelf life of exactly a year:
-a shelf life longer than a unit lasts changes nothing, so the plan uses
-`usageDays` as it is.
+day's worth of use rather than a division by zero — and it is the *faster of the
+two*, so a thing used twice a day is still planned at twice a day. The freshness
+slider's top end, 365 days, means **never spoils** rather than a shelf life of
+exactly a year: a shelf life longer than a unit lasts changes nothing.
 
 ## From days to whole units
 
-Four days of waiting at a roll every two days is two rolls, so days divided by
-days-per-unit *is* the number of units — and it is rounded up, because a shelf is
+Four days of waiting at a roll every two days is two rolls, so days multiplied by
+the rate *is* the number of units — and it is rounded up, because a shelf is
 counted in whole things:
 
 $$
-\text{waitUnits} = \left\lceil \frac{\text{leadDays}}{L} \right\rceil
+\text{waitUnits} = \left\lceil \frac{\text{leadDays} \times \text{usageUnits}}{\text{usageDays}} \right\rceil
 \qquad
-\text{reserveUnits} = \left\lceil \frac{\text{extraDays}}{L} \right\rceil
+\text{reserveUnits} = \left\lceil \frac{\text{extraDays} \times \text{usageUnits}}{\text{usageDays}} \right\rceil
 $$
 
-The code divides rather than multiplying by $1/L$. The two are the same
-arithmetic, but the reciprocal form rounds twice, and on some pairs it crosses a
-whole unit: 273 days at 91 days a unit is exactly three units, while
-$1/91 \times 273$ is `3.0000000000000004`, which the ceiling turns into four.
+This is where the rounding lives, and it is the reason the rate is a pair. The
+two numbers chosen so far — four days of waiting, a roll every two days — cannot
+cross a whole unit by accident, because the arithmetic is a product of integers
+divided once. Written the other way round, as days divided by the life of a unit,
+the divisor is the number that cannot be held: 273 days at 91 days a unit is
+exactly three units, while $1/91 \times 273$ is `3.0000000000000004`, which the
+ceiling turns into four.
 
 ## The plan
 
@@ -61,7 +76,7 @@ $$
 $$
 \text{shelfAfterFetch} = \text{reorderPoint} + \text{fetchQuantity}
 \qquad
-\text{days of cover} = \text{shelfAfterFetch} \times L
+\text{days of cover} = \frac{\text{shelfAfterFetch} \times \text{usageDays}}{\text{usageUnits}}
 $$
 
 $$
@@ -133,10 +148,15 @@ is counted as gone in seven days. A household that eats two units a week and buy
 them two at a time wastes one of them, and a plan that pretended otherwise would
 be worse than no plan.
 
-When `freshDays` is shorter than `usageDays`, the screen says so out loud, in the
-same slot the days-of-cover line would otherwise fill, so the warning costs no
-height of its own. The cover figure itself only appears from 640 px up: on a
-phone that line is there for the warning, and for nothing else.
+When `freshDays` is shorter than the time one unit takes to use up, the screen
+says so out loud, in the same slot the days-of-cover line would otherwise fill,
+so the warning costs no height of its own. The cover figure itself only appears
+from 640 px up: on a phone that line is there for the warning, and for nothing
+else.
+
+A thing used faster than once a day has nothing to fear from a shelf life of a
+day or more: two tablets a day means a unit is gone in half a day, so a three-day
+shelf life never gets a chance to matter, and no warning is shown.
 
 ## When the shop only sells packs
 

@@ -74,7 +74,7 @@ export function planCover(item: StockItem, plan: StockPlan): string {
  */
 export function spoilsWarning(item: StockItem): string {
   const turns = item.freshDays === 0 ? 'at once' : `${days(item.freshDays)} after opening`;
-  return `It turns ${turns}, so a unit is really gone in ${days(effectiveUsageDays(item))}, not the ${days(item.usageDays)} it takes to use up.`;
+  return `It turns ${turns}, so a unit is really gone in ${days(effectiveUsageDays(item))}, not the ${days(oneUnitLasts(item))} it takes to use up.`;
 }
 
 /** One of the two plan cards: the number, and what the number counts. */
@@ -134,7 +134,29 @@ export function reserveHolding(plan: StockPlan): string {
 /** The subtitle under each thing in the picker. */
 export function itemSummary(item: StockItem): string {
   const sold = item.packSize > 1 ? ` · ${item.packSize} per pack` : '';
-  return `1 unit lasts ${days(item.usageDays)} · ${days(item.leadDays)} to fetch${sold}`;
+  return `${rateOfUse(item)} · ${days(item.leadDays)} to fetch${sold}`;
+}
+
+/**
+ * How fast a thing goes, in the words a household would use for it: a bottle
+ * that lasts a month is not described as "0.03 a day", and a thing used twice a
+ * day is not described as "one unit lasts half a day". Quicker than a unit a day
+ * is said in units; anything else is said in how long one lasts.
+ */
+function rateOfUse(item: StockItem): string {
+  return oneUnitLasts(item) < 1
+    ? `${perDay(item)} a day`
+    : `1 unit lasts ${days(oneUnitLasts(item))}`;
+}
+
+/** Days one unit lasts, which is what a household reads for a slow thing. */
+function oneUnitLasts(item: StockItem): number {
+  return item.usageDays / item.usageUnits;
+}
+
+/** Units a day, for the things that go quicker than that. */
+function perDay(item: StockItem): number {
+  return item.usageUnits / item.usageDays;
 }
 
 /** "1 thing" / "3 things", for the export and import messages. */

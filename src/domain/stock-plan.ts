@@ -67,7 +67,7 @@ export function spoilsBeforeEmpty(requirements: StockRequirements): boolean {
  * 136 is one too many). Multiplied out by whole units over whole days, every
  * comparison and every rounding-up is exact.
  */
-interface Rate {
+export interface Rate {
   readonly units: number;
   readonly days: number;
 }
@@ -99,8 +99,11 @@ function unitsCovering(days: number, rate: Rate): number {
  * gets through a unit faster than that anyway, which is what a thing used twice
  * a day is. That floor is why a thing that spoils at once is planned at the rate
  * it is used rather than at an infinity of units.
+ *
+ * Exported as the pair it is, so nothing has to divide by it to reason about it:
+ * whole units over whole days compare and round exactly.
  */
-function effectiveRate(requirements: StockRequirements): Rate {
+export function effectiveRate(requirements: StockRequirements): Rate {
   const usage: Rate = { units: requirements.usageUnits, days: requirements.usageDays };
   if (requirements.freshDays >= FRESHNESS_NEVER) {
     return usage;

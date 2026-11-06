@@ -27,7 +27,7 @@ import never has to know which it was given. Both write the same document:
 ```json
 {
   "format": "shopping-peace",
-  "version": 1,
+  "version": 2,
   "exported": "2026-10-17T08:00:00.000Z",
   "selected": "a1b2c3",
   "things": [
@@ -35,6 +35,7 @@ import never has to know which it was given. Both write the same document:
       "id": "a1b2c3",
       "name": "Laundry detergent",
       "emoji": "🧴",
+      "usageUnits": 1,
       "usageDays": 30,
       "leadDays": 3,
       "extraDays": 30,
@@ -44,6 +45,10 @@ import never has to know which it was given. Both write the same document:
   ]
 }
 ```
+
+`usageUnits` and `usageDays` are how fast the thing goes, together: one unit
+every thirty days here, and `2` over `1` for something used twice a day. One a
+day is written either way. See [the arithmetic](arithmetic.md).
 
 The object, rather than a bare list, is there so a file can say what it is
 (`format`), when it was written (`exported`) and — the reason it exists — which
@@ -55,12 +60,16 @@ left out when nothing was.
   too, rather than guessed at.
 - **An older file is still read**: import takes the bare list this app wrote
   before the format was versioned.
-- **The numbers that drive the maths are required** and validated — `usageDays`
-  at least 1, the other days at least 0, `packSize` at least 1 — with an error
-  naming the preset (`Preset #2 needs usageDays to be at least 1.`).
-- **A missing field reads as the safe thing**: no `freshDays` means it keeps, no
-  `packSize` means sold one at a time, no `id` means a new one is made, and an
-  empty name shows as *Unnamed thing*.
+- **The numbers that drive the maths are required** and validated — `usageUnits`
+  and `packSize` at least 1, `usageDays` at least 1, the other days at least 0,
+  and every one of them a whole number — with an error naming the preset
+  (`Preset #2 needs usageDays to be at least 1.`). Half a day or half a pack is
+  refused: a day is a day and a pack is a pack, and a part of one is not something
+  a shelf or a shop can hold.
+- **A missing field reads as the safe thing**: no `usageUnits` means one unit at a
+  time (which is every file written before version 2), no `freshDays` means it
+  keeps, no `packSize` means sold one at a time, no `id` means a new one is made,
+  and an empty name shows as *Unnamed thing*.
 - **A picture left inside a name is moved out of it** into the `emoji` field on
   the way in — the one place the two are pulled apart. See [naming](naming.md).
 

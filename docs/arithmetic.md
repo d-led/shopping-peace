@@ -103,7 +103,7 @@ units, so the property tests can say so for any household's numbers.
 | `reorderPoint` | **Fetch more at** — the shelf level to shop at |
 | `packsPerFetch` | *"a 10-pack"*, or *"3 packs of 10"* |
 | `fetchQuantity` | *"🛒 Fetch …"* in the headline |
-| `shelfAfterFetch` | *"✓ you're at a level of N"*, and **N units ≈ M days of cover** |
+| `shelfAfterFetch` | *"✓ you're at a level of N"*, and **N units × M days each ≈ K days of cover** |
 | `reviewDays` | *"👀 Check the shelf every N days"*, the last clause of the headline |
 | `packSize` | **Sold in packs of** — `1` is sold one at a time |
 
@@ -221,7 +221,7 @@ rolls — and the shop sells tens.
 | **Keep at least** `3` units spare | reserve $= \lceil 6 \div 2 \rceil = 3$ |
 | **Fetch more at** `5` — *"3 spare + 2 for the wait"* | wait $= \lceil 4 \div 2 \rceil = 2$; reorder point $= 3 + 2$ |
 | *🗄️ Down to 5 units? 🛒 Fetch a 10-pack and you're at a level of 15 ✓, safe for emergencies. 👀 Check the shelf every 6 days.* | packs $= \max(1, \lceil 3 \div 10 \rceil) = 1$; level $= 5 + 10$; looks $= \lfloor 3 \times 2 \rfloor$ |
-| `15 units ≈ 30 days of cover.` | $15 \times 2$ days |
+| `15 units × 2 days each ≈ 30 days of cover.` | $15 \times 2$ days |
 
 A shop will not sell three spare rolls, so the household comes home with ten —
 seven more spare than it asked for — and the plan says so rather than pretending

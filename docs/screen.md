@@ -15,12 +15,19 @@ Read from the top:
    10-pack and you're at a level of 15 ✓, safe for emergencies. 👀 Check the
    shelf every 6 days."* — one paragraph, because it is one instruction, and
    because a household reading from across the kitchen gets it in one look;
+   each figure explains itself when it is pointed at, focused, or tapped: a strip
+   under the paragraph, placed absolutely so that nothing moves and nothing
+   grows, and kept inside the screen instead of hanging off a number near the
+   edge. The same words are in the paragraph for a screen reader, out of sight;
 4. **In reserve**, a plain card under the headline: the reserve as a cupboard holds
    it — whole packs plus the units outside them. It is stock to check, not one of
    the numbers to act on, so it carries no tone and no display-sized figure of its
    own;
 5. one line that is the spoilage warning when a unit turns before it is used up,
-   and the days-of-cover figure otherwise;
+   and the days-of-cover figure otherwise, with its working attached — *"33 units
+   ÷ 3 a day ≈ 11 days of cover"* — because there is room for it there, and a
+   figure a household cannot check is a figure it has to take on trust. The one
+   place a figure is explained in words rather than on demand;
 6. the five sliders — how fast the thing is used (said either as how long a unit
    lasts or as how many a day, with a two-word toggle between the two), how long
    a fetch takes, the reserve in days, the pack size, the shelf life;

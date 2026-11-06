@@ -1,9 +1,13 @@
 /** @jsxImportSource hono/jsx/dom */
+import type { Child } from 'hono/jsx';
+import { useState } from 'hono/jsx/dom';
+import type { HeadlinePart } from './copy';
+import { Hint } from './Hint';
 import { TEXT } from './text';
 
 export interface HeadlineProps {
-  /** The instruction, numbers and all, as the arithmetic words it. */
-  readonly text: string;
+  /** The instruction in pieces, the figures carrying what they mean. */
+  readonly parts: readonly HeadlinePart[];
 }
 
 /**
@@ -13,7 +17,7 @@ export interface HeadlineProps {
 const FIGURE = /(\d+(?:\s*✓)?[,.;:!?]*)/u;
 
 /**
- * The instruction, with its numbers sitting in their own little boxes.
+ * The instruction, with each figure in its own little box.
  *
  * The figures are what a household acts on — the level to shop at, what to fetch,
  * how often to look — so each gets a pastel wash inside a thin rounded border,
@@ -21,19 +25,69 @@ const FIGURE = /(\d+(?:\s*✓)?[,.;:!?]*)/u;
  * the digits (`leading-none`, no vertical padding), so a line of text is no taller
  * with the boxes than without them.
  *
- * Why the digits are found here rather than in `planHeadline`: the words have one
- * home, and this is the only place that has to know how they are painted.
+ * Pointing at a figure, focusing it or tapping it explains it, and the explaining
+ * happens *here* rather than under the finger: a tooltip hung off a number near
+ * the edge of a phone is a tooltip half off the screen, so it is a strip under the
+ * paragraph instead, absolutely placed so that nothing moves and nothing grows.
  */
-export function Headline({ text }: HeadlineProps) {
+export function Headline({ parts }: HeadlineProps) {
+  const [asked, setAsked] = useState<string | null>(null);
+
   return (
-    <p class={`text-center font-bold leading-snug ${TEXT.body}`} data-testid="headline">
-      {text
-        .split(FIGURE)
-        .map((piece, index) =>
-          /^\d/u.test(piece) ? <Figure key={index} figure={piece} /> : piece,
-        )}
+    <p
+      class={`relative text-center font-bold leading-snug ${TEXT.body}`}
+      data-testid="headline"
+    >
+      {parts.map((part, index) => figuresIn(part, index, setAsked))}
+      {parts.map((part, index) =>
+        part.hint === undefined ? null : (
+          <span key={hintId(index)} id={hintId(index)} class="sr-only">
+            {part.hint}
+          </span>
+        ),
+      )}
+      <span
+        class={`absolute inset-x-0 top-full z-20 rounded-md bg-neutral px-2 py-1 text-neutral-content ${TEXT.small} ${
+          asked === null ? 'hidden' : ''
+        }`}
+        data-testid="figure-hint"
+      >
+        {asked ?? ''}
+      </span>
     </p>
   );
+}
+
+/** The figures of one part, each boxed and each explained when the part knows how. */
+function figuresIn(
+  part: HeadlinePart,
+  partIndex: number,
+  onAsk: (hint: string | null) => void,
+): Child[] {
+  return part.text.split(FIGURE).map((piece, index) => {
+    if (!/^\d/u.test(piece)) {
+      return piece;
+    }
+
+    const box = <Figure key={index} figure={piece} />;
+    return part.hint === undefined ? (
+      box
+    ) : (
+      <Hint
+        key={index}
+        text={part.hint}
+        onAsk={onAsk}
+        describedBy={hintId(partIndex)}
+      >
+        {box}
+      </Hint>
+    );
+  });
+}
+
+/** Where a part's explanation lives, for the figure that describes it. */
+function hintId(partIndex: number): string {
+  return `headline-hint-${partIndex}`;
 }
 
 /**

@@ -354,6 +354,31 @@ describe('what the household sees first', () => {
     );
   });
 
+  it('lets a figure say what it means when it is pointed at', async () => {
+    const { container } = openApp([detergent]);
+    const figures = [
+      ...container.querySelectorAll('[data-testid="headline"] [aria-describedby]'),
+    ];
+    const asked = () => value(container, 'figure-hint');
+
+    // One figure per fact, each describing its own explanation, nothing said yet.
+    expect(figures).toHaveLength(4);
+    expect(asked()).toBe('');
+
+    const landing = figures[2];
+    landing?.dispatchEvent(new MouseEvent('pointerenter'));
+
+    await vi.waitFor(() => {
+      expect(asked()).toBe('Where a fetch leaves the shelf: the reserve, still whole.');
+    });
+
+    landing?.dispatchEvent(new MouseEvent('pointerleave'));
+
+    await vi.waitFor(() => {
+      expect(asked()).toBe('');
+    });
+  });
+
   it('keeps the reserve apart from the shopping, in the packs it is held in', () => {
     const { container } = openApp([paperInBulk]);
 
@@ -926,7 +951,7 @@ describe('touching the numbers', () => {
     await vi.waitFor(() => {
       expect(value(container, 'keep-at-least')).toBe('3');
     });
-    expect(textOf(container)).toContain('7 units ≈ 70 days of cover.');
+    expect(textOf(container)).toContain('7 units × 10 days each ≈ 70 days of cover.');
     expect(saved(storage)[0]?.usageDays).toBe(10);
   });
 
@@ -1052,7 +1077,7 @@ describe('touching the numbers', () => {
         "🛒 Fetch a 10-pack and you're at a level of 12 ✓, safe for emergencies.",
       );
     });
-    expect(textOf(container)).toContain('12 units ≈ 360 days of cover.');
+    expect(textOf(container)).toContain('12 units × 30 days each ≈ 360 days of cover.');
     expect(saved(storage)[0]?.packSize).toBe(10);
   });
 

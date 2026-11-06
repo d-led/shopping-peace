@@ -6,6 +6,7 @@ import {
   deleteQuestion,
   exportedNotice,
   fetchCard,
+  headlineParts,
   importFailed,
   importedNotice,
   importQuestion,
@@ -55,6 +56,29 @@ describe('the instruction the household reads first', () => {
     );
   });
 
+  it('says what each figure means, so a pointer can ask about one at a time', () => {
+    const hints = headlineParts(planStock(detergent)).flatMap((part) =>
+      part.hint === undefined ? [] : [part.hint],
+    );
+
+    expect(hints).toEqual([
+      'The shelf level to shop at: what a wait eats, plus the reserve.',
+      'How much to bring home, in whole packs.',
+      'Where a fetch leaves the shelf: the reserve, still whole.',
+      'How often to look: the reserve is what buys the gap between looks.',
+    ]);
+  });
+
+  it('has only two figures to explain when no reserve is kept', () => {
+    const hints = headlineParts(planStock(thing({ extraDays: 0 }))).flatMap((part) =>
+      part.hint === undefined ? [] : [part.hint],
+    );
+
+    // Nothing lands on a level when nothing is held back, and looking "every
+    // day" is not a figure at all.
+    expect(hints).toHaveLength(2);
+  });
+
   it('counts in whole units, so the number cannot be read as a reserve', () => {
     const slow = thing({ usageDays: 10, leadDays: 25, extraDays: 30 });
 
@@ -62,8 +86,10 @@ describe('the instruction the household reads first', () => {
     expect(planHeadline(planStock(slow))).toContain('Down to 6 units?');
   });
 
-  it('translates the shelf a fetch lands on into days of cover', () => {
-    expect(planCover(detergent, planStock(detergent))).toBe('5 units ≈ 150 days of cover.');
+  it('translates the shelf a fetch lands on into days of cover, showing the working', () => {
+    expect(planCover(detergent, planStock(detergent))).toBe(
+      '5 units × 30 days each ≈ 150 days of cover.',
+    );
   });
 
   it('asks for nothing by number when there is no reserve to rebuild', () => {
@@ -84,13 +110,33 @@ describe('the instruction the household reads first', () => {
 
   it('says "unit" when there is exactly one', () => {
     const single = { ...detergent, leadDays: 0, extraDays: 0 };
-    expect(planCover(single, planStock(single))).toBe('1 unit ≈ 30 days of cover.');
+    expect(planCover(single, planStock(single))).toBe(
+      '1 unit × 30 days each ≈ 30 days of cover.',
+    );
+  });
+
+  it('divides by the rate for a thing used several times a day', () => {
+    // Three a day, a two-day wait, four days of reserve, sold five at a time:
+    // thirty-three units on the shelf, and thirty-three at three a day is eleven.
+    const coffees = thing({
+      usageUnits: 3,
+      usageDays: 1,
+      leadDays: 2,
+      extraDays: 4,
+      packSize: 5,
+    });
+
+    expect(planCover(coffees, planStock(coffees))).toBe(
+      '33 units ÷ 3 a day ≈ 11 days of cover.',
+    );
   });
 
   it('counts a perishable at the size it is really gone in', () => {
     // Three units of butter: one for the wait, one of reserve, one fetched —
     // each gone a week after opening.
-    expect(planCover(butter, planStock(butter))).toBe('3 units ≈ 21 days of cover.');
+    expect(planCover(butter, planStock(butter))).toBe(
+      '3 units × 7 days each ≈ 21 days of cover.',
+    );
   });
 });
 
@@ -117,7 +163,9 @@ describe('the household\'s own toilet paper, ten rolls at a time', () => {
 
   it('counts the cupboard space the order point and the pack need together', () => {
     // Nine rolls to fetch at, plus the pack of ten: nineteen.
-    expect(planCover(paper, planStock(paper))).toBe('19 units ≈ 38 days of cover.');
+    expect(planCover(paper, planStock(paper))).toBe(
+      '19 units × 2 days each ≈ 38 days of cover.',
+    );
   });
 
   it('counts several packs when one will not cover the reserve', () => {

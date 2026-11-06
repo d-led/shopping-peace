@@ -1,5 +1,5 @@
 import { InvalidPresetFileError } from '../data/presets-file';
-import { effectiveUsageDays, type StockPlan } from '../domain/stock-plan';
+import { effectiveRate, effectiveUsageDays, type Rate, type StockPlan } from '../domain/stock-plan';
 import { UNNAMED_ITEM, type StockItem } from '../domain/stock-item';
 
 /** What to call a thing on screen, even when it has not been named yet. */
@@ -47,11 +47,67 @@ export function pictureButtonLabel(item: StockItem): string {
  * nowhere.
  */
 export function planHeadline(plan: StockPlan): string {
-  const look = `👀 ${lookEvery(plan.reviewDays)}`;
+  return headlineParts(plan)
+    .map((part) => part.text)
+    .join('');
+}
+
+/**
+ * A piece of the instruction: words, or one figure with the meaning it carries.
+ *
+ * The parts exist so that a figure can be explained where it stands — the words
+ * have one home, and a number's meaning is fixed by the sentence rather than by
+ * counting how many numbers came before it.
+ */
+export interface HeadlinePart {
+  readonly text: string;
+  /** What this part's figure means, when it is a figure worth explaining. */
+  readonly hint?: string;
+}
+
+/**
+ * The instruction, in pieces, the figures carrying what they mean.
+ *
+ * Nothing here is said inline: the sentence is already four facts long, and these
+ * are the words a household asks for by pointing at a number. The cards above keep
+ * their own captions instead, because a household reads those before it thinks to
+ * point at anything.
+ */
+export function headlineParts(plan: StockPlan): readonly HeadlinePart[] {
+  const look = lookClause(plan.reviewDays);
+  const shelf: HeadlinePart = {
+    text: units(plan.reorderPoint),
+    hint: 'The shelf level to shop at: what a wait eats, plus the reserve.',
+  };
+  const fetch: HeadlinePart = {
+    text: packed(plan),
+    hint: 'How much to bring home, in whole packs.',
+  };
+
   if (plan.reserveUnits === 0) {
-    return `🗄️ Down to ${units(plan.reorderPoint)}? No reserve, so 🛒 fetch ${packed(plan)} as this one runs out. ${look}`;
+    return [
+      { text: '🗄️ Down to ' },
+      shelf,
+      { text: '? No reserve, so 🛒 fetch ' },
+      fetch,
+      { text: ' as this one runs out. ' },
+      ...look,
+    ];
   }
-  return `🗄️ Down to ${units(plan.reorderPoint)}? 🛒 Fetch ${packed(plan)} and you're at a level of ${plan.shelfAfterFetch} ✓, safe for emergencies. ${look}`;
+
+  return [
+    { text: '🗄️ Down to ' },
+    shelf,
+    { text: '? 🛒 Fetch ' },
+    fetch,
+    { text: " and you're at a level of " },
+    {
+      text: `${plan.shelfAfterFetch} ✓,`,
+      hint: 'Where a fetch leaves the shelf: the reserve, still whole.',
+    },
+    { text: ' safe for emergencies. ' },
+    ...look,
+  ];
 }
 
 /**
@@ -62,8 +118,19 @@ export function planHeadline(plan: StockPlan): string {
  * thinner than a day's use — or none at all — falls back to "every day" rather
  * than to "never": the cure for a thin reserve is a bigger reserve.
  */
-function lookEvery(reviewDays: number): string {
-  return reviewDays <= 1 ? 'Check the shelf every day.' : `Check the shelf every ${reviewDays} days.`;
+function lookClause(reviewDays: number): readonly HeadlinePart[] {
+  if (reviewDays <= 1) {
+    return [{ text: '👀 Check the shelf every day.' }];
+  }
+
+  return [
+    { text: '👀 Check the shelf every ' },
+    {
+      text: String(reviewDays),
+      hint: 'How often to look: the reserve is what buys the gap between looks.',
+    },
+    { text: ' days.' },
+  ];
 }
 
 /**
@@ -84,10 +151,34 @@ function packed(plan: StockPlan): string {
  * How long the shelf lasts once a fetch has landed — the number a household can
  * picture, and the one that says how much cupboard space this needs. It counts
  * the packages, so it can be higher than the reserve.
+ *
+ * The working is shown rather than just the answer, because a figure a household
+ * cannot check is a figure it has to take on trust: thirty-two units at three a
+ * day is thirty-two divided by three, and saying so is what makes eleven days
+ * believable. A unit that lasts longer than a day is counted the other way round,
+ * because that is how a household holds it.
  */
 export function planCover(item: StockItem, plan: StockPlan): string {
-  const cover = Math.round(plan.shelfAfterFetch * effectiveUsageDays(item));
-  return `${units(plan.shelfAfterFetch)} ≈ ${cover} ${cover === 1 ? 'day' : 'days'} of cover.`;
+  const rate = effectiveRate(item);
+  const everyUnit = rate.days / rate.units;
+  const cover = Math.round(plan.shelfAfterFetch * everyUnit);
+
+  return `${units(plan.shelfAfterFetch)}${countedAt(rate)} ≈ ${days(cover)} of cover.`;
+}
+
+/** The rate the units are counted at, or nothing when it is one a day. */
+function countedAt(rate: Rate): string {
+  if (rate.units === rate.days) {
+    return '';
+  }
+  return rate.units > rate.days
+    ? ` ÷ ${oneDecimal(rate.units / rate.days)} a day`
+    : ` × ${oneDecimal(rate.days / rate.units)} days each`;
+}
+
+/** A rate as a household would say it: 3, or 1.5, and never 1.5000000001. */
+function oneDecimal(value: number): string {
+  return String(Math.round(value * 10) / 10);
 }
 
 /**

@@ -165,6 +165,24 @@ test.describe('the screen a household opens', () => {
     await expect(cover).toBeHidden();
   });
 
+  test('explains a figure when it is pointed at, or tapped by a thumb', async ({ page, hasTouch }) => {
+    await openAppWith(page, [detergent]);
+    const hint = page.getByTestId('figure-hint');
+    const landing = page.locator('[data-testid="headline"] [aria-describedby]').nth(2);
+
+    await expect(hint).toBeHidden();
+
+    if (hasTouch) {
+      // A tap on a number is how a phone asks what it is.
+      await landing.tap();
+    } else {
+      await landing.hover();
+    }
+
+    await expect(hint).toBeVisible();
+    await expect(hint).toHaveText('Where a fetch leaves the shelf: the reserve, still whole.');
+  });
+
   test('says where it came from, and which commit this copy is', async ({ page }) => {
     await openFreshApp(page);
 

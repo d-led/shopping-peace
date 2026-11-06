@@ -4,7 +4,7 @@ import { KpiCard } from './KpiCard';
 import { ReserveCard } from './ReserveCard';
 import { StepSlider } from './StepSlider';
 import { UsageControl } from './UsageControl';
-import { fetchCard, itemLabel, keepCard, planCover, planHeadline, spoilsWarning } from './copy';
+import { fetchCard, headlineParts, itemLabel, keepCard, planCover, spoilsWarning } from './copy';
 import { Headline } from './Headline';
 import { LIMITS } from './limits';
 import { TEXT } from './text';
@@ -73,7 +73,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
           />
         </div>
 
-        <Headline text={planHeadline(plan)} />
+        <Headline parts={headlineParts(plan)} />
 
         {/* Stock, not shopping: what has to be there, and how it is held. */}
         <ReserveCard plan={plan} />

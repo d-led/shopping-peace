@@ -40,7 +40,7 @@ rebuilt (`#refresh`), so it is never a copy that has gone stale.
 | # | Invariant | Where it is held |
 | --- | --- | --- |
 | S1 | `selected` is the thing whose id is the remembered one, or `null` when the shelf no longer holds it | `#refresh` |
-| S2 | No two things on the shelf share an id | **nowhere** — see D3 |
+| S2 | No two things on the shelf share an id | `parsePresetFile`, at the boundary where foreign shelves come in |
 | S3 | A shelf that is not empty has something open | `#openSomethingIfNothingIsOpen`, `add`, `remove`, `replaceAll`, `resetToDefaults` |
 | S4 | What the store holds is what the browser holds: a change is saved before it is announced | `#commit` → `#persist` → `#announce` |
 | S5 | Every accepted change produces a new state object, so a view comparing by identity re-renders | `#refresh` |
@@ -161,8 +161,10 @@ tap.
 
 Everything the file can say is checked at this one boundary: `format`, `version`
 (a newer one is refused, an older bare list is read), `usageDays ≥ 1`, the other
-days `≥ 0`, `packSize ≥ 1`, a blank name becoming `Unnamed thing`. What it does
-*not* check is that ids are unique (D3) or that day counts are whole (D9).
+days `≥ 0`, `packSize ≥ 1`, a blank name becoming `Unnamed thing`, and an id no
+earlier thing on the same shelf claimed — a repeat gets a suffix rather than
+sharing, so nothing on the shelf can end up impossible to tell from another
+(D3). What it does *not* check is that a day count is whole (D9).
 
 ## M6 — A shelf coming in from a link (`App`'s hash effect → `decodeShelf`)
 
@@ -243,8 +245,10 @@ how the state was reached and seen, not a guess at it.
   keyboard leaves, then reaches and taps the last icon.
 - **D3** — a file that repeats an id gets a second one for the repeat, at the
   boundary where foreign shelves come in (`parsePresetFile`), so the rest of the
-  app can keep believing S2. Held by unit tests on the file reader and on
-  deleting one of two once-identical things.
+  app can keep believing S2. Held by unit tests on the file reader, by a property
+  that no shelf read back has two things under one id, and by a screen test that
+  imports two things a file named the same way and deletes only the one asked
+  for.
 
 ## Reproducing the register
 

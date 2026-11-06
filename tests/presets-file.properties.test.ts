@@ -18,10 +18,17 @@ const preset: fc.Arbitrary<StockItem> = fc.record({
   packSize: fc.integer({ min: 1, max: 48 }),
 });
 
+/**
+ * A shelf as the app writes one, where no two things share an id: that is the
+ * rule the app keeps everywhere else, so the round trip is about what else the
+ * file carries.
+ */
+const shelf = fc.uniqueArray(preset, { selector: (item) => item.id, maxLength: 12 });
+
 describe('a file of presets, whatever is in it', () => {
   it('reads back exactly what it was given', () => {
     fc.assert(
-      fc.property(fc.array(preset, { maxLength: 12 }), (presets) => {
+      fc.property(shelf, (presets) => {
         expect(parsePresets(serializePresets(presets))).toEqual(presets);
       }),
     );
@@ -29,9 +36,20 @@ describe('a file of presets, whatever is in it', () => {
 
   it('survives a second round trip unchanged', () => {
     fc.assert(
-      fc.property(fc.array(preset, { maxLength: 12 }), (presets) => {
+      fc.property(shelf, (presets) => {
         const once = parsePresets(serializePresets(presets));
         expect(parsePresets(serializePresets(once))).toEqual(once);
+      }),
+    );
+  });
+
+  it('gives every thing an id of its own, however often the file repeats one', () => {
+    fc.assert(
+      fc.property(fc.array(preset, { maxLength: 12 }), (presets) => {
+        const things = parsePresets(serializePresets(presets));
+
+        expect(things).toHaveLength(presets.length);
+        expect(new Set(things.map((item) => item.id)).size).toBe(things.length);
       }),
     );
   });

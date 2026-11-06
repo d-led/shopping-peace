@@ -546,6 +546,32 @@ describe('the full screen of things', () => {
     expect(saved(storage)).toHaveLength(1);
   });
 
+  it('deletes only the thing asked for when a file named two of them the same', async () => {
+    const { container, storage } = openApp([detergent]);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const shared = 'a-shared-id';
+    const shelf = serializePresets(
+      [
+        { ...detergent, id: shared, name: 'Butter' },
+        { ...tabs, id: shared, name: 'Cat litter' },
+      ],
+      new Date('2026-10-16T08:00:00Z'),
+      shared,
+    );
+
+    await openThingPicker(container);
+    pickFile(container, shelf);
+    await vi.waitFor(() => {
+      expect(saved(storage)).toHaveLength(2);
+    });
+
+    button(container, '🗑️ Delete').click();
+
+    await vi.waitFor(() => {
+      expect(saved(storage).map((item) => item.name)).toEqual(['Cat litter']);
+    });
+  });
+
   it('adds a thing from one + press and hands you the name field', async () => {
     const { container, storage } = openApp([detergent]);
 

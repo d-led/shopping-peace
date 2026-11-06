@@ -104,7 +104,12 @@ function slugOf(name: string): string {
  */
 export function parsePresetFile(text: string, createId: () => string = newId): PresetShelf {
   const parsed = parseJson(text);
-  const things = thingsIn(parsed).map((entry, index) => toStockItem(entry, index, createId));
+  // Nothing on the shelf may share an id with anything else: two things under
+  // one id cannot be told apart, so deleting one would delete both.
+  const taken = new Set<string>();
+  const things = thingsIn(parsed).map((entry, index) =>
+    toStockItem(entry, index, createId, taken),
+  );
   return { things, selected: selectedIn(parsed, things) };
 }
 
@@ -165,14 +170,19 @@ function checkVersion(version: unknown): void {
   }
 }
 
-function toStockItem(entry: unknown, index: number, createId: () => string): StockItem {
+function toStockItem(
+  entry: unknown,
+  index: number,
+  createId: () => string,
+  taken: Set<string>,
+): StockItem {
   if (!isRecord(entry)) {
     throw new InvalidPresetFileError(`Preset ${position(index)} is not an object.`);
   }
   const where = `Preset ${position(index)}`;
   const named = nameAndEmoji(entry, where);
   return {
-    id: readId(entry.id, createId),
+    id: uniqueId(readId(entry.id, createId), taken),
     name: named.name,
     emoji: named.emoji,
     usageDays: readNumber(entry.usageDays, where, 'usageDays', 1),
@@ -209,6 +219,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function readId(value: unknown, createId: () => string): string {
   return typeof value === 'string' && value !== '' ? value : createId();
+}
+
+/**
+ * An id no earlier thing on this shelf claimed. The first claim keeps the id the
+ * file wrote, because that is the one its `selected` points at; a repeat — two
+ * exports spliced together, or a hand edit — gets a suffix of its own instead of
+ * being dropped or sharing.
+ */
+function uniqueId(asked: string, taken: Set<string>): string {
+  let id = asked;
+  for (let count = 2; taken.has(id); count += 1) {
+    id = `${asked}-${count}`;
+  }
+  taken.add(id);
+  return id;
 }
 
 /** Text that may be missing, but has to be text when it is there. */

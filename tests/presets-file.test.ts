@@ -11,6 +11,13 @@ import {
 import { FRESHNESS_NEVER, UNNAMED_ITEM } from '../src/domain/stock-item';
 import { thing } from './support/items';
 
+/** Two things a file claims the same id for: a hand edit, or two exports spliced. */
+function underOneId(name: string): string {
+  const shared = 'a-shared-id';
+  const things = [thing({ id: shared, name }), thing({ id: shared, name: `${name}, again` })];
+  return serializePresets(things, new Date('2026-10-16T08:00:00Z'), shared);
+}
+
 const detergent = thing({
   id: 'detergent',
   name: 'Laundry detergent',
@@ -71,8 +78,7 @@ describe('presets travelling as a file', () => {
   });
 });
 
-describe('files written before the format was versioned', () => {
-  it('still reads a bare list of things', () => {
+describe('files written before the format was versioned', () => {  it('still reads a bare list of things', () => {
     expect(parsePresets(`[${withoutFreshness}]`)[0]?.name).toBe(UNNAMED_ITEM);
   });
 
@@ -82,6 +88,19 @@ describe('files written before the format was versioned', () => {
 
   it('leaves a name without a picture exactly as it was', () => {
     expect(parsePresets(`[${withoutFreshness}]`)[0]?.emoji).toBe('');
+  });
+});
+
+describe('a file that names two things with one id', () => {
+  it('keeps both, giving the second an id of its own', () => {
+    const { things } = parsePresetFile(underOneId('Butter'));
+
+    expect(things.map((item) => item.name)).toEqual(['Butter', 'Butter, again']);
+    expect(things[1]?.id).not.toBe(things[0]?.id);
+  });
+
+  it('still opens the thing the file names', () => {
+    expect(parsePresetFile(underOneId('Butter')).selected).toBe('a-shared-id');
   });
 });
 

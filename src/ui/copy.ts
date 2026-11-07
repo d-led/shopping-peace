@@ -1,5 +1,11 @@
 import { InvalidPresetFileError } from '../data/presets-file';
-import { effectiveRate, effectiveUsageDays, type Rate, type StockPlan } from '../domain/stock-plan';
+import {
+  effectiveRate,
+  effectiveUsageDays,
+  type PlanTrouble,
+  type Rate,
+  type StockPlan,
+} from '../domain/stock-plan';
 import { UNNAMED_ITEM, type StockItem } from '../domain/stock-item';
 
 /** What to call a thing on screen, even when it has not been named yet. */
@@ -66,22 +72,20 @@ export interface HeadlinePart {
 }
 
 /**
- * The instruction, in pieces, the figures carrying what they mean.
+ * The instruction, in pieces, the figures carrying the sum they came from.
  *
- * Nothing here is said inline: the sentence is already four facts long, and these
- * are the words a household asks for by pointing at a number. The cards above keep
- * their own captions instead, because a household reads those before it thinks to
- * point at anything.
+ * Nothing here is said inline, and nothing is a sentence: a household that points
+ * at a number wants to check it, not to read, so each explanation is the two
+ * numbers that make it, each named for what it counts. The names are what makes
+ * a sum checkable — a bare pair of numbers only says that two numbers exist —
+ * and the words stop at naming: "2 days of slack" says what the figure is, not
+ * how a household should feel about it.
  */
 export function headlineParts(plan: StockPlan): readonly HeadlinePart[] {
-  const look = lookClause(plan.reviewDays);
+  const look = lookClause(plan);
   const shelf: HeadlinePart = {
     text: units(plan.reorderPoint),
-    hint: 'The shelf level to shop at: what a wait eats, plus the reserve.',
-  };
-  const fetch: HeadlinePart = {
-    text: packed(plan),
-    hint: 'How much to bring home, in whole packs.',
+    hint: `${plan.waitUnits} for the wait + ${plan.reserveUnits} spare`,
   };
 
   if (plan.reserveUnits === 0) {
@@ -89,7 +93,7 @@ export function headlineParts(plan: StockPlan): readonly HeadlinePart[] {
       { text: '🗄️ Down to ' },
       shelf,
       { text: '? No reserve, so 🛒 fetch ' },
-      fetch,
+      fetchPart(plan),
       { text: ' as this one runs out. ' },
       ...look,
     ];
@@ -99,15 +103,56 @@ export function headlineParts(plan: StockPlan): readonly HeadlinePart[] {
     { text: '🗄️ Down to ' },
     shelf,
     { text: '? 🛒 Fetch ' },
-    fetch,
+    fetchPart(plan),
     { text: " and you're at a level of " },
     {
       text: `${plan.shelfAfterFetch} ✓,`,
-      hint: 'Where a fetch leaves the shelf: the reserve, still whole.',
+      hint: `if you buy ${plan.fetchQuantity} at ${plan.reorderPoint} left`,
     },
-    { text: ' safe for emergencies. ' },
+    ...safetyClause(plan),
     ...look,
   ];
+}
+
+/**
+ * What the level a fetch lands on is safe against.
+ *
+ * "Safe for emergencies" is a claim, and the reserve is what has to make it
+ * good: a spare of two days answers a shop that slips by two days and no more.
+ * When the spare is thinner than the wait — which is most household plans, since
+ * nobody keeps three weeks of coffee — the words say how much slack there really
+ * is, in the same length of time the look interval is measured in. The two
+ * figures coming out the same number is the point: the spare is what the looking
+ * and the waiting are both paid out of.
+ */
+function safetyClause(plan: StockPlan): readonly HeadlinePart[] {
+  if (plan.reserveUnits >= plan.waitUnits) {
+    return [{ text: ' safe for emergencies. ' }];
+  }
+
+  const spare = spareDays(plan);
+  return [
+    { text: ' safe for ' },
+    { text: String(spare), hint: slackHint(plan) },
+    { text: ` ${dayWord(spare)} of slack. ` },
+  ];
+}
+
+/** The spare as a length of time: never less than a day, since a day is the unit. */
+function spareDays(plan: StockPlan): number {
+  return Math.max(1, plan.reviewDays);
+}
+
+/**
+ * What to fetch, and why it is that size. A pack is what a fetch brings home,
+ * whichever way the shop is counted, so the pack is the reason the number is
+ * bigger than the reserve — worth one line of words, and not worth saying when
+ * things are fetched one at a time.
+ */
+function fetchPart(plan: StockPlan): HeadlinePart {
+  return plan.packSize > 1
+    ? { text: packed(plan), hint: `fetched in packs of ${plan.packSize}` }
+    : { text: packed(plan) };
 }
 
 /**
@@ -118,19 +163,28 @@ export function headlineParts(plan: StockPlan): readonly HeadlinePart[] {
  * thinner than a day's use — or none at all — falls back to "every day" rather
  * than to "never": the cure for a thin reserve is a bigger reserve.
  */
-function lookClause(reviewDays: number): readonly HeadlinePart[] {
-  if (reviewDays <= 1) {
+function lookClause(plan: StockPlan): readonly HeadlinePart[] {
+  if (plan.reviewDays <= 1) {
     return [{ text: '👀 Check the shelf every day.' }];
   }
 
   return [
     { text: '👀 Check the shelf every ' },
-    {
-      text: String(reviewDays),
-      hint: 'How often to look: the reserve is what buys the gap between looks.',
-    },
+    { text: String(plan.reviewDays), hint: slackHint(plan) },
     { text: ' days.' },
   ];
+}
+
+/**
+ * Where the look interval comes from: the spare, counted at the rate it goes.
+ *
+ * Two days is not two days because two days was typed anywhere — it is six units
+ * of spare at three a day, and the words say which number is which. What the
+ * spare cannot reach is a slow shop; that is said in the sentence, where it
+ * belongs, because it is a fact about the plan and not about this figure.
+ */
+function slackHint(plan: StockPlan): string {
+  return `${plan.reserveUnits} spare${daysPerUnitStep(plan.daysPerUnit)} ≈ ${days(plan.reviewDays)}`;
 }
 
 /**
@@ -168,12 +222,20 @@ export function planCover(item: StockItem, plan: StockPlan): string {
 
 /** The rate the units are counted at, or nothing when it is one a day. */
 function countedAt(rate: Rate): string {
-  if (rate.units === rate.days) {
+  return daysPerUnitStep(rate.days / rate.units);
+}
+
+/**
+ * Units turned into days in one step a household can follow: "÷ 3 a day" for a
+ * thing used several times a day, "× 30 days each" for a slow one.
+ */
+function daysPerUnitStep(daysPerUnit: number): string {
+  if (daysPerUnit === 1) {
     return '';
   }
-  return rate.units > rate.days
-    ? ` ÷ ${oneDecimal(rate.units / rate.days)} a day`
-    : ` × ${oneDecimal(rate.days / rate.units)} days each`;
+  return daysPerUnit > 1
+    ? ` × ${oneDecimal(daysPerUnit)} days each`
+    : ` ÷ ${oneDecimal(1 / daysPerUnit)} a day`;
 }
 
 /** A rate as a household would say it: 3, or 1.5, and never 1.5000000001. */
@@ -188,6 +250,25 @@ function oneDecimal(value: number): string {
 export function spoilsWarning(item: StockItem): string {
   const turns = item.freshDays === 0 ? 'at once' : `${days(item.freshDays)} after opening`;
   return `It turns ${turns}, so a unit is really gone in ${days(effectiveUsageDays(item))}, not the ${days(oneUnitLasts(item))} it takes to use up.`;
+}
+
+/**
+ * Each way a plan cannot work, said in one line a household can act on.
+ *
+ * Kept beside the spoilage sentence they replace or accompany, and deliberately
+ * short: these appear in the one alert slot the screen has, and a warning nobody
+ * finishes reading is not a warning.
+ */
+const TROUBLE_WORDING: Readonly<Record<PlanTrouble, (item: StockItem) => string>> = {
+  'nothing-keeps': (item) =>
+    `It keeps for no time at all, and fetching takes ${days(item.leadDays)}: nothing fetched can still be good.`,
+  'no-reserve': () => 'Nothing spare: the shelf is empty exactly as a fetch lands.',
+  'spoils-before-used': (item) => spoilsWarning(item),
+};
+
+/** What is wrong with a plan, as the sentence the alert slot shows. */
+export function troubleWords(trouble: PlanTrouble, item: StockItem): string {
+  return TROUBLE_WORDING[trouble](item);
 }
 
 /** One of the two plan cards: the number, and what the number counts. */
@@ -209,6 +290,25 @@ export function keepCard(plan: StockPlan): PlanCard {
     return { value: plan.reorderPoint, caption: `${unitWord(plan.reorderPoint)} — no reserve` };
   }
   return { value: plan.reserveUnits, caption: `${unitWord(plan.reserveUnits)} spare` };
+}
+
+/**
+ * Where the reserve figure comes from, as the two numbers that make it: how fast
+ * the thing goes, and how many days of it the household wants spare.
+ *
+ * The rate is said the way the usage row says it — "3/day" for a thing used
+ * several times a day, "1 every 30 days" for a slow one — because that is the
+ * phrasing the household typed a moment ago.
+ */
+export function reserveCalculation(item: StockItem, plan: StockPlan): string {
+  return `${rateLabel(plan.daysPerUnit)} × ${item.extraDays} days reserve`;
+}
+
+/** The rate in the words the usage row uses, for the sums a pointer asks about. */
+function rateLabel(daysPerUnit: number): string {
+  return daysPerUnit > 1
+    ? `1 every ${oneDecimal(daysPerUnit)} days`
+    : `${oneDecimal(1 / daysPerUnit)}/day`;
 }
 
 /**
@@ -363,7 +463,12 @@ export function resetQuestion(count: number): string {
 }
 
 function days(count: number): string {
-  return `${count} ${count === 1 ? 'day' : 'days'}`;
+  return `${count} ${dayWord(count)}`;
+}
+
+/** The word alone, for figures a caller has already written out. */
+function dayWord(count: number): string {
+  return count === 1 ? 'day' : 'days';
 }
 
 /** The word on its own, for captions that already have a number above them. */

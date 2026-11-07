@@ -1,10 +1,18 @@
 import type { StockItem, StockRequirements } from '../domain/stock-item';
-import { planStock, spoilsBeforeEmpty } from '../domain/stock-plan';
+import { planStock, spoilsBeforeEmpty, troublesIn } from '../domain/stock-plan';
 import { KpiCard } from './KpiCard';
 import { ReserveCard } from './ReserveCard';
 import { StepSlider } from './StepSlider';
 import { UsageControl } from './UsageControl';
-import { fetchCard, headlineParts, itemLabel, keepCard, planCover, spoilsWarning } from './copy';
+import {
+  fetchCard,
+  headlineParts,
+  itemLabel,
+  keepCard,
+  planCover,
+  reserveCalculation,
+  troubleWords,
+} from './copy';
 import { Headline } from './Headline';
 import { LIMITS } from './limits';
 import { TEXT } from './text';
@@ -21,6 +29,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
   const plan = planStock(item);
   const keep = keepCard(plan);
   const fetch = fetchCard(plan);
+  const troubles = troublesIn(item);
 
   return (
     <section class="card min-w-0 bg-base-100 shadow-xl border border-base-300 rounded-none sm:rounded-box">
@@ -56,7 +65,6 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
             title="Fetch more at"
             value={fetch.value}
             caption={fetch.caption}
-            hint="Shop when the last spare is opened: the wait would otherwise eat what is left."
             testId="fetch-more-at"
           />
           <KpiCard
@@ -64,11 +72,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
             title="Keep at least"
             value={keep.value}
             caption={keep.caption}
-            hint={
-              plan.packSize > 1
-                ? 'The reserve you hold on top of the wait. A pack is bigger than that, so a fetch lands you higher.'
-                : 'The reserve: what you hold on top of what the wait eats up.'
-            }
+            hint={reserveCalculation(item, plan)}
             testId="keep-at-least"
           />
         </div>
@@ -78,18 +82,22 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
         {/* Stock, not shopping: what has to be there, and how it is held. */}
         <ReserveCard plan={plan} />
 
-        {/* One slot, one line tall either way: a thing that turns says so where
-            the cover figure would otherwise sit, so a warning adds no height of
-            its own. The figure itself is a nicety, and a phone screen has no
-            room for niceties — it keeps that line for the warning alone. */}
-        {spoilsBeforeEmpty(item) ? (
-          <p
-            class={`alert alert-warning rounded-none py-1 ${TEXT.small}`}
-            role="alert"
-            data-testid="spoil-warning"
-          >
-            ⏰ {spoilsWarning(item)}
-          </p>
+        {/* One slot, and it belongs to whatever is wrong with the plan: a plan
+            that cannot work says so where the cover figure would otherwise sit,
+            so a warning adds no height of its own on a screen that fits. The
+            figure itself is a nicety, and a phone screen has no room for
+            niceties — it keeps that line for the warnings alone. */}
+        {troubles.length > 0 ? (
+          troubles.map((trouble) => (
+            <p
+              key={trouble}
+              class={`alert alert-warning rounded-none py-1 ${TEXT.small}`}
+              role="alert"
+              data-testid={`trouble-${trouble}`}
+            >
+              ⏰ {troubleWords(trouble, item)}
+            </p>
+          ))
         ) : (
           <p
             class={`hidden text-center leading-tight text-base-content/70 sm:block ${TEXT.small}`}
@@ -132,7 +140,7 @@ export function ItemEditor({ item, onChange, onOpenThingPicker, onShare }: ItemE
           <StepSlider
             id="pack-size"
             tone="success"
-            label="📦 Sold in packs of"
+            label="📦 Fetched in packs of"
             unit="unit"
             value={item.packSize}
             min={LIMITS.packSize.min}

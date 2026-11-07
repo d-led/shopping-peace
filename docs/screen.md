@@ -18,16 +18,32 @@ Read from the top:
    each figure explains itself when it is pointed at, focused, or tapped: a strip
    under the paragraph, placed absolutely so that nothing moves and nothing
    grows, and kept inside the screen instead of hanging off a number near the
-   edge. The same words are in the paragraph for a screen reader, out of sight;
+   edge. The same words are in the paragraph for a screen reader, out of sight.
+   Every explanation names both of its numbers and what each one counts — *"1 for
+   the wait + 2 spare"*, *"fetched in packs of 10"*, *"if you buy 20 at 60 left"*,
+   *"6 spare ÷ 3 a day ≈ 2 days"* — because a bare pair of numbers says only that
+   two numbers exist, and a household has to be able to follow the step from two
+   things it already knows to the figure in front of it. The words stop at naming
+   the numbers and saying what the result is for: no explanation is a sentence,
+   none asks for more than two steps, and none is longer than one line on a phone.
+   An explanation that is still too long for the width wraps inside the screen
+   rather than running off the edge, where the half saying why is the half that
+   would disappear. What the reserve cannot reach — a shop slower than the wait —
+   is said in the sentence itself, where it belongs: *"safe for emergencies"* only
+   while the spare outlasts the wait, and *"safe for 2 days of slack"* when it
+   does not;
 4. **In reserve**, a plain card under the headline: the reserve as a cupboard holds
    it — whole packs plus the units outside them. It is stock to check, not one of
    the numbers to act on, so it carries no tone and no display-sized figure of its
    own;
-5. one line that is the spoilage warning when a unit turns before it is used up,
-   and the days-of-cover figure otherwise, with its working attached — *"33 units
-   ÷ 3 a day ≈ 11 days of cover"* — because there is room for it there, and a
-   figure a household cannot check is a figure it has to take on trust. The one
-   place a figure is explained in words rather than on demand;
+5. one line under the headline that is a warning when the plan cannot work — one
+   line per thing wrong, in the order the plan is worked out — and the days-of-cover
+   figure otherwise, with its working attached — *"33 units ÷ 3 a day ≈ 11 days of
+   cover"* — because there is room for it there, and a figure a household cannot
+   check is a figure it has to take on trust. A warning takes the cover line's
+   place rather than pushing it down, so the screen grows only when something is
+   really wrong, and by one short line each time. The one place a figure is
+   explained in words rather than on demand;
 6. the five sliders — how fast the thing is used (said either as how long a unit
    lasts or as how many a day, with a two-word toggle between the two), how long
    a fetch takes, the reserve in days, the pack size, the shelf life;

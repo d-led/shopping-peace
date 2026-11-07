@@ -236,6 +236,38 @@ you made, posted back to you — keeps the framing you had chosen for those thin
 even if the rates in it changed. The numbers on screen are the numbers in the
 file; the framing catches up on the first touch.
 
+## M10 — A plan that cannot work (`troublesIn`)
+
+The plan is total: every legal set of numbers produces an order point, a fetch and
+a look interval. Some of those plans cannot be carried out, though, and until now
+they were drawn in the same calm voice as any other. `troublesIn` names them, and
+the screen shows one line per trouble in the alert slot where the days-of-cover
+line would be — **warned, never blocked**, because the household's own numbers are
+the only ones it has and a form that refuses them leaves it with nowhere to go.
+
+| trouble | reached when | what is wrong |
+| ------- | ------------ | ------------- |
+| `nothing-keeps` | `freshDays === 0` and `leadDays >= 1` | a unit is gone as it is unpacked, so nothing fetched can bridge a wait of a day or more |
+| `no-reserve` | `waitUnits > 0` and `extraDays === 0` | the shelf reaches nothing exactly as a fetch lands: no day can be missed without running out |
+| `spoils-before-used` | `freshDays` below `FRESHNESS_NEVER` and `freshDays · usageUnits < usageDays` | the plan counts a unit shorter than the household thinks it lasts |
+
+Three states are **not** troubles, and saying so is part of the audit:
+
+- **a long fetch with a normal reserve.** `leadDays = 11` with a reserve leaves an
+  order point of `wait + reserve`; the wait is covered by stock that is already
+  on its way, so nothing is broken. The buying window is the reserve, and the look
+  interval says how wide it is.
+- **a reserve smaller than the wait.** That is an ordinary plan; the order point
+  sits above the reserve and the fetch arrives before the reserve is needed.
+- **`fetchQuantity < waitUnits`.** Fetching less than the wait eats means the next
+  order has to be placed before this one lands — a rolling order, which is what a
+  pack smaller than the wait forces. It is worth knowing and not worth a warning:
+  the level to fetch at already says a fetch is due.
+
+A reserve thinner than a day's use was considered and dropped: whole days of
+reserve always buy at least one whole day of looking, so the state is unreachable
+and a warning for it would never fire.
+
 ---
 
 # The register

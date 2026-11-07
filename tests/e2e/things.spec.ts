@@ -189,19 +189,15 @@ test.describe('numbers being changed by hand', () => {
     await page.locator('#lead-days').fill('45');
 
     // A 45-day wait eats two units instead of one, so the level to fetch at
-    // grows with it: two units of wait, one of reserve, one fetched.
-    await expect(
-      page.getByText(
-        "🗄️ Down to 3 units? 🛒 Fetch 1 more and you're at a level of 4 ✓, safe for emergencies. 👀 Check the shelf every 30 days.",
-      ),
-    ).toBeVisible();
+    // grows with it: two units of wait, one of reserve, one fetched. The spare
+    // no longer outlasts the wait, so the sentence says how thin it is.
+    const headline =
+      "🗄️ Down to 3 units? 🛒 Fetch 1 more and you're at a level of 4 ✓, safe for 30 days of slack. 👀 Check the shelf every 30 days.";
+
+    await expect(page.getByText(headline)).toBeVisible();
     await page.reload();
     await expect(page.locator('#lead-days')).toHaveValue('45');
-    await expect(
-      page.getByText(
-        "🗄️ Down to 3 units? 🛒 Fetch 1 more and you're at a level of 4 ✓, safe for emergencies. 👀 Check the shelf every 30 days.",
-      ),
-    ).toBeVisible();
+    await expect(page.getByText(headline)).toBeVisible();
   });
 
   test('steps with the ± buttons, which need no aiming', async ({ page }) => {

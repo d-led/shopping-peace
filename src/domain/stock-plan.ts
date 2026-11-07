@@ -39,6 +39,8 @@ export interface StockPlan {
    * that is what the screen says.
    */
   readonly reviewDays: number;
+  /** Days one unit effectively lasts — what the cover and the looking are counted in. */
+  readonly daysPerUnit: number;
 }
 
 /**
@@ -198,8 +200,62 @@ export function planStock(requirements: StockRequirements): StockPlan {
     // The reserve as the time it buys: whole units divided by the rate, rounded
     // down so the promise is a length of time the reserve really covers.
     reviewDays: Math.floor((reserveUnits * rate.days) / rate.units),
+    daysPerUnit: rate.days / rate.units,
   };
 }
+
+/**
+ * The ways a set of numbers cannot make a shelf that works, whatever the
+ * household does about it afterwards.
+ *
+ * These are not sliders out of range — those are clamped — but combinations the
+ * plan cannot honour: stock that cannot be kept, slack that does not exist, and a
+ * reserve too thin for a single day of looking. The screen says them out loud,
+ * because each one is a plan that reads as if it works and does not.
+ */
+export type PlanTrouble =
+  /** Nothing keeps at all, and fetching takes time: nothing fetched can bridge it. */
+  | 'nothing-keeps'
+  /** No reserve: the shelf arrives at nothing exactly as a fetch lands. */
+  | 'no-reserve'
+  /** A unit turns before the household gets through it. */
+  | 'spoils-before-used';
+
+/**
+ * Everything wrong with a plan, in the order a household should read it: the
+ * impossible first, then the thin, then the merely wasteful.
+ */
+export function troublesIn(requirements: StockRequirements): readonly PlanTrouble[] {
+  const plan = planStock(requirements);
+
+  return TROUBLE_CHECKS.filter((check) => check.when(requirements, plan)).map(
+    (check) => check.trouble,
+  );
+}
+
+interface TroubleCheck {
+  readonly trouble: PlanTrouble;
+  readonly when: (requirements: StockRequirements, plan: StockPlan) => boolean;
+}
+
+/** One line per way a shelf cannot work, so the list of them reads as a list. */
+const TROUBLE_CHECKS: readonly TroubleCheck[] = [
+  {
+    trouble: 'nothing-keeps',
+    when: (requirements) => requirements.freshDays === 0 && requirements.leadDays >= 1,
+  },
+  {
+    // A wait of nothing is fetched instantly, so there is no gap to be bare in,
+    // and whole days of reserve always buy at least a day of looking.
+    trouble: 'no-reserve',
+    when: (requirements, plan) => plan.waitUnits > 0 && requirements.extraDays === 0,
+  },
+  {
+    // Said differently, and more urgently, when nothing keeps at all.
+    trouble: 'spoils-before-used',
+    when: (requirements) => requirements.freshDays > 0 && spoilsBeforeEmpty(requirements),
+  },
+];
 
 function requireAtLeast(value: number, minimum: number, field: string): void {
   if (!Number.isFinite(value) || value < minimum) {

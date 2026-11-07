@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { FRESHNESS_NEVER } from '../src/domain/stock-item';
-import { effectiveUsageDays, planStock, spoilsBeforeEmpty } from '../src/domain/stock-plan';
+import {
+  effectiveUsageDays,
+  planStock,
+  spoilsBeforeEmpty,
+  troublesIn,
+} from '../src/domain/stock-plan';
 import { requirements } from './support/items';
 
 describe('how much the shelf has to hold: the wait', () => {
@@ -300,5 +305,38 @@ describe('numbers that cannot work', () => {
 
   it('refuses a negative shelf life', () => {
     expect(() => planStock(requirements({ freshDays: -1 }))).toThrow(/freshDays/u);
+  });
+});
+
+describe('states the plan cannot honour', () => {
+  it('says nothing at all about numbers that hold together', () => {
+    expect(troublesIn(requirements())).toEqual([]);
+  });
+
+  it('names a shelf with nothing spare, which runs out exactly as a fetch lands', () => {
+    // A three-day wait and no reserve: the last unit goes on the day the order
+    // arrives, so there is no day on which a late look can be made up for.
+    expect(troublesIn(requirements({ extraDays: 0 }))).toEqual(['no-reserve']);
+  });
+
+  it('stays quiet about nothing spare when a fetch is instant', () => {
+    // Nothing to bridge: fetch the moment the shelf is bare.
+    expect(troublesIn(requirements({ leadDays: 0, extraDays: 0 }))).toEqual([]);
+  });
+
+  it('names stock that keeps for no time at all when fetching takes time', () => {
+    expect(troublesIn(requirements({ freshDays: 0, leadDays: 3 }))).toEqual(['nothing-keeps']);
+  });
+
+  it('names a unit that turns before the household gets through it', () => {
+    expect(troublesIn(requirements({ usageUnits: 1, usageDays: 14, freshDays: 7 }))).toEqual([
+      'spoils-before-used',
+    ]);
+  });
+
+  it('lists two troubles together, because one screen can have both', () => {
+    const bareAndTurned = requirements({ extraDays: 0, usageDays: 14, freshDays: 7 });
+
+    expect(troublesIn(bareAndTurned)).toEqual(['no-reserve', 'spoils-before-used']);
   });
 });

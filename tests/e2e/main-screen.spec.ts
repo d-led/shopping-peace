@@ -128,15 +128,30 @@ test.describe('the screen a household opens', () => {
   test('warns when a thing turns before a unit is finished', async ({ page }) => {
     await openAppWith(page, [perishable]);
 
-    await expect(page.getByTestId('spoil-warning')).toContainText('It turns 7 days after opening');
-    await expect(page.getByTestId('spoil-warning')).toContainText('really gone in 7 days');
+    await expect(page.getByTestId('trouble-spoils-before-used')).toContainText(
+      'It turns 7 days after opening',
+    );
+    await expect(page.getByTestId('trouble-spoils-before-used')).toContainText(
+      'really gone in 7 days',
+    );
     await expect(page.getByTestId('keep-at-least')).toHaveText('1');
   });
 
   test('says nothing about turning for a thing that keeps', async ({ page }) => {
     await openFreshApp(page);
 
-    await expect(page.getByTestId('spoil-warning')).toHaveCount(0);
+    await expect(page.getByTestId('trouble-spoils-before-used')).toHaveCount(0);
+    await expect(page.getByTestId('trouble-no-reserve')).toHaveCount(0);
+  });
+
+  test('warns when a long fetch is planned with nothing spare', async ({ page }) => {
+    // Eleven days to fetch and no reserve: the shelf is empty exactly as the
+    // fetch lands, and nothing on the screen said so before.
+    await openAppWith(page, [{ ...detergent, leadDays: 11, extraDays: 0 }]);
+
+    await expect(page.getByTestId('trouble-no-reserve')).toContainText(
+      'Nothing spare: the shelf is empty exactly as a fetch lands.',
+    );
   });
 
   test('names the ends of the shelf life slider instead of leaving them as numbers', async ({
@@ -168,7 +183,7 @@ test.describe('the screen a household opens', () => {
   test('explains a figure when it is pointed at, or tapped by a thumb', async ({ page, hasTouch }) => {
     await openAppWith(page, [detergent]);
     const hint = page.getByTestId('figure-hint');
-    const landing = page.locator('[data-testid="headline"] [aria-describedby]').nth(2);
+    const landing = page.locator('[data-testid="headline"] [aria-describedby]').nth(1);
 
     await expect(hint).toBeHidden();
 
@@ -180,7 +195,41 @@ test.describe('the screen a household opens', () => {
     }
 
     await expect(hint).toBeVisible();
-    await expect(hint).toHaveText('Where a fetch leaves the shelf: the reserve, still whole.');
+    await expect(hint).toHaveText('if you buy 1 at 2 left');
+  });
+
+  test('keeps an explanation inside the screen when a thumb asks for it', async ({
+    page,
+    hasTouch,
+  }) => {
+    // The narrowest phone, and the longest explanation on the screen: three a
+    // day, eighteen days to fetch, two days of spare.
+    await page.setViewportSize({ width: 320, height: 568 });
+    await openAppWith(page, [
+      { ...detergent, usageUnits: 3, usageDays: 1, leadDays: 18, extraDays: 2 },
+    ]);
+    const look = page.locator('[data-testid="headline"] [aria-describedby]').last();
+
+    if (hasTouch) {
+      await look.tap();
+    } else {
+      await look.hover();
+    }
+
+    const hint = page.getByTestId('figure-hint');
+    await expect(hint).toBeVisible();
+    await expect(hint).toHaveText('6 spare ÷ 3 a day ≈ 2 days');
+
+    const box = await hint.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x, 'the explanation hangs off the left edge').toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width, 'the explanation hangs off the right edge').toBeLessThanOrEqual(320);
+
+    const sideways = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+
+    expect(sideways, 'the explanation makes the page scroll sideways').toBeLessThanOrEqual(0);
   });
 
   test('says where it came from, and which commit this copy is', async ({ page }) => {

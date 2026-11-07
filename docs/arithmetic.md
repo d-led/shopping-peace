@@ -105,7 +105,7 @@ units, so the property tests can say so for any household's numbers.
 | `fetchQuantity` | *"🛒 Fetch …"* in the headline |
 | `shelfAfterFetch` | *"✓ you're at a level of N"*, and **N units × M days each ≈ K days of cover** |
 | `reviewDays` | *"👀 Check the shelf every N days"*, the last clause of the headline |
-| `packSize` | **Sold in packs of** — `1` is sold one at a time |
+| `packSize` | **Fetched in packs of** — `1` is fetched one at a time |
 
 With no reserve the two cards both fall back to the level the shelf must not drop
 below, and say there is no reserve: there is no counter to watch when the
@@ -140,6 +140,21 @@ than seven.
 
 It holds through spoilage and through a thing used several times a day, because
 the reserve is already counted at the rate the shelf really goes down at.
+
+The same figure is what the level a fetch lands on is safe against, and the
+sentence says so rather than promising safety in general:
+
+- a spare as long as the wait, or longer, absorbs a shop that takes the wait it
+  was told about and more besides, so the level is *safe for emergencies*;
+- a spare shorter than the wait answers a shop that slips by the spare and no
+  more, so the level is *safe for two days of slack* — two days of spare against
+  an eighteen-day shop is not emergency cover, and a household should not have to
+  work that out from a figure as loose as the word "emergencies".
+
+The tight look interval that follows is not the fault of the arithmetic: a
+household that wants to look weekly needs a week of spare, and the same week is
+what a late shop would have to be answered with. Both come out of one reserve,
+which is why a small one is visible twice on the same screen.
 
 What it promises, and what it does not: **a look on time**. Skip a look and the
 slip is twice the reserve, so the household is into the reserve itself — which is

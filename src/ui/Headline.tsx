@@ -2,6 +2,7 @@
 import type { Child } from 'hono/jsx';
 import { useState } from 'hono/jsx/dom';
 import type { HeadlinePart } from './copy';
+import { Explanation } from './Explanation';
 import { Hint } from './Hint';
 import { TEXT } from './text';
 
@@ -27,7 +28,7 @@ const FIGURE = /(\d+(?:\s*✓)?[,.;:!?]*)/u;
  *
  * Pointing at a figure, focusing it or tapping it explains it, and the explaining
  * happens *here* rather than under the finger: a tooltip hung off a number near
- * the edge of a phone is a tooltip half off the screen, so it is a strip under the
+ * the edge of a phone is a tooltip half off the screen, so it is a pill above the
  * paragraph instead, absolutely placed so that nothing moves and nothing grows.
  */
 export function Headline({ parts }: HeadlineProps) {
@@ -46,14 +47,7 @@ export function Headline({ parts }: HeadlineProps) {
           </span>
         ),
       )}
-      <span
-        class={`absolute inset-x-0 top-full z-20 rounded-md bg-neutral px-2 py-1 text-neutral-content ${TEXT.small} ${
-          asked === null ? 'hidden' : ''
-        }`}
-        data-testid="figure-hint"
-      >
-        {asked ?? ''}
-      </span>
+      <Explanation text={asked} />
     </p>
   );
 }

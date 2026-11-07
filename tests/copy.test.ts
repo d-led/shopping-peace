@@ -19,11 +19,13 @@ import {
   planCover,
   planHeadline,
   readingTime,
+  reserveCalculation,
   reserveHolding,
   resetNotice,
   resetQuestion,
   sharedShelfQuestion,
   spoilsWarning,
+  troubleWords,
 } from '../src/ui/copy';
 import { thing } from './support/items';
 
@@ -56,27 +58,72 @@ describe('the instruction the household reads first', () => {
     );
   });
 
-  it('says what each figure means, so a pointer can ask about one at a time', () => {
+  it('gives a pointer the sum behind a figure, in two named numbers', () => {
     const hints = headlineParts(planStock(detergent)).flatMap((part) =>
       part.hint === undefined ? [] : [part.hint],
     );
 
     expect(hints).toEqual([
-      'The shelf level to shop at: what a wait eats, plus the reserve.',
-      'How much to bring home, in whole packs.',
-      'Where a fetch leaves the shelf: the reserve, still whole.',
-      'How often to look: the reserve is what buys the gap between looks.',
+      '1 for the wait + 2 spare',
+      'if you buy 2 at 3 left',
+      '2 spare × 30 days each ≈ 60 days',
     ]);
   });
 
-  it('has only two figures to explain when no reserve is kept', () => {
+  it('says how many come in a pack, which is why a fetch is bigger than the reserve', () => {
+    const paper = planStock(thing({ usageDays: 2, leadDays: 4, extraDays: 14, packSize: 10 }));
+    const hints = headlineParts(paper).flatMap((part) =>
+      part.hint === undefined ? [] : [part.hint],
+    );
+
+    expect(hints).toContain('fetched in packs of 10');
+  });
+
+  it('reads the look interval against the wait when the spare is thinner than it', () => {
+    // Three a day, eighteen days to fetch, two days spare: the plan holds only as
+    // long as the shop keeps to the wait, and two days is the whole of the slack.
+    const coffees = thing({ usageUnits: 3, usageDays: 1, leadDays: 18, extraDays: 2 });
+
+    expect(planHeadline(planStock(coffees))).toContain('safe for 2 days of slack.');
+  });
+
+  it('claims to be safe for emergencies only when the spare outlasts the wait', () => {
+    const roomy = thing({ usageUnits: 1, usageDays: 2, leadDays: 4, extraDays: 14 });
+
+    expect(planHeadline(planStock(roomy))).toContain('safe for emergencies.');
+  });
+
+  it('explains the look interval as the spare, counted at the rate it goes', () => {
+    // Six spare at three a day is two days of slack, which is as long as a look
+    // can be left — not two days because two days was typed anywhere. Fetched
+    // inside a day, so the spare outlasts the wait and is slack for looking.
+    const coffees = thing({ usageUnits: 3, usageDays: 1, leadDays: 1, extraDays: 2 });
+    const hints = headlineParts(planStock(coffees)).flatMap((part) =>
+      part.hint === undefined ? [] : [part.hint],
+    );
+
+    expect(hints).toContain('6 spare ÷ 3 a day ≈ 2 days');
+  });
+
+  it('has nothing to explain about a thing fetched one at a time with no reserve', () => {
     const hints = headlineParts(planStock(thing({ extraDays: 0 }))).flatMap((part) =>
       part.hint === undefined ? [] : [part.hint],
     );
 
-    // Nothing lands on a level when nothing is held back, and looking "every
-    // day" is not a figure at all.
-    expect(hints).toHaveLength(2);
+    // Only the level to shop at is worked out: nothing lands on a level when
+    // nothing is held back, and looking "every day" is not a figure at all.
+    expect(hints).toEqual(['1 for the wait + 0 spare']);
+  });
+
+  it('says the reserve as the two numbers that make it', () => {
+    // Three a day, two days spare: six units, and the household can see why.
+    const coffees = thing({ usageUnits: 3, usageDays: 1, extraDays: 2 });
+    const bottle = thing({ usageUnits: 1, usageDays: 30, extraDays: 30 });
+
+    expect(reserveCalculation(coffees, planStock(coffees))).toBe('3/day × 2 days reserve');
+    expect(reserveCalculation(bottle, planStock(bottle))).toBe(
+      '1 every 30 days × 30 days reserve',
+    );
   });
 
   it('counts in whole units, so the number cannot be read as a reserve', () => {
@@ -238,6 +285,26 @@ describe('explaining a thing that turns before it is finished', () => {
     expect(spoilsWarning(thing({ usageDays: 3, freshDays: 0 }))).toBe(
       'It turns at once, so a unit is really gone in 1 day, not the 3 days it takes to use up.',
     );
+  });
+});
+
+describe('saying what a plan cannot do', () => {
+  it('says a thing that keeps for no time cannot survive the wait for a fetch', () => {
+    const nothingKeeps = thing({ usageDays: 3, leadDays: 2, freshDays: 0 });
+
+    expect(troubleWords('nothing-keeps', nothingKeeps)).toBe(
+      'It keeps for no time at all, and fetching takes 2 days: nothing fetched can still be good.',
+    );
+  });
+
+  it('says a shelf with nothing spare is bare exactly as the fetch lands', () => {
+    expect(troubleWords('no-reserve', detergent)).toBe(
+      'Nothing spare: the shelf is empty exactly as a fetch lands.',
+    );
+  });
+
+  it('uses the spoilage sentence it already had, rather than a second version of it', () => {
+    expect(troubleWords('spoils-before-used', butter)).toBe(spoilsWarning(butter));
   });
 });
 

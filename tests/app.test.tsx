@@ -361,21 +361,32 @@ describe('what the household sees first', () => {
     ];
     const asked = () => value(container, 'figure-hint');
 
-    // One figure per fact, each describing its own explanation, nothing said yet.
-    expect(figures).toHaveLength(4);
+    // One figure per sum worth checking, each describing its own explanation.
+    expect(figures).toHaveLength(3);
     expect(asked()).toBe('');
 
-    const landing = figures[2];
+    const landing = figures[1];
     landing?.dispatchEvent(new MouseEvent('pointerenter'));
 
     await vi.waitFor(() => {
-      expect(asked()).toBe('Where a fetch leaves the shelf: the reserve, still whole.');
+      expect(asked()).toBe('if you buy 1 at 2 left');
     });
 
     landing?.dispatchEvent(new MouseEvent('pointerleave'));
 
     await vi.waitFor(() => {
       expect(asked()).toBe('');
+    });
+  });
+
+  it('says how the reserve figure was worked out, on the figure itself', async () => {
+    const { container } = openApp([detergent]);
+    const figure = container.querySelector('[data-testid="keep-at-least"] [tabindex]');
+
+    figure?.dispatchEvent(new MouseEvent('pointerenter'));
+
+    await vi.waitFor(() => {
+      expect(value(container, 'card-hint')).toBe('1 every 30 days × 30 days reserve');
     });
   });
 
@@ -934,8 +945,10 @@ describe('touching the numbers', () => {
     enter(container, 'lead-days', '45');
 
     await vi.waitFor(() => {
+      // A wait of two units against one unit of spare: the level still holds, and
+      // the sentence says how much slack it is really holding.
       expect(textOf(container)).toContain(
-        "🗄️ Down to 3 units? 🛒 Fetch 1 more and you're at a level of 4 ✓, safe for emergencies. 👀 Check the shelf every 30 days.",
+        "🗄️ Down to 3 units? 🛒 Fetch 1 more and you're at a level of 4 ✓, safe for 30 days of slack. 👀 Check the shelf every 30 days.",
       );
     });
     expect(saved(storage)[0]?.leadDays).toBe(45);
@@ -1115,7 +1128,9 @@ describe('a thing that turns before it is finished', () => {
   it('says out loud why the numbers are higher than the eating rate suggests', () => {
     const { container } = openApp([butter]);
 
-    expect(container.querySelector('[data-testid="spoil-warning"]')?.textContent).toContain(
+    expect(
+      container.querySelector('[data-testid="trouble-spoils-before-used"]')?.textContent,
+    ).toContain(
       'It turns 7 days after opening, so a unit is really gone in 7 days, not the 14 days it takes to use up.',
     );
   });
@@ -1130,7 +1145,8 @@ describe('a thing that turns before it is finished', () => {
   it('keeps quiet about spoiling for a thing that keeps', () => {
     const { container } = openApp([detergent]);
 
-    expect(container.querySelector('[data-testid="spoil-warning"]')).toBeNull();
+    expect(container.querySelector('[data-testid="trouble-spoils-before-used"]')).toBeNull();
+    expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 
   it('lets a thing be marked as gone as soon as it is opened', async () => {
@@ -1139,8 +1155,8 @@ describe('a thing that turns before it is finished', () => {
     enter(container, 'fresh-days', '0');
 
     await vi.waitFor(() => {
-      expect(container.querySelector('[data-testid="spoil-warning"]')?.textContent).toContain(
-        'It turns at once',
+      expect(container.querySelector('[data-testid="trouble-nothing-keeps"]')?.textContent).toContain(
+        'It keeps for no time at all, and fetching takes 2 days: nothing fetched can still be good.',
       );
     });
     // A day is the shortest a unit can count as: 2 for the wait, 7 spare.
@@ -1158,6 +1174,32 @@ describe('a thing that turns before it is finished', () => {
     const { container } = openApp([{ ...butter, freshDays: 0 }]);
 
     expect(textOf(container)).toContain('spoils at once');
+  });
+});
+
+describe('a thing fetched with nothing spare', () => {
+  it('says the shelf is bare exactly as the fetch lands', () => {
+    const { container } = openApp([{ ...detergent, leadDays: 11, extraDays: 0 }]);
+
+    expect(container.querySelector('[data-testid="trouble-no-reserve"]')?.textContent).toContain(
+      'Nothing spare: the shelf is empty exactly as a fetch lands.',
+    );
+  });
+
+  it('says nothing about it when fetching is instant, because there is no gap', () => {
+    const { container } = openApp([{ ...detergent, leadDays: 0, extraDays: 0 }]);
+
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('shows both troubles when nothing is spare and a unit turns first', () => {
+    const { container } = openApp([{ ...butter, extraDays: 0 }]);
+
+    const warnings = [...container.querySelectorAll('[role="alert"]')].map((warning) =>
+      warning.getAttribute('data-testid'),
+    );
+
+    expect(warnings).toEqual(['trouble-no-reserve', 'trouble-spoils-before-used']);
   });
 });
 

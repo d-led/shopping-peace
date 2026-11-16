@@ -21,9 +21,9 @@ falls between them.
 The rate is kept as that pair rather than as the life of one unit, because the
 life is not a number a machine holds for the interesting cases. A third of a day
 is `0.333…`, and a quotient rounded up by it gains a whole unit: forty-five days
-at three a day is exactly 135 units, and dividing by a third of a day gives 136.
-Multiplied out by whole units over whole days, every comparison and every
-round-up is exact.
+at three a day is exactly 135 units, and dividing by the truncated `0.333` gives
+`135.1…`, which the ceiling turns into 136. Multiplied out by whole units over
+whole days, every comparison and every round-up is exact.
 
 A thing that goes off before it is finished is gone when it goes off, not when it
 is eaten, so the plan uses whichever is the **faster**: the household's own rate,
@@ -31,8 +31,13 @@ or one unit per day of shelf life — and never anything slower than one unit a
 day.
 
 $$
-R = \max\left(\min\left(\frac{\text{usageUnits}}{\text{usageDays}},\ \frac{1}{1}\right),\ \frac{1}{\text{freshDays}}\right)
-\quad\text{and}\quad R = \frac{\text{usageUnits}}{\text{usageDays}}\ \text{when nothing spoils}
+R =
+\begin{cases}
+\dfrac{\text{usageUnits}}{\text{usageDays}} & \text{a unit goes in a day or less}\\[4pt]
+\max\left(\dfrac{\text{usageUnits}}{\text{usageDays}},\ \dfrac{1}{\text{freshDays}}\right) & \text{otherwise}
+\end{cases}
+\qquad\text{and}\qquad
+R = \frac{\text{usageUnits}}{\text{usageDays}}\ \text{when nothing spoils}
 $$
 
 The floor of a day is there so that something which will not keep at all is a

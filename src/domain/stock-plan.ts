@@ -145,8 +145,8 @@ export function effectiveRate(requirements: StockRequirements): Rate {
  *   a fetch aims at = order point + packages * pack size
  *
  * A unit lasting longer means *fewer* units cover the same stretch of days:
- * fourteen days of reserve is seven rolls at a roll a fortnight, but two rolls
- * at a roll every ten days. That is days multiplied by units-a-day, which is
+ * fourteen days of reserve is seven rolls at a roll every two days, but two
+ * rolls at a roll every ten days. That is days multiplied by units-a-day, which is
  * why the rate is kept as whole units over whole days: see `Rate`.
  *
  * The reserve sits inside the fetch level rather than under it, so a household

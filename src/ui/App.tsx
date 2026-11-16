@@ -20,7 +20,7 @@ import { EmptyEditor } from './EmptyEditor';
 import { ItemEditor } from './ItemEditor';
 import { NoticeBar, type Notice } from './NoticeBar';
 import { SourceStamp } from './SourceStamp';
-import { ThingPicker } from './ThingPicker';
+import { ThingPicker, type SheetMode } from './ThingPicker';
 import {
   deleteQuestion,
   exportedNotice,
@@ -93,6 +93,9 @@ function mayGoAhead(losing: number, question: string): boolean {
 export function App({ store }: { readonly store: ItemStore }) {
   const { items, selected } = useStoreState(store);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Which of the sheet's two jobs is on screen: choosing is what the sheet is
+  // for, and adding a thing is the one way in that starts on the other.
+  const [sheetMode, setSheetMode] = useState<SheetMode>('choosing');
   const [notice, setNotice] = useState<Notice | null>(null);
   // The sheet is only a sheet with something in it to name; without one there
   // is nothing for it to show, and no dialog for the page to be inert behind.
@@ -141,13 +144,19 @@ export function App({ store }: { readonly store: ItemStore }) {
   const addThing = () => {
     store.add();
     setPickerOpen(true);
+    // A new thing has no name yet, and naming it is what the household wants
+    // next: the sheet opens on the editor rather than on a list of one.
+    setSheetMode('editing');
     focusThingNameSoon();
   };
 
-  const deleteThing = (item: StockItem) => {
-    if (window.confirm(deleteQuestion(item))) {
-      store.remove(item.id);
+  /** Removes the thing, and says whether the household went through with it. */
+  const deleteThing = (item: StockItem): boolean => {
+    if (!window.confirm(deleteQuestion(item))) {
+      return false;
     }
+    store.remove(item.id);
+    return true;
   };
 
   const resetDefaults = () => {
@@ -233,7 +242,10 @@ export function App({ store }: { readonly store: ItemStore }) {
             onChange={(id: string, patch: Partial<StockRequirements>) =>
               store.adjust(id, patch)
             }
-            onOpenThingPicker={() => setPickerOpen(true)}
+            onOpenThingPicker={() => {
+              setSheetMode('choosing');
+              setPickerOpen(true);
+            }}
             onShare={shareShelf}
           />
         )}
@@ -247,9 +259,10 @@ export function App({ store }: { readonly store: ItemStore }) {
         <ThingPicker
           items={items}
           currentId={selected.id}
+          mode={sheetMode}
+          onMode={setSheetMode}
           // Switching stays in the sheet: the household often wants to rename
-          // the thing they just picked, and ✓ OK is right there when they are
-          // done.
+          // the thing they just picked, and ✏️ is right there when they do.
           onSelect={(id: string) => store.select(id)}
           onRename={(id: string, name: string) => store.rename(id, name)}
           onEmoji={(emoji: string) => store.setEmoji(selected.id, emoji)}

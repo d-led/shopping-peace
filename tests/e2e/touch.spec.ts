@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './support/coverage';
-import { openAppWith, openThingPicker } from './support/app';
+import { openAppWith, openTheEditor, openThingPicker } from './support/app';
 import { detergent, tabs } from './support/things';
 
 /**
@@ -40,12 +40,17 @@ test.describe('picking a thing with a thumb', () => {
     );
 
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.locator('#thing-name')).toHaveValue('Dishwasher tabs');
+    // One tap picks, and the sheet stays: the row it picked is the marked one,
+    // and the screen behind it follows.
+    await expect(
+      page.getByRole('dialog').getByRole('button', { name: /🧽 Dishwasher tabs/u }),
+    ).toHaveAttribute('aria-current', 'true');
+    await expect(page.getByTestId('keep-at-least')).toHaveText('3');
   });
 
   test('takes the picture a thumb picks out of the search', async ({ page, hasTouch }) => {
     await openAppWith(page, [detergent]);
-    await openThingPicker(page);
+    await openTheEditor(page);
     const picker = page.getByRole('dialog');
 
     // The way a hand does it: search for the word, then tap the picture.
@@ -68,7 +73,7 @@ test.describe('picking a thing with a thumb', () => {
     // scroll by itself or the lower pictures are simply out of reach.
     await page.setViewportSize({ width: 375, height: 360 });
     await openAppWith(page, [detergent]);
-    await openThingPicker(page);
+    await openTheEditor(page);
     const picker = page.getByRole('dialog');
 
     await picker.getByRole('button', { name: /Picture/u }).click();

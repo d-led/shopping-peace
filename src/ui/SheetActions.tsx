@@ -42,7 +42,7 @@ export function SheetActions({
       <div class="grid grid-cols-2 gap-2">
         <button
           type="button"
-          class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.body}`}
+          class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.small}`}
           aria-label="Export all"
           title="Every thing, as one file"
           onClick={onExportAll}
@@ -53,7 +53,7 @@ export function SheetActions({
         {current !== undefined && (
           <button
             type="button"
-            class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.body}`}
+            class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.small}`}
             aria-label="Export this one"
             title="Just the thing on screen"
             onClick={onExportCurrent}
@@ -68,7 +68,7 @@ export function SheetActions({
           is the one a keyboard can reach and a screen reader can name, and
           ::file-selector-button is where its button gets styled. */}
       <div class="flex items-center gap-2">
-        <label class={`shrink-0 font-bold ${TEXT.body}`} for={IMPORT_FIELD_ID}>
+        <label class={`shrink-0 font-bold ${TEXT.small} border-0 p-0`} for={IMPORT_FIELD_ID}>
           <Icon symbol="📥" /> Import
         </label>
         <input

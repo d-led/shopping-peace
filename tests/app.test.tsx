@@ -211,6 +211,19 @@ async function openThingPicker(container: HTMLElement): Promise<void> {
   });
 }
 
+/**
+ * Opens the sheet and then the editor inside it: choosing a thing and editing
+ * it are the sheet's two separate jobs, and the tests that rename or manage one
+ * start on the second.
+ */
+async function openTheEditor(container: HTMLElement): Promise<void> {
+  await openThingPicker(container);
+  button(container, 'Edit this one').click();
+  await vi.waitFor(() => {
+    expect(container.querySelector('#thing-name')).not.toBeNull();
+  });
+}
+
 function enter(container: HTMLElement, id: string, typed: string): void {
   const input = field(container, id);
   input.value = typed;
@@ -444,18 +457,48 @@ describe('the full screen of things', () => {
     expect(textOf(picker(container) ?? container)).toContain('🧽 Dishwasher tabs');
   });
 
-  it('switches to the thing that was pressed, and stays open for editing', async () => {
+  it('switches to the thing that was pressed, and keeps the sheet open', async () => {
     const { container } = openApp([detergent, tabs]);
 
     await openThingPicker(container);
     pickerButton(container, '🧽 Dishwasher tabs').click();
 
-    // Still every bit as open: the household may well want to rename it next.
+    // Still every bit as open: the list is where the household is choosing.
     expect(picker(container)).not.toBeNull();
+    await vi.waitFor(() => {
+      expect(value(container, 'keep-at-least')).toBe('3');
+    });
+
+    // And the editor is about the thing that was just picked.
+    button(container, 'Edit this one').click();
     await vi.waitFor(() => {
       expect(field(container, 'thing-name').value).toBe('Dishwasher tabs');
     });
-    expect(value(container, 'keep-at-least')).toBe('3');
+  });
+
+  it('keeps the things to choose from to itself, and editing behind a button', async () => {
+    const { container } = openApp([detergent, tabs]);
+
+    await openThingPicker(container);
+
+    // A short screen has room for one job at a time: the sheet opens on the
+    // list, and none of the editing controls are on it.
+    expect(textOf(picker(container) ?? container)).toContain('🧽 Dishwasher tabs');
+    expect(container.querySelector('#thing-name')).toBeNull();
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+
+    button(container, 'Edit this one').click();
+    await vi.waitFor(() => {
+      expect(container.querySelector('#thing-name')).not.toBeNull();
+    });
+    expect(textOf(picker(container) ?? container)).not.toContain('🧽 Dishwasher tabs');
+
+    // The way back is the list, not the way out.
+    button(container, 'Back to the things').click();
+    await vi.waitFor(() => {
+      expect(container.querySelector('#thing-name')).toBeNull();
+    });
+    expect(picker(container)).not.toBeNull();
   });
 
   it('lets you rename the thing you just switched to, before closing', async () => {
@@ -463,6 +506,7 @@ describe('the full screen of things', () => {
 
     await openThingPicker(container);
     pickerButton(container, '🧽 Dishwasher tabs').click();
+    button(container, 'Edit this one').click();
     await vi.waitFor(() => {
       expect(field(container, 'thing-name').value).toBe('Dishwasher tabs');
     });
@@ -540,7 +584,7 @@ describe('the full screen of things', () => {
 
     expect(textOf(container)).not.toContain('📤');
 
-    await openThingPicker(container);
+    await openTheEditor(container);
     const sheet = picker(container) ?? container;
 
     // Both ways out of the app live in the sheet: everything, or just this one.
@@ -552,11 +596,11 @@ describe('the full screen of things', () => {
   it('renames the thing as you type, and keeps it', async () => {
     const { container, storage } = openApp([detergent]);
 
-    await openThingPicker(container);
+    await openTheEditor(container);
     enter(container, 'thing-name', 'Dish soap');
 
     await vi.waitFor(() => {
-      expect(textOf(picker(container) ?? container)).toContain('Dish soap');
+      expect(field(container, 'thing-name').value).toBe('Dish soap');
     });
     expect(saved(storage)[0]?.name).toBe('Dish soap');
     // The picture in front has nothing to do with the name: it stays put.
@@ -567,7 +611,7 @@ describe('the full screen of things', () => {
     const { container, storage } = openApp([detergent, tabs]);
     const asked = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    await openThingPicker(container);
+    await openTheEditor(container);
     button(container, '🗑️ Delete').click();
 
     await vi.waitFor(() => {
@@ -575,16 +619,25 @@ describe('the full screen of things', () => {
     });
     expect(saved(storage)[0]?.id).toBe('tabs');
     expect(asked).toHaveBeenCalledWith('Delete 🧴 Laundry detergent?');
+
+    // Nothing is left to edit, so the sheet is back to the things to choose
+    // from rather than showing a form about something that is gone.
+    await vi.waitFor(() => {
+      expect(container.querySelector('#thing-name')).toBeNull();
+    });
+    expect(textOf(picker(container) ?? container)).toContain('🧽 Dishwasher tabs');
   });
 
   it('keeps the thing when the household changes its mind', async () => {
     const { container, storage } = openApp([detergent]);
     vi.spyOn(window, 'confirm').mockReturnValue(false);
 
-    await openThingPicker(container);
+    await openTheEditor(container);
     button(container, '🗑️ Delete').click();
 
     expect(saved(storage)).toHaveLength(1);
+    // Saying no leaves the editor where it was: nothing was deleted.
+    expect(container.querySelector('#thing-name')).not.toBeNull();
   });
 
   it('deletes only the thing asked for when a file named two of them the same', async () => {
@@ -600,7 +653,7 @@ describe('the full screen of things', () => {
       shared,
     );
 
-    await openThingPicker(container);
+    await openTheEditor(container);
     pickFile(container, shelf);
     await vi.waitFor(() => {
       expect(saved(storage)).toHaveLength(2);
@@ -641,7 +694,7 @@ describe('the full screen of things', () => {
 describe('finding a picture for a thing', () => {
   it('puts the chosen picture in front of the name without touching the name', async () => {
     const { container, storage } = openApp([{ ...detergent, name: 'Bar soap', emoji: '' }]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     await pickPicture(container, 'soap');
 
     await vi.waitFor(() => {
@@ -649,24 +702,25 @@ describe('finding a picture for a thing', () => {
     });
     // The name is a name, still: the picture sits in front of it, not in it.
     expect(field(container, 'thing-name').value).toBe('Bar soap');
-    expect(pickerButton(container, '🧼 Bar soap')).toBeDefined();
+    expect(pickerButton(container, '🧼 Picture')).toBeDefined();
   });
 
   it('swaps the picture instead of stacking a second one', async () => {
     const { container, storage } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     await pickPicture(container, 'soap');
 
     await vi.waitFor(() => {
       expect(saved(storage)[0]).toEqual({ ...detergent, emoji: '🧼' });
     });
     // One picture, not two, and nothing else about the thing moved.
-    expect(pickerButton(container, '🧼 Laundry detergent')).toBeDefined();
+    expect(field(container, 'thing-name').value).toBe('Laundry detergent');
+    expect(pickerButton(container, '🧼 Picture')).toBeDefined();
   });
 
   it('leaves the sheet open, with the name ready for what the picture is of', async () => {
     const { container } = openApp([{ ...detergent, name: 'Bar soap', emoji: '' }]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     await pickPicture(container, 'soap');
 
     await vi.waitFor(() => {
@@ -679,7 +733,7 @@ describe('finding a picture for a thing', () => {
 
   it('takes a tap somewhere else as the picture being settled', async () => {
     const { container } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     await openEmojiSearch(container);
     enter(container, 'emoji-search', 'soap');
 
@@ -690,12 +744,12 @@ describe('finding a picture for a thing', () => {
       expect(container.querySelector('#emoji-search')).toBeNull();
     });
     // Nothing was picked, so the picture the thing already had is left alone.
-    expect(pickerButton(container, '🧴 Laundry detergent')).toBeDefined();
+    expect(pickerButton(container, '🧴 Picture')).toBeDefined();
   });
 
   it('narrows as more words are typed, and says so when nothing is left', async () => {
     const { container } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     await openEmojiSearch(container);
 
     enter(container, 'emoji-search', 'cat litter');
@@ -711,7 +765,7 @@ describe('finding a picture for a thing', () => {
 
   it('stays out of the way until it is asked for', async () => {
     const { container } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
 
     expect(container.querySelector('#emoji-search')).toBeNull();
 
@@ -724,7 +778,7 @@ describe('finding a picture for a thing', () => {
 describe('files in and out', () => {
   it('imports a file the household picked, and says what came in', async () => {
     const { container, storage } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     answerTheQuestionWith(true);
 
     pickFile(
@@ -744,7 +798,7 @@ describe('files in and out', () => {
 
   it('asks before a file replaces the shelf, and keeps it when told no', async () => {
     const { container, storage } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     answerTheQuestionWith(false);
 
     pickFile(
@@ -765,7 +819,7 @@ describe('files in and out', () => {
 
   it('takes an older file, which kept the emoji inside the name', async () => {
     const { container, storage } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     answerTheQuestionWith(true);
 
     // What this app wrote before the picture had a field of its own.
@@ -779,7 +833,7 @@ describe('files in and out', () => {
 
   it('refuses a file from a newer copy of the app instead of half-reading it', async () => {
     const { container, storage } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     answerTheQuestionWith(true);
 
     pickFile(
@@ -795,7 +849,7 @@ describe('files in and out', () => {
 
   it('says how many things are about to be replaced', async () => {
     const { container } = openApp([detergent, tabs]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     answerTheQuestionWith(false);
 
     pickFile(container, '[]');
@@ -809,7 +863,7 @@ describe('files in and out', () => {
 
   it('exports every thing, and says how many went', async () => {
     const { container } = openApp([detergent, tabs]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     stopTheDownload();
 
     pickerButton(container, 'Export all').click();
@@ -821,7 +875,7 @@ describe('files in and out', () => {
 
   it('exports just the thing on screen', async () => {
     const { container } = openApp([detergent, tabs]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     stopTheDownload();
 
     pickerButton(container, 'Export this one').click();
@@ -833,7 +887,7 @@ describe('files in and out', () => {
 
   it('explains a file it cannot read, and keeps the shelf it had', async () => {
     const { container, storage } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
 
     pickFile(container, 'this is not json');
 
@@ -845,7 +899,7 @@ describe('files in and out', () => {
 
   it('does nothing at all when the file dialog was dismissed', async () => {
     const { container, storage } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
 
     dismissFileDialog(container);
 
@@ -857,7 +911,7 @@ describe('files in and out', () => {
 describe('being told what just happened', () => {
   it('says it once, and takes it away when dismissed', async () => {
     const { container } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     answerTheQuestionWith(true);
 
     pickerButton(container, '↩️ Reset to defaults').click();
@@ -874,7 +928,7 @@ describe('being told what just happened', () => {
 
   it('takes it away by itself once the household has had time to read it', async () => {
     const { container } = openApp([detergent]);
-    await openThingPicker(container);
+    await openTheEditor(container);
     stopTheDownload();
 
     pickerButton(container, 'Export all').click();
@@ -898,13 +952,13 @@ describe('starting again from the starter things', () => {
     const { container, storage } = openApp([mine, tabs]);
     answerTheQuestionWith(true);
 
-    await openThingPicker(container);
+    await openTheEditor(container);
     pickerButton(container, '↩️ Reset to defaults').click();
 
     await vi.waitFor(() => {
       expect(saved(storage).map((item) => item.id)).toEqual(['detergent', 'tabs']);
     });
-    expect(textOf(picker(container) ?? container)).toContain('🧴 Laundry detergent');
+    expect(field(container, 'thing-name').value).toBe('Laundry detergent');
     expect(textOf(container)).toContain('Back to the starter things — 1 thing of yours deleted.');
   });
 
@@ -912,7 +966,7 @@ describe('starting again from the starter things', () => {
     const { container, storage } = openApp([{ ...detergent, id: 'mine', name: 'Dish soap' }, tabs]);
     answerTheQuestionWith(false);
 
-    await openThingPicker(container);
+    await openTheEditor(container);
     pickerButton(container, '↩️ Reset to defaults').click();
 
     await vi.waitFor(() => {

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './support/coverage';
-import { openAppWith, openFreshApp, openThingPicker } from './support/app';
+import { openAppWith, openFreshApp, openTheEditor, openThingPicker } from './support/app';
 import { perishable } from './support/things';
 
 /**
@@ -49,7 +49,7 @@ test.describe('the page a screen reader reads', () => {
 
   test('has nothing to complain about with the emoji search open', async ({ page }) => {
     await openFreshApp(page);
-    await openThingPicker(page);
+    await openTheEditor(page);
     await page.getByRole('button', { name: /Picture/u }).click();
     await expect(page.locator('#emoji-search')).toBeVisible();
 

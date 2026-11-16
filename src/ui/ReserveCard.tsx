@@ -21,7 +21,7 @@ export function ReserveCard({ plan }: ReserveCardProps) {
 
   return (
     <div
-      class="min-w-0 rounded-2xl border-2 border-base-300 bg-base-100 p-3 md:p-4 text-center"
+      class="min-w-0 rounded-none sm:rounded-2xl border-2 border-base-300 bg-base-100 p-3 md:p-4 text-center"
       data-testid="in-reserve"
     >
       <span

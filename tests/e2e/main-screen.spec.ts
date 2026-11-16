@@ -1,5 +1,5 @@
 import { expect, test } from './support/coverage';
-import { openAppWith, openFreshApp, paintedFontSizes } from './support/app';
+import { openAppWith, openFreshApp, openThingPicker, paintedFontSizes } from './support/app';
 import { detergent, perishable } from './support/things';
 
 /**
@@ -63,9 +63,37 @@ test.describe('the screen a household opens', () => {
 
     expect(await sideways(), 'the picker is wider than the screen').toBeLessThanOrEqual(0);
 
+    await page.getByRole('button', { name: 'Edit this one' }).click();
+
+    expect(await sideways(), 'the editor is wider than the screen').toBeLessThanOrEqual(0);
+
     await page.getByRole('button', { name: /Picture/u }).click();
 
     expect(await sideways(), 'the emoji search is wider than the screen').toBeLessThanOrEqual(0);
+  });
+
+  test('shows the things to choose from even on a short screen', async ({ page }) => {
+    // The shortest screen the app is for, with the sheet taking all of it.
+    await page.setViewportSize({ width: 320, height: 568 });
+    await openFreshApp(page);
+    await openThingPicker(page);
+
+    // Choosing owns the sheet, so the list is not squeezed by a form under it:
+    // a whole handful of things are readable without scrolling anything.
+    const whole = await page.evaluate(() => {
+      const sheet = document.querySelector('dialog')?.getBoundingClientRect();
+      if (sheet === undefined) {
+        return 0;
+      }
+      return [...document.querySelectorAll('[data-testid="picker-thing-name"]')].filter(
+        (name) => {
+          const row = name.getBoundingClientRect();
+          return row.top >= sheet.top && row.bottom <= sheet.bottom;
+        },
+      ).length;
+    });
+
+    expect(whole, 'a short screen shows only a row or two of things').toBeGreaterThanOrEqual(4);
   });
 
   test('puts both numbers above the fold, with no scrolling at all', async ({ page }) => {

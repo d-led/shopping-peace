@@ -34,6 +34,16 @@ export async function openThingPicker(page: Page): Promise<void> {
 }
 
 /**
+ * The sheet's other job: renaming the thing on screen, its picture, and the
+ * files. Choosing and editing are one at a time, so this is the second press.
+ */
+export async function openTheEditor(page: Page): Promise<void> {
+  await openThingPicker(page);
+  await page.getByRole('button', { name: 'Edit this one' }).click();
+  await expect(page.getByRole('dialog', { name: 'This thing' })).toBeVisible();
+}
+
+/**
  * Every size a household actually reads, largest last: the pictures in front of
  * the labels and the ticks beside a chosen thing are marks, not reading, and
  * they are hidden from screen readers for the same reason.

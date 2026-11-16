@@ -76,18 +76,24 @@ starters (D8).
 
 Two bits of view state, both of which outlive the thing they are about.
 
-**State**: `pickerOpen: boolean`, `notice: Notice | null`.
+**State**: `pickerOpen: boolean`, `sheetMode: 'choosing' | 'editing'`,
+`notice: Notice | null`.
 
 | # | Invariant | Where it is held |
 | --- | --- | --- |
 | A1 | The sheet is on screen only when it is open *and* there is something open in it | `pickerOpen && selected !== null` |
 | A2 | One notice at a time; a new one replaces the old one and restarts its reading time | `setNotice` + the timer effect in `NoticeBar`, keyed on the notice |
 | A3 | A notice goes away on its own after its reading time, or when dismissed | `NoticeBar` |
+| A4 | The sheet shows one of its two jobs at a time — the list or the editor, never both | `sheetMode` |
+| A5 | Adding a thing lands in the editor, because a thing with no name has nothing to choose between | `addThing` sets `sheetMode = 'editing'` |
 
-**Transitions**: the name of the thing opens the sheet (`pickerOpen = true`),
-`✓ OK` and Escape close it, `+` and the empty screen's add both add a thing and
-open the sheet, and the sheet closes itself when the shelf empties. Any action
-that has something to say sets a notice; the bar clears it.
+**Transitions**: the name of the thing opens the sheet on the list
+(`pickerOpen = true`, `sheetMode = 'choosing'`), `✓ OK` and Escape close it, and
+the sheet closes itself when the shelf empties. `✏️` opens the editor for the
+thing on screen and `←` goes back to the list; `+` and the empty screen's add
+both add a thing and open the editor; deleting the thing being edited returns to
+the list, since nothing is left there to edit. Any action that has something to
+say sets a notice; the bar clears it.
 
 Invariant A1 is a *guard*, not a fact: `pickerOpen` stays true when the last thing
 is deleted from the sheet, and the sheet is simply not rendered. The state
@@ -95,7 +101,7 @@ is deleted from the sheet, and the sheet is simply not rendered. The state
 
 ---
 
-## M3 — The picture search inside the sheet (`src/ui/ThingPicker.tsx`)
+## M3 — The picture search inside the editor (`src/ui/ThingEditor.tsx`)
 
 An implicit machine in one boolean, `pickingEmoji`, with three different things
 able to move it.
@@ -117,7 +123,7 @@ and an icon grid).
 | E1 | When the search is open, the grid it shows belongs to the thing on screen | the picker is rendered inside `current !== undefined` |
 | E2 | A press that lands on an icon sets that icon | nowhere — see D1 |
 | E3 | Folding the search away never loses something the household just did | nowhere — see D1 |
-| E4 | The foot of the sheet can always be scrolled to, keyboard or not | nowhere — see D2 |
+| E4 | The search and the pictures in it can always be scrolled to, keyboard or not | nowhere — see D2 |
 
 The `onFocusOut` rule is the one that matters: it exists so that a keyboard user
 who tabs out of the block, or a thumb that taps the name field, folds the search

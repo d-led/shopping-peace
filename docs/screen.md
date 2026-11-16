@@ -49,13 +49,22 @@ Read from the top:
    a fetch takes, the reserve in days, the pack size, the shelf life;
 7. **🔗 Share this calculator**, and the commit this copy was built from.
 
-Everything that happens once in a while lives in the sheet: the list of things,
-the name, the picture, export and import, reset and delete. Renaming and deleting
-are not on the main screen at all.
+Everything that happens once in a while lives in the sheet, which has **two jobs
+and shows one at a time** — a short screen has room for one:
 
-The sheet is left with **✓ OK**, with a double tap on a thing, or with Escape —
-never with an ✕. Switching things **keeps the sheet open**, because the name of
-what you just picked is usually the next thing to edit.
+- **Which thing?** — the list of things and nothing else, at the whole height of
+the sheet. A tap picks; a second tap on the same row picks and leaves. The list
+is never squeezed by a form underneath it: on a 320 × 568 screen a handful of
+things are readable without scrolling anything.
+- **This thing** — the name, its picture beside it, and the jobs that happen once
+in a while: export and import, reset and delete. **✏️** opens it for the thing on
+screen, **←** goes back to the list.
+
+Renaming and deleting are not on the main screen at all. The sheet is left with
+**✓ OK**, with a double tap on a thing, or with Escape — never with an ✕.
+Switching things **keeps the sheet open**, and **✏️** is one press from the thing
+that was just picked. Adding a thing opens the editor instead of the list, since
+a thing with no name yet has nothing to choose between.
 
 ## The rules, and why
 

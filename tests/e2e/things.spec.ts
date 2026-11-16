@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './support/coverage';
-import { openAppWith, openThingPicker, paintedFontSizes } from './support/app';
+import { openAppWith, openTheEditor, openThingPicker, paintedFontSizes } from './support/app';
 import { detergent, tabs } from './support/things';
 
 /**
@@ -14,7 +14,7 @@ import { detergent, tabs } from './support/things';
  */
 
 test.describe('the full screen of things', () => {
-  test('lists every thing, and switching keeps the sheet open for editing', async ({ page }) => {
+  test('lists every thing, and switching keeps the sheet open', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
     await openThingPicker(page);
     const picker = page.getByRole('dialog');
@@ -31,12 +31,15 @@ test.describe('the full screen of things', () => {
 
     await picker.getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
 
-    // The sheet stays put, and now points at the thing that was just picked.
+    // The sheet stays put, and the screen behind it follows the pick.
     await expect(picker).toBeVisible();
-    await expect(page.locator('#thing-name')).toHaveValue('Dishwasher tabs');
     // Three spares, plus the five units a forty-five day wait eats: eight.
     await expect(page.getByTestId('keep-at-least')).toHaveText('3');
     await expect(page.getByTestId('fetch-more-at')).toHaveText('8');
+
+    // One press away, the editor is about the thing that was just picked.
+    await picker.getByRole('button', { name: 'Edit this one' }).click();
+    await expect(page.locator('#thing-name')).toHaveValue('Dishwasher tabs');
 
     await picker.getByRole('button', { name: 'OK' }).click();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
@@ -53,7 +56,7 @@ test.describe('the full screen of things', () => {
 
   test('renames the thing, and the name is still there after a reload', async ({ page }) => {
     await openAppWith(page, [detergent]);
-    await openThingPicker(page);
+    await openTheEditor(page);
 
     await page.locator('#thing-name').fill('🧼 Dish soap');
     await page.getByRole('button', { name: 'OK' }).click();
@@ -79,7 +82,7 @@ test.describe('the full screen of things', () => {
 
   test('takes the picture it is offered, and leaves the name alone', async ({ page }) => {
     await openAppWith(page, [detergent]);
-    await openThingPicker(page);
+    await openTheEditor(page);
     const picker = page.getByRole('dialog');
 
     await picker.getByRole('button', { name: /Picture/u }).click();
@@ -96,7 +99,7 @@ test.describe('the full screen of things', () => {
     await picker.getByRole('button', { name: 'OK' }).click();
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🥛 Semi-skimmed milk');
-    await openThingPicker(page);
+    await openTheEditor(page);
     await expect(page.locator('#thing-name')).toHaveValue('Semi-skimmed milk');
   });
 
@@ -120,7 +123,7 @@ test.describe('the full screen of things', () => {
 
   test('deletes the thing on screen, but only after asking', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
-    await openThingPicker(page);
+    await openTheEditor(page);
     const picker = page.getByRole('dialog');
     const deleteButton = picker.getByRole('button', { name: /🗑️ Delete/u });
 
@@ -135,30 +138,37 @@ test.describe('the full screen of things', () => {
 
     page.once('dialog', (dialog) => dialog.dismiss());
     await deleteButton.click();
-    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toBeVisible();
+    // Told no, the editor is still about the thing it was about.
+    await expect(page.locator('#thing-name')).toHaveValue('Laundry detergent');
 
     page.once('dialog', (dialog) => dialog.accept());
     await deleteButton.click();
 
+    // Gone — and the sheet is back to the list it was chosen from, since there
+    // is nothing left to edit.
     await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toHaveCount(0);
+    await expect(picker.getByRole('button', { name: /🧽 Dishwasher tabs/u })).toBeVisible();
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧽 Dishwasher tabs');
   });
 
   test('starts the shelf again from the starter things, after asking', async ({ page }) => {
     await openAppWith(page, [tabs]);
-    await openThingPicker(page);
+    await openTheEditor(page);
     const picker = page.getByRole('dialog');
 
-    // Told no, the shelf is left exactly as it was.
+    // Told no, the shelf is left exactly as it was: no starters among it.
     page.once('dialog', (dialog) => dialog.dismiss());
     await picker.getByRole('button', { name: '↩️ Reset to defaults' }).click();
-    await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toHaveCount(0);
+    await picker.getByRole('button', { name: 'Back to the things' }).click();
+    await expect(picker.getByRole('button', { name: /🧈 Butter/u })).toHaveCount(0);
 
+    await picker.getByRole('button', { name: 'Edit this one' }).click();
     page.once('dialog', (dialog) => dialog.accept());
     await picker.getByRole('button', { name: '↩️ Reset to defaults' }).click();
 
     await expect(page.getByRole('status')).toContainText('Back to the starter things');
+    await picker.getByRole('button', { name: 'Back to the things' }).click();
     await expect(picker.getByRole('button', { name: /🧴 Laundry detergent/u })).toBeVisible();
     await expect(picker.getByRole('button', { name: /🧈 Butter/u })).toBeVisible();
 
@@ -215,7 +225,7 @@ test.describe('numbers being changed by hand', () => {
 test.describe('files in and out', () => {
   test('exports every thing as a dated JSON file', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
-    await openThingPicker(page);
+    await openTheEditor(page);
     const exportAll = page.getByRole('dialog').getByRole('button', { name: 'Export all' });
 
     // The button says what it does, in the words a household would use.
@@ -244,7 +254,7 @@ test.describe('files in and out', () => {
 
   test('says what happened, and then gets out of the way on its own', async ({ page }) => {
     await openAppWith(page, [detergent, tabs]);
-    await openThingPicker(page);
+    await openTheEditor(page);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -264,6 +274,7 @@ test.describe('files in and out', () => {
 
     // The thing on screen, which is the one the sheet has highlighted.
     await picker.getByRole('button', { name: /🧽 Dishwasher tabs/u }).click();
+    await picker.getByRole('button', { name: 'Edit this one' }).click();
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       picker.getByRole('button', { name: 'Export this one' }).click(),
@@ -316,7 +327,7 @@ test.describe('files in and out', () => {
 
     // The picture came out of the name, and the name is just the name now.
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧼 Dish soap');
-    await openThingPicker(page);
+    await openTheEditor(page);
     await expect(page.locator('#thing-name')).toHaveValue('Dish soap');
   });
 
@@ -329,12 +340,12 @@ test.describe('files in and out', () => {
       ]),
     );
 
-    await openThingPicker(page);
+    await openTheEditor(page);
     page.once('dialog', (dialog) => dialog.dismiss());
     await page.locator('input[type="file"]').setInputFiles(file);
 
-    await expect(page.getByRole('dialog').getByRole('button', { name: /🧴 Laundry detergent/u }))
-      .toBeVisible();
+    // Told no, the thing on screen is still the one they had.
+    await expect(page.locator('#thing-name')).toHaveValue('Laundry detergent');
     await expect(page.getByRole('status')).toHaveCount(0);
     await page.reload();
     await expect(page.locator('[aria-haspopup="dialog"]')).toContainText('🧴 Laundry detergent');
@@ -344,13 +355,11 @@ test.describe('files in and out', () => {
     await openAppWith(page, [detergent]);
     const file = await writeTempFile('broken.json', 'not json at all');
 
-    await openThingPicker(page);
+    await openTheEditor(page);
     await page.locator('input[type="file"]').setInputFiles(file);
 
     await expect(page.getByRole('status')).toContainText('not valid JSON');
-    await expect(
-      page.getByRole('dialog').getByRole('button', { name: /🧴 Laundry detergent/u }),
-    ).toBeVisible();
+    await expect(page.locator('#thing-name')).toHaveValue('Laundry detergent');
   });
 });
 
@@ -365,7 +374,7 @@ test.describe('files in and out', () => {
  * are there to pin down.
  */
 async function importFile(page: Page, path: string): Promise<void> {
-  await openThingPicker(page);
+  await openTheEditor(page);
   page.once('dialog', (dialog) => dialog.accept());
   await page.locator('input[type="file"]').setInputFiles(path);
 

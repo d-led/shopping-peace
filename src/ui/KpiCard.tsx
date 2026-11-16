@@ -33,7 +33,7 @@ export function KpiCard({ tone, title, value, caption, hint, testId }: KpiCardPr
 
   return (
     <div
-      class={`relative min-w-0 rounded-2xl border-2 p-3 md:p-4 text-center ${TONE_CARD[tone]}`}
+      class={`relative min-w-0 rounded-none sm:rounded-2xl border-2 p-3 md:p-4 text-center ${TONE_CARD[tone]}`}
     >
       <span
         class={`block font-black uppercase tracking-tight md:tracking-wide break-words ${TEXT.small}`}

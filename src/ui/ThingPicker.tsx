@@ -1,11 +1,44 @@
 import { useEffect, useRef, useState } from 'hono/jsx/dom';
 import type { StockItem } from '../domain/stock-item';
 import { EmojiPicker } from './EmojiPicker';
+import { NoticeBar, type Notice } from './NoticeBar';
 import { SheetActions } from './SheetActions';
 import { itemLabel, itemSummary, pictureButtonLabel } from './copy';
 import { tapWatcher } from './taps';
 import { TEXT } from './text';
 import { THING_NAME_FIELD_ID, focusThingNameSoon } from './thing-name';
+
+/** The heading the sheet is named by, for the dialog's accessible name. */
+const SHEET_TITLE_ID = 'which-thing-title';
+
+/** Whether something the household touched is outside the picture block. */
+function outsidePictures(
+  pictures: HTMLDivElement | null,
+  target: EventTarget | null,
+): boolean {
+  return !(pictures?.contains(target as Node | null) ?? false);
+}
+
+/**
+ * Whether focus leaving the picture block means the household has moved on,
+ * rather than a tap still on its way to the icon.
+ *
+ * A touch screen blurs the search field first and delivers the click
+ * afterwards, so that blur is not a move: it arrives with nothing to focus, or
+ * with the sheet itself, because a button there takes no focus at all. Anything
+ * else is a real move — a tab, or a tap on another field.
+ */
+function focusMovedOn(
+  event: FocusEvent,
+  pictures: HTMLDivElement | null,
+  sheet: HTMLDialogElement | null,
+): boolean {
+  const next = event.relatedTarget as Node | null;
+  if (next === null || next === sheet) {
+    return false;
+  }
+  return outsidePictures(pictures, next);
+}
 
 export interface ThingPickerProps {
   readonly items: readonly StockItem[];
@@ -25,6 +58,14 @@ export interface ThingPickerProps {
   readonly onResetToDefaults: () => void;
   /** Leaves the sheet. Everything is already saved, so this is just "done". */
   readonly onConfirm: () => void;
+  /**
+   * What just happened, said inside the sheet.
+   *
+   * A modal dialog makes the page behind it inert, so a notice out there would
+   * be neither seen nor read: exporting from the sheet says so here instead.
+   */
+  readonly notice: Notice | null;
+  readonly onDismissNotice: () => void;
 }
 
 /**
@@ -33,6 +74,11 @@ export interface ThingPickerProps {
  * the presets in and out again as a file. The link version lives at the foot of
  * the main screen, since what it hands over needs no editing. A household hand
  * gets a list a foot tall instead of a dropdown the width of a thumbnail.
+ *
+ * It is a native modal `<dialog>`: the browser makes the page behind it inert,
+ * keeps focus inside, closes it on Escape and the back gesture, and puts focus
+ * back on the thing that opened it. All of that is the browser's job, so none
+ * of it is re-implemented here.
  */
 export function ThingPicker({
   items,
@@ -47,15 +93,26 @@ export function ThingPicker({
   onImport,
   onResetToDefaults,
   onConfirm,
+  notice,
+  onDismissNotice,
 }: ThingPickerProps) {
+  const sheet = useRef<HTMLDialogElement | null>(null);
+
+  // The sheet is mounted only while it is open, so opening it is the same thing
+  // as being on the screen, and every way of closing it — our ✓ OK button,
+  // Escape, the back gesture — arrives as one `close` event. That event is the
+  // only thing that has to come back to the app: "done".
   useEffect(() => {
-    const confirmOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onConfirm();
-      }
-    };
-    document.addEventListener('keydown', confirmOnEscape);
-    return () => document.removeEventListener('keydown', confirmOnEscape);
+    const dialog = sheet.current;
+    if (dialog === null) {
+      return;
+    }
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+    const done = () => onConfirm();
+    dialog.addEventListener('close', done);
+    return () => dialog.removeEventListener('close', done);
   }, [onConfirm]);
 
   const current = items.find((item) => item.id === currentId);
@@ -77,15 +134,17 @@ export function ThingPicker({
   };
 
   return (
-    <div
-      class="fixed inset-0 z-[100] flex flex-col bg-base-100 overscroll-contain"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Which thing?"
+    <dialog
+      ref={sheet}
+      aria-labelledby={SHEET_TITLE_ID}
+      // A modal dialog is painted in the top layer and given `inset: 0` and
+      // `margin: auto` by the browser; the sheet wants the whole screen, so
+      // those are undone here and the display is set only while it is open.
+      class="m-0 h-dvh max-h-none w-full max-w-none overflow-hidden border-0 bg-base-100 p-0 text-base-content open:flex open:flex-col"
       onClick={(event: MouseEvent) => {
         // Anything the household taps that is not the picture button or the
         // search under it means they are done with the picture.
-        if (pickingEmoji && !(pictureBlock.current?.contains(event.target as Node) ?? false)) {
+        if (pickingEmoji && outsidePictures(pictureBlock.current, event.target)) {
           setPickingEmoji(false);
         }
       }}
@@ -93,7 +152,9 @@ export function ThingPicker({
       {/* A plain box, not a <header>: a header inside a dialog is a second
           banner landmark, and a page has room for one. */}
       <div class="navbar shrink-0 gap-1.5 md:gap-2 bg-base-200 border-b border-base-300 px-2 md:px-6">
-        <h2 class={`min-w-0 flex-1 font-black tracking-tight ${TEXT.body}`}>Which thing?</h2>
+        <h2 id={SHEET_TITLE_ID} class={`min-w-0 flex-1 font-black tracking-tight ${TEXT.body}`}>
+          Which thing?
+        </h2>
         <button
           type="button"
           class={`btn btn-square btn-lg shrink-0 rounded-none ${TEXT.body}`}
@@ -108,7 +169,7 @@ export function ThingPicker({
           class={`btn btn-primary btn-lg shrink-0 rounded-none ${TEXT.body}`}
           aria-label="OK"
           title="OK — done"
-          onClick={onConfirm}
+          onClick={() => sheet.current?.close()}
         >
           ✓ OK
         </button>
@@ -126,6 +187,9 @@ export function ThingPicker({
                     : 'bg-base-100 border-2 border-base-300 hover:border-primary'
                 }`}
                 aria-current={item.id === currentId ? 'true' : undefined}
+                // The thing the household is on is where the sheet starts:
+                // opening it is answering "which one?" with "this one".
+                autofocus={item.id === currentId}
                 onClick={(event) => {
                   onSelect(item.id);
                   // Two taps in a row mean "this one, and I am done" — the
@@ -196,16 +260,13 @@ export function ThingPicker({
                 // or a tap on a field; a click on something that cannot hold
                 // focus — a row, the background — is the other half.
                 //
-                // Focus arriving nowhere is neither: that is a tap in flight.
-                // A touch screen blurs the search field first and delivers the
-                // click on the icon afterwards, so folding away here would take
-                // the icon out from under the thumb.
+                // Focus arriving nowhere is neither: that is a tap in flight,
+                // and folding away here would take the icon out from under the
+                // thumb. `focusMovedOn` says which is which.
                 onFocusOut={(event: FocusEvent) => {
-                  const next = event.relatedTarget as Node | null;
-                  if (next === null || (pictureBlock.current?.contains(next) ?? false)) {
-                    return;
+                  if (focusMovedOn(event, pictureBlock.current, sheet.current)) {
+                    setPickingEmoji(false);
                   }
-                  setPickingEmoji(false);
                 }}
               >
                 <button
@@ -233,6 +294,10 @@ export function ThingPicker({
           />
         </div>
       </footer>
-    </div>
+
+      {/* Inside the dialog, because the page behind it is inert: a notice about
+          an export has to be readable while the sheet is still up. */}
+      <NoticeBar notice={notice} onDismiss={onDismissNotice} />
+    </dialog>
   );
 }

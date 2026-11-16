@@ -58,6 +58,14 @@ function openThingId(selected: StockItem | null): string | null {
 }
 
 /**
+ * Whether the sheet is up: it has to have been asked for, and there has to be a
+ * thing in it to name — a sheet with nothing to name shows nothing.
+ */
+function sheetIsOpen(pickerOpen: boolean, selected: StockItem | null): boolean {
+  return pickerOpen && selected !== null;
+}
+
+/**
  * The file the household picked, if the dialog came back with one at all. The
  * input is emptied either way, so the very same file can be picked twice.
  */
@@ -86,6 +94,9 @@ export function App({ store }: { readonly store: ItemStore }) {
   const { items, selected } = useStoreState(store);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  // The sheet is only a sheet with something in it to name; without one there
+  // is nothing for it to show, and no dialog for the page to be inert behind.
+  const sheetOpen = sheetIsOpen(pickerOpen, selected);
 
   const say = (text: string) => setNotice({ tone: 'success', text });
   const complain = (text: string) => setNotice({ tone: 'error', text });
@@ -232,7 +243,7 @@ export function App({ store }: { readonly store: ItemStore }) {
         </div>
       </main>
 
-      {pickerOpen && selected !== null && (
+      {selected !== null && sheetOpen && (
         <ThingPicker
           items={items}
           currentId={selected.id}
@@ -249,10 +260,15 @@ export function App({ store }: { readonly store: ItemStore }) {
           onImport={importPresets}
           onResetToDefaults={resetDefaults}
           onConfirm={() => setPickerOpen(false)}
+          notice={notice}
+          onDismissNotice={() => setNotice(null)}
         />
       )}
 
-      <NoticeBar notice={notice} onDismiss={() => setNotice(null)} />
+      {/* While the sheet is up it carries the notice itself: a modal dialog
+          makes this side of the page inert, and a message nobody can read is
+          no message. */}
+      {!sheetOpen && <NoticeBar notice={notice} onDismiss={() => setNotice(null)} />}
     </div>
   );
 }

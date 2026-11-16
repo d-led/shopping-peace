@@ -13,11 +13,36 @@
   --color-error-content: oklch(98% 0.01 25);
 }
 
+/* A figure that explains itself is a button — focus and Enter are how a
+   keyboard asks — so the browser's button chrome is stripped back to the words
+   it holds. */
+.hint-figure {
+  display: inline;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: inherit;
+}
+
+/* The sheet is a modal dialog, and the page behind it is inert but still a
+   scroll container: a gesture that reaches the end of the dialog must not run
+   on into it. Both rules are needed — ::backdrop is not a scroll container of
+   its own, so overscroll-behavior alone would be ignored there. */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
 /* Kitchen mode: no accidental text selection, no double-tap zoom while handling
    a drippy bottle with one hand. */
 @layer base {
   button,
-  label.btn,
   input[type='range'] {
     -webkit-user-select: none;
     user-select: none;

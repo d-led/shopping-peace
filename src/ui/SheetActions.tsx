@@ -2,6 +2,9 @@ import type { StockItem } from '../domain/stock-item';
 import { Icon } from './Icon';
 import { TEXT } from './text';
 
+/** The one file field in the app, so its label always has something to point at. */
+export const IMPORT_FIELD_ID = 'import-presets';
+
 export interface SheetActionsProps {
   /** The thing on screen, when there is one: two of these act on it. */
   readonly current: StockItem | undefined;
@@ -59,18 +62,22 @@ export function SheetActions({
             Export this one
           </button>
         )}
-        <label
-          class={`btn btn-lg gap-1 px-2 rounded-none md:gap-2 md:px-4 ${TEXT.body}`}
-        >
-          <Icon symbol="📥" />
-          Import
-          <input
-            type="file"
-            accept="application/json,.json"
-            class="hidden"
-            onChange={onImport}
-          />
+      </div>
+
+      {/* A file input, not a button that opens one: the browser's own control
+          is the one a keyboard can reach and a screen reader can name, and
+          ::file-selector-button is where its button gets styled. */}
+      <div class="flex items-center gap-2">
+        <label class={`shrink-0 font-bold ${TEXT.body}`} for={IMPORT_FIELD_ID}>
+          <Icon symbol="📥" /> Import
         </label>
+        <input
+          id={IMPORT_FIELD_ID}
+          type="file"
+          accept="application/json,.json"
+          class={`file-input file-input-lg w-full rounded-none ${TEXT.small}`}
+          onChange={onImport}
+        />
       </div>
 
       <div class="flex flex-col gap-2 md:gap-3 border-t border-base-300 pt-2 md:pt-3">

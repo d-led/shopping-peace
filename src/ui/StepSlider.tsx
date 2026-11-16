@@ -13,6 +13,16 @@ function unitAfter(value: number, unit: string, plural: string = `${unit}s`): st
   return value === 1 ? unit : plural;
 }
 
+/** What the number is called on screen: the end of the range's meaning, or the unit. */
+function wordsBeside(value: number, ending: string | undefined, unit: string, plural?: string): string {
+  return ending ?? unitAfter(value, unit, plural);
+}
+
+/** The id of the sentence that explains this control, when there is one to say. */
+function descriptionOf(hint: string | undefined, id: string): string | undefined {
+  return hint === undefined ? undefined : id;
+}
+
 export type SliderTone = keyof typeof TONE_RANGE;
 
 export interface StepSliderProps {
@@ -58,8 +68,11 @@ export function StepSlider({
   // than lying about the value.
   const highest = Math.max(max, value);
   const sliderId = `${id}-slider`;
+  const hintId = `${id}-hint`;
   // At the ends of the range the unit says less than the meaning does.
   const ending = value === min ? minLabel : value === max ? maxLabel : undefined;
+  const unitWords = wordsBeside(value, ending, unit, unitPlural);
+  const describedBy = descriptionOf(hint, hintId);
 
   const commit = (wanted: number) => {
     if (!Number.isFinite(wanted)) {
@@ -88,6 +101,7 @@ export function StepSlider({
             min={min}
             max={highest}
             value={value}
+            aria-describedby={describedBy}
             onInput={(event) => {
               const typed = (event.target as HTMLInputElement).value;
               if (typed !== '') {
@@ -96,7 +110,7 @@ export function StepSlider({
             }}
           />
           <span class={`font-bold text-base-content/70 ${TEXT.small}`}>
-            {ending ?? unitAfter(value, unit, unitPlural)}
+            {unitWords}
           </span>
         </span>
       </div>
@@ -118,8 +132,12 @@ export function StepSlider({
           value={value}
           // The track is a second way into the same number, so it carries the
           // same name as the label beside it: an unlabelled slider is a
-          // control a screen reader announces as nothing at all.
+          // control a screen reader announces as nothing at all. Its value is
+          // said in the same words the screen uses, since the ends of the range
+          // mean something a number cannot say — 365 is "never spoils".
           aria-label={label}
+          aria-valuetext={`${value} ${unitWords}`}
+          aria-describedby={describedBy}
           class={`range range-lg min-w-0 flex-1 ${TONE_RANGE[tone]}`}
           onInput={(event) => commit(Number((event.target as HTMLInputElement).value))}
         />
@@ -132,6 +150,11 @@ export function StepSlider({
           +
         </button>
       </div>
+      {hint !== undefined && (
+        <p id={hintId} class={`sr-only ${TEXT.small}`}>
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

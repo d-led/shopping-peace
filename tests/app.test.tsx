@@ -164,8 +164,8 @@ function textOf(container: HTMLElement): string {
   return container.textContent ?? '';
 }
 
-function picker(container: HTMLElement): HTMLElement | null {
-  return container.querySelector('[role="dialog"]');
+function picker(container: HTMLElement): HTMLDialogElement | null {
+  return container.querySelector('dialog');
 }
 
 function field(container: HTMLElement, id: string): HTMLInputElement {
@@ -381,7 +381,7 @@ describe('what the household sees first', () => {
 
   it('says how the reserve figure was worked out, on the figure itself', async () => {
     const { container } = openApp([detergent]);
-    const figure = container.querySelector('[data-testid="keep-at-least"] [tabindex]');
+    const figure = container.querySelector('[data-testid="keep-at-least"] button');
 
     figure?.dispatchEvent(new MouseEvent('pointerenter'));
 
@@ -480,7 +480,7 @@ describe('the full screen of things', () => {
     );
   });
 
-  it('leaves when you press OK, or press Escape', async () => {
+  it('leaves when the sheet is closed, by its OK or by the browser', async () => {
     const { container } = openApp([detergent]);
 
     await openThingPicker(container);
@@ -489,9 +489,10 @@ describe('the full screen of things', () => {
       expect(picker(container)).toBeNull();
     });
 
+    // Escape and the back gesture are the browser's, and they arrive as the
+    // same `close` event the OK button causes. The browser tests press them.
     await openThingPicker(container);
-    await nextFrame();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    picker(container)?.close();
     await vi.waitFor(() => {
       expect(picker(container)).toBeNull();
     });

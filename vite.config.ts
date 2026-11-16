@@ -53,6 +53,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     environmentOptions: { jsdom: { pretendToBeVisual: true } },
+    // jsdom knows <dialog> but not what it does: the setup file gives it the
+    // two calls the sheet makes, which the browser tests then exercise for real.
+    setupFiles: ['tests/support/dialog.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
   },
 });

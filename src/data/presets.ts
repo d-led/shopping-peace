@@ -45,9 +45,10 @@ export class LocalStoragePresetRepository implements PresetRepository {
 /**
  * The presets a household finds on its first visit, and the pack sizes a
  * European shop actually sells: a box of dishwasher tablets is thirty, a
- * toilet-paper pack is ten, a box of washing powder is forty washes. The unit
- * is whatever the household counts — a tab, a roll, a wash — so what a unit
- * lasts is what matters, not what the bottle holds.
+ * toilet-paper pack is ten, a box of washing powder is forty washes, a box of
+ * pills is a hundred. The unit is whatever the household counts — a tab, a
+ * roll, a wash — so what a unit lasts is what matters, not what the bottle
+ * holds.
  */
 export function starterPresets(createId: () => string = newId): StockItem[] {
   const never = FRESHNESS_NEVER;
@@ -64,6 +65,9 @@ export function starterPresets(createId: () => string = newId): StockItem[] {
     // fortnight of reserve, and jumbo packs of ten the only size sold.
     { id: createId(), name: 'Toilet paper (jumbo)', emoji: '🧻', usageUnits: one, usageDays: 2, leadDays: 4, extraDays: 7, freshDays: never, packSize: 10 },
     { id: createId(), name: 'Cat litter', emoji: '🐾', usageUnits: one, usageDays: 21, leadDays: 5, extraDays: 21, freshDays: never, packSize: one },
+    // The one a household must not be caught short of: a pill a day, a week to
+    // fetch, four weeks of reserve, and a box of a hundred the only size sold.
+    { id: createId(), name: 'Pills', emoji: '💊', usageUnits: one, usageDays: 1, leadDays: 7, extraDays: 28, freshDays: never, packSize: 100 },
     // The perishable one, so the freshness slider can be seen doing something:
     // eaten over a fortnight, but sour a week after opening.
     { id: createId(), name: 'Butter', emoji: '🧈', usageUnits: one, usageDays: 14, leadDays: 2, extraDays: 7, freshDays: 7, packSize: one },

@@ -5,6 +5,7 @@ import {
   starterPresets,
 } from '../src/data/presets';
 import { FRESHNESS_NEVER } from '../src/domain/stock-item';
+import { planStock } from '../src/domain/stock-plan';
 import { FakeStorage } from './support/fake-storage';
 import { thing } from './support/items';
 
@@ -46,6 +47,7 @@ describe('the presets a household finds on day one', () => {
       'Laundry detergent',
       'Toilet paper (jumbo)',
       'Cat litter',
+      'Pills',
       'Butter',
     ]);
   });
@@ -54,7 +56,15 @@ describe('the presets a household finds on day one', () => {
     const starters = starterPresets(() => 'fixed');
 
     expect(starters.every((starter) => starter.emoji !== '')).toBe(true);
-    expect(starters.map((starter) => starter.emoji)).toEqual(['🧽', '🫧', '🧴', '🧻', '🐾', '🧈']);
+    expect(starters.map((starter) => starter.emoji)).toEqual([
+      '🧽',
+      '🫧',
+      '🧴',
+      '🧻',
+      '🐾',
+      '💊',
+      '🧈',
+    ]);
   });
 
   it('sells them in the pack sizes a European shop actually sells', () => {
@@ -78,10 +88,20 @@ describe('the presets a household finds on day one', () => {
     });
   });
 
+  it('keeps a month of pills behind the week it takes to fetch them', () => {
+    const pills = starterPresets(() => 'fixed').find((starter) => starter.name === 'Pills');
+    const plan = pills && planStock(pills);
+
+    // A week of wait plus four weeks of reserve: shop at 35, and 100 arrive.
+    expect(plan?.reorderPoint).toBe(35);
+    expect(plan?.fetchQuantity).toBe(100);
+    expect(plan?.reviewDays).toBe(28);
+  });
+
   it('gives every starter its own id', () => {
     let issued = 0;
     const ids = starterPresets(() => `id-${(issued += 1)}`).map((item) => item.id);
-    expect(new Set(ids).size).toBe(6);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('describes every starter in whole days', () => {
